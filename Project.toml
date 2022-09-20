@@ -1,0 +1,13 @@
+name = "OrthogonalPolynomials"
+uuid = "03c4bcba-a943-47e9-bfa1-b1661fc2974f"
+authors = ["Christoph Ortner <christohortner@gmail.com> and contributors"]
+version = "0.0.1"
+
+[compat]
+julia = "1"
+
+[extras]
+Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
+
+[targets]
+test = ["Test"]
