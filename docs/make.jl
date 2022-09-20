@@ -1,16 +1,16 @@
 using OrthogonalPolynomials
 using Documenter
 
-DocMeta.setdocmeta!(OrthogonalPolynomials, :DocTestSetup, :(using OrthogonalPolynomials); recursive=true)
+DocMeta.setdocmeta!(OrthPolys4ML, :DocTestSetup, :(using OrthPolys4ML); recursive=true)
 
 makedocs(;
-    modules=[OrthogonalPolynomials],
+    modules=[OrthPolys4ML],
     authors="Christoph Ortner <christohortner@gmail.com> and contributors",
-    repo="https://github.com/ACEsuit/OrthogonalPolynomials.jl/blob/{commit}{path}#{line}",
-    sitename="OrthogonalPolynomials.jl",
+    repo="https://github.com/ACEsuit/OrthPolys4ML.jl/blob/{commit}{path}#{line}",
+    sitename="OrthPolys4ML.jl",
     format=Documenter.HTML(;
         prettyurls=get(ENV, "CI", "false") == "true",
-        canonical="https://ACEsuit.github.io/OrthogonalPolynomials.jl",
+        canonical="https://ACEsuit.github.io/OrthPolys4ML.jl",
         edit_link="main",
         assets=String[],
     ),
@@ -20,6 +20,6 @@ makedocs(;
 )
 
 deploydocs(;
-    repo="github.com/ACEsuit/OrthogonalPolynomials.jl",
+    repo="github.com/ACEsuit/OrthPolys4ML.jl",
     devbranch="main",
 )

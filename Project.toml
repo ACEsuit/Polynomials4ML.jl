@@ -1,7 +1,11 @@
-name = "OrthogonalPolynomials"
+name = "OrthPolys4ML"
 uuid = "03c4bcba-a943-47e9-bfa1-b1661fc2974f"
 authors = ["Christoph Ortner <christohortner@gmail.com> and contributors"]
 version = "0.0.1"
+
+[deps]
+ForwardDiff = "f6369f11-7733-5829-9624-2563aa707210"
+LoopVectorization = "bdcacae8-1622-11e9-2a5c-532679323890"
 
 [compat]
 julia = "1"
