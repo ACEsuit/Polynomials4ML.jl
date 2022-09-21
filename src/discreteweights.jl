@@ -1,7 +1,11 @@
 
+export DiscreteWeights, 
+       orthpolybasis
+
+
 struct DiscreteWeights{T} 
-   X::T 
-   W::T 
+   X::Vector{T}
+   W::Vector{T}
 end
 
 function DiscreteWeights(X, W, normalize=false)
@@ -17,7 +21,7 @@ function DiscreteWeights(X, W, normalize=false)
 end
 
 
-function orthpolys(N::Integer, W::DiscreteWeights{TW}; TX = Float64) where {TW} 
+function orthpolybasis(N::Integer, W::DiscreteWeights{TW}; TX = Float64) where {TW} 
    @assert N > 0 
 
    T = promote_type(TW, TX)
@@ -36,13 +40,15 @@ function orthpolys(N::Integer, W::DiscreteWeights{TW}; TX = Float64) where {TW}
    end
 
    # ---------------- degree 1 (n = 2)
-   # a J2 = (t - b) J1
+   # _J2 = (x - b) J1; J2 = a _J2 
+   # 0 = <J1, _J2> = <x J1, J1> - b <J1, J1> 
+   # b = <x J1, J1> / <J1, J1> 
    J1 = A[1] * _J1
-   b = dotw(J1, J1)
+   b = dotw(W.X .* J1, J1) ./ dotw(J1, J1)
    _J2 = (W.X .- b) .* J1
    a = sqrt( dotw(_J2, _J2) )
    A[2] = 1 / a
-   B[2] = -b / a
+   B[2] = - b / a
    if N == 2 
       return OrthPolyBasis1d3T(A, B, C)
    end 
@@ -65,26 +71,9 @@ function orthpolys(N::Integer, W::DiscreteWeights{TW}; TX = Float64) where {TW}
       Jprev, Jpprev = _J / a, Jprev
    end
    
-   return OrthPolyBasis1d3T(A, B, C)
+   return OrthPolyBasis1D3T(A, B, C, 
+                            Dict{String, Any}("weights" => W))
 end
 
 
 
-
-# --------------------- Jacobi Weights 
-# this includes in particular Legendre, Gegenbauere, Chebyshev 
-
-struct JacobiWeights{T}
-   α::T
-   β::T
-   a::T 
-   b::T 
-end
-
-chebyshev_weights(; a = -1.0, b = 1.0) = JacobiWeights(-0.5, -0.5, a, b)
-
-legendre_weights(; a = -1.0, b = 1.0) = JacobiWeights(0.0, 0.0, a, b)
-
-# function orthpolys(space::WeightedL2{<: JacobiWeights})
-
-# end

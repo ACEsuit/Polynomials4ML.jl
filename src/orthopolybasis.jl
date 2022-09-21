@@ -21,8 +21,10 @@ struct OrthPolyBasis1D3T{T}
    C::Vector{T}
    # ----------------- used only for construction ...
    #                   but useful to have since it defines the notion of orth.
-
+   meta::Dict{String, Any}
 end
+
+OrthPolyBasis1D3T(A, B, C) = OrthPolyBasis1D3T(A, B, C, Dict{String, Any}())
 
 export OrthPolyBasis1D3T
 
@@ -48,6 +50,8 @@ evaluate_ed2(basis::OrthPolyBasis1D3T, x) =
                     basis, x)
 
 evaluate_dd(basis::OrthPolyBasis1D3T, x) = evaluate_ed2(basis, x)[3] 
+
+(basis::OrthPolyBasis1D3T)(x) = evaluate(basis, x)
 
 # ----------------- main evaluation code 
 

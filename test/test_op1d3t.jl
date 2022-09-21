@@ -1,6 +1,7 @@
 
 using Polynomials4ML, Test, ForwardDiff
 using Polynomials4ML: evaluate, evaluate_d, evaluate_dd, evaluate_ed, evaluate_ed2 
+using Polynomials4ML.Testing: println_slim
 
 @info("Testing OrthPolyBasis1D3T")
 
@@ -19,19 +20,19 @@ dP3 = evaluate_d(basis, x)
 P4, dP4, ddP4 = evaluate_ed2(basis, x)
 ddP5 = evaluate_dd(basis, x)
 
-@test P1 ≈ P2 ≈ P4 
-@test dP2 ≈ dP3 ≈ dP4
-@test ddP4 ≈ ddP5
+println_slim(@test P1 ≈ P2 ≈ P4 )
+println_slim(@test dP2 ≈ dP3 ≈ dP4)
+println_slim(@test ddP4 ≈ ddP5)
 
 ##
 
 @info("Test correctness of derivatives")
 
 adP1 = ForwardDiff.derivative(x -> evaluate(basis, x), x)
-@test adP1 ≈ dP2 
+println_slim(@test adP1 ≈ dP2)
 
 addP3 = ForwardDiff.derivative(x -> evaluate_d(basis, x), x)
-@test addP3 ≈ ddP5
+println_slim(@test addP3 ≈ ddP5)
 
 ##
 
@@ -51,6 +52,6 @@ bP2 = evaluate(basis, X)
 bP3, bdP3 = evaluate_ed(basis, X)
 bP4, bdP4, bddP4 = evaluate_ed2(basis, X)
 
-@test bP2 ≈ bP1 ≈ bP3 ≈ bP4
-@test bdP3 ≈ bdP1 ≈ bdP4
-@test bddP4 ≈ bddP1
+println_slim(@test bP2 ≈ bP1 ≈ bP3 ≈ bP4)
+println_slim(@test bdP3 ≈ bdP1 ≈ bdP4)
+println_slim(@test bddP4 ≈ bddP1)
