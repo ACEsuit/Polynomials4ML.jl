@@ -1,14 +1,14 @@
 ```@meta
-CurrentModule = OrthPolys4ML
+CurrentModule = Polynomials4ML
 ```
 
-# OrthPolys4ML
+# Polynomials4ML
 
-Documentation for [OrthPolys4ML](https://github.com/ACEsuit/OrthPolys4ML.jl).
+Documentation for [Polynomials4ML](https://github.com/ACEsuit/Polynomials4ML.jl).
 
 ```@index
 ```
 
 ```@autodocs
-Modules = [OrthPolys4ML]
+Modules = [Polynomials4ML]
 ```

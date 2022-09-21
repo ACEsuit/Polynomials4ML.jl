@@ -1,6 +1,6 @@
 
-using OrthPolys4ML, Test, ForwardDiff
-using OrthPolys4ML: evaluate, evaluate_d, evaluate_dd, evaluate_ed, evaluate_ed2 
+using Polynomials4ML, Test, ForwardDiff
+using Polynomials4ML: evaluate, evaluate_d, evaluate_dd, evaluate_ed, evaluate_ed2 
 
 @info("Testing OrthPolyBasis1D3T")
 
@@ -38,9 +38,9 @@ addP3 = ForwardDiff.derivative(x -> evaluate_d(basis, x), x)
 @info("Test consistency of batched evaluation")
 
 X = rand(16) 
-bP1 = OrthPolys4ML._alloc(basis, X)
-bdP1 = OrthPolys4ML._alloc(basis, X)
-bddP1 = OrthPolys4ML._alloc(basis, X)
+bP1 = Polynomials4ML._alloc(basis, X)
+bdP1 = Polynomials4ML._alloc(basis, X)
+bddP1 = Polynomials4ML._alloc(basis, X)
 for (i, x) in enumerate(X)
    bP1[i, :] = evaluate(basis, x)
    bdP1[i, :] = evaluate_d(basis, x)

@@ -1,6 +1,6 @@
 
-using OrthPolys4ML
-using OrthPolys4ML: evaluate!, evaluate_ed!, evaluate_ed2!
+using Polynomials4ML
+using Polynomials4ML: evaluate!, evaluate_ed!, evaluate_ed2!
 using BenchmarkTools
 
 

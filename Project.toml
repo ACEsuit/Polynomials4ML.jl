@@ -1,4 +1,4 @@
-name = "OrthPolys4ML"
+name = "Polynomials4ML"
 uuid = "03c4bcba-a943-47e9-bfa1-b1661fc2974f"
 authors = ["Christoph Ortner <christohortner@gmail.com> and contributors"]
 version = "0.0.1"
