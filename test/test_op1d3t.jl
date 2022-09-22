@@ -3,6 +3,7 @@ using Polynomials4ML, Test
 using Polynomials4ML: evaluate, evaluate_d, evaluate_dd
 using Polynomials4ML.Testing: println_slim, test_derivatives
 using LinearAlgebra: I
+using QuadGK
 
 @info("Testing OrthPolyBasis1D3T")
 

@@ -34,7 +34,7 @@ CTrigBasis(N::Integer, T = Float64, meta = Dict{String, Any}()) =
 natural_indices(basis::CTrigBasis) = -basis.N:basis.N 
 
 index(basis::CTrigBasis, m::Integer) = 
-         2 * abs(m) + (sign(m) < 0 ? 1 : 0)
+         2 * abs(m) + (sign(m) <= 0 ? 1 : 0)
 
 
 Base.length(basis::CTrigBasis) = 2 * basis.N + 1 
