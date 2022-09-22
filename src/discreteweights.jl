@@ -1,7 +1,7 @@
 
-export DiscreteWeights, 
-       orthpolybasis
+export DiscreteWeights
 
+# orthpolybasis is exported in interfaces.jl
 
 struct DiscreteWeights{T} 
    X::Vector{T}

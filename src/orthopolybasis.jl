@@ -14,7 +14,7 @@ using LoopVectorization
 Orthogonality is achieved with respect to a user-specified distribution, which
 can be either continuous or discrete but must have a density function.
 """
-struct OrthPolyBasis1D3T{T}
+struct OrthPolyBasis1D3T{T} <: PolyBasis4ML
    # ----------------- the recursion coefficients
    A::Vector{T}
    B::Vector{T}
@@ -37,21 +37,6 @@ _alloc(basis::OrthPolyBasis1D3T{T1}, x::T2) where {T1, T2 <: Number} =
 
 _alloc(basis::OrthPolyBasis1D3T{T1}, X::AbstractVector{T2}) where {T1, T2 <: Number} = 
             zeros(promote_type(T1, T2), length(X), length(basis))
-
-evaluate(basis::OrthPolyBasis1D3T, x) = evaluate!(_alloc(basis, x), basis, x)
-
-evaluate_ed(basis::OrthPolyBasis1D3T, x) = 
-      evaluate_ed!(_alloc(basis, x), _alloc(basis, x), basis, x)
-
-evaluate_d(basis::OrthPolyBasis1D3T, x) = evaluate_ed(basis, x)[2] 
-
-evaluate_ed2(basis::OrthPolyBasis1D3T, x) = 
-      evaluate_ed2!(_alloc(basis, x), _alloc(basis, x), _alloc(basis, x), 
-                    basis, x)
-
-evaluate_dd(basis::OrthPolyBasis1D3T, x) = evaluate_ed2(basis, x)[3] 
-
-(basis::OrthPolyBasis1D3T)(x) = evaluate(basis, x)
 
 # ----------------- main evaluation code 
 
