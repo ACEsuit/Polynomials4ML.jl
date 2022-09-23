@@ -15,7 +15,7 @@ end
 @info("check that the orthogonality relation is satisfied")
 
 for ntest = 1:30 
-   local N, basis 
+   local N, basis, G 
    N = rand(5:20)
    nX = rand(100:300) 
    basis = rand_basis(nX, N)

@@ -2,7 +2,8 @@
 
 using StaticArrays, LinearAlgebra
 
-import ObjectPools: acquire!, release!, VectorPool
+import Polynomials4ML.ObjectPools: acquire!, release!, 
+				ArrayCache, CachedArray
 
 export CYlmBasis
 
@@ -55,4 +56,4 @@ end
 
 include("alp.jl")
 
-include("ylm.jl")
+include("cylm.jl")

@@ -7,7 +7,7 @@ Constructor:
 ALPolynomials(maxL::Integer, T::Type=Float64)
 ```
 """
-struct ALPolynomials{T} <: ACEBasis
+struct ALPolynomials{T} 
 	L::Int
 	A::Vector{T}
 	B::Vector{T}
@@ -17,7 +17,8 @@ end
 
 
 ALPolynomials(L::Integer, A::Vector{T}, B::Vector{T}) where {T}  = 
-		ALPolynomials(L, A, B, ArrayCache{T}())
+		ALPolynomials(L, A, B, 
+                    ArrayCache{T, 1}(), ArrayCache{T, 2}())
 
 Base.length(alp::ALPolynomials) = sizeP(alp.L)
 
@@ -115,8 +116,8 @@ end
 
 function _evaluate_ed(alp::ALPolynomials, S::SphericalCoords) 
 	VT = _valtype(alp, S)
-	P = acquire!(alp.B_pool, length(alp), VT)
-	dP = acquire!(alp.B_pool, length(alp), VT)
+	P = acquire!(alp.pool, length(alp), VT)
+	dP = acquire!(alp.pool, length(alp), VT)
 	_evaluate_ed!(parent(P), parent(dP), alp::ALPolynomials, S::SphericalCoords)
 	return P, dP 
 end

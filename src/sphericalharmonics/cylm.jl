@@ -91,7 +91,7 @@ function evaluate(basis::CYlmBasis, R::AbstractVector{<: Real})
 	return Y 
 end
 
-function evaluate!(Y, basis::AbstractCYlmBasis, R::AbstractVector{<: Real})
+function evaluate!(Y, basis::CYlmBasis, R::AbstractVector{<: Real})
 	@assert length(R) == 3
 	L = maxL(basis)
 	S = cart2spher(R) 
@@ -102,29 +102,29 @@ function evaluate!(Y, basis::AbstractCYlmBasis, R::AbstractVector{<: Real})
 end
 
 
-# function ACE.evaluate_d(SH::AbstractCYlmBasis, R::AbstractVector)
-# 	B, dB = evaluate_ed(SH, R) 
-# 	release!(B)
-# 	return dB 
-# end 
+function evaluate_d(SH::CYlmBasis, R::AbstractVector)
+	B, dB = evaluate_ed(SH, R) 
+	release!(B)
+	return dB 
+end 
 
-# function ACE.evaluate_ed(SH::AbstractCYlmBasis, R::AbstractVector)
-# 	Y = acquire!(SH.B_pool, length(SH), _valtype(SH, R))
-# 	dY = acquire!(SH.dB_pool, length(SH), _gradtype(SH, R))
-# 	evaluate_ed!(parent(Y), parent(dY), SH, R)
-# 	return Y, dY
-# end
+function evaluate_ed(SH::CYlmBasis, R::AbstractVector)
+	Y = acquire!(SH.pool, length(SH), _valtype(SH, R))
+	dY = acquire!(SH.pool_d, length(SH), _gradtype(SH, R))
+	evaluate_ed!(parent(Y), parent(dY), SH, R)
+	return Y, dY
+end
 
-# function evaluate_ed!(Y, dY, SH::AbstractCYlmBasis, R::AbstractVector)
-# 	@assert length(R) == 3
-# 	L = maxL(SH)
-# 	S = cart2spher(R)
-# 	P, dP = _evaluate_ed(SH.alp, S)
-# 	cYlm_ed!(Y, dY, maxL(SH), S, P, dP)
-# 	release!(P)
-# 	release!(dP)
-# 	return Y, dY
-# end
+function evaluate_ed!(Y, dY, SH::CYlmBasis, R::AbstractVector)
+	@assert length(R) == 3
+	L = maxL(SH)
+	S = cart2spher(R)
+	P, dP = _evaluate_ed(SH.alp, S)
+	cYlm_ed!(Y, dY, maxL(SH), S, P, dP)
+	release!(P)
+	release!(dP)
+	return Y, dY
+end
 
 
 
@@ -166,43 +166,43 @@ end
 
 
 
-# """
-# evaluate gradients of complex spherical harmonics
-# """
-# function cYlm_ed!(Y, dY, L, S::SphericalCoords, P, dP)
-# 	@assert length(P) >= sizeP(L)
-# 	@assert length(Y) >= sizeY(L)
-# 	@assert length(dY) >= sizeY(L)
+"""
+evaluate gradients of complex spherical harmonics
+"""
+function cYlm_ed!(Y, dY, L, S::SphericalCoords, P, dP)
+	@assert length(P) >= sizeP(L)
+	@assert length(Y) >= sizeY(L)
+	@assert length(dY) >= sizeY(L)
 
-# 	# m = 0 case
-# 	ep = 1 / sqrt(2)
-# 	for l = 0:L
-# 		Y[index_y(l, 0)] = P[index_p(l, 0)] * ep
-# 		dY[index_y(l, 0)] = dspher_to_dcart(S, 0.0, dP[index_p(l, 0)] * ep)
-# 	end
+	# m = 0 case
+	ep = 1 / sqrt(2)
+	for l = 0:L
+		Y[index_y(l, 0)] = P[index_p(l, 0)] * ep
+		dY[index_y(l, 0)] = dspher_to_dcart(S, 0.0, dP[index_p(l, 0)] * ep)
+	end
 
-#    sig = 1
-#    ep_fact = S.cosφ + im * S.sinφ
+   sig = 1
+   ep_fact = S.cosφ + im * S.sinφ
 
-# 	for m in 1:L
-# 		sig *= -1
-# 		ep *= ep_fact            # ep =   exp(i *   m  * φ)
-# 		em = sig * conj(ep)      # ep = ± exp(i * (-m) * φ)
-# 		dep_dφ = im *   m  * ep
-# 		dem_dφ = im * (-m) * em
-# 		for l in m:L
-# 			p_div_sinθ = P[index_p(l,m)]
-# 			@inbounds Y[index_y(l, -m)] = em * p_div_sinθ * S.sinθ
-# 			@inbounds Y[index_y(l,  m)] = ep * p_div_sinθ * S.sinθ
+	for m in 1:L
+		sig *= -1
+		ep *= ep_fact            # ep =   exp(i *   m  * φ)
+		em = sig * conj(ep)      # ep = ± exp(i * (-m) * φ)
+		dep_dφ = im *   m  * ep
+		dem_dφ = im * (-m) * em
+		for l in m:L
+			p_div_sinθ = P[index_p(l,m)]
+			@inbounds Y[index_y(l, -m)] = em * p_div_sinθ * S.sinθ
+			@inbounds Y[index_y(l,  m)] = ep * p_div_sinθ * S.sinθ
 
-# 			dp_dθ = dP[index_p(l,m)]
-# 			@inbounds dY[index_y(l, -m)] = dspher_to_dcart(S, dem_dφ * p_div_sinθ, em * dp_dθ)
-# 			@inbounds dY[index_y(l,  m)] = dspher_to_dcart(S, dep_dφ * p_div_sinθ, ep * dp_dθ)
-# 		end
-# 	end
+			dp_dθ = dP[index_p(l,m)]
+			@inbounds dY[index_y(l, -m)] = dspher_to_dcart(S, dem_dφ * p_div_sinθ, em * dp_dθ)
+			@inbounds dY[index_y(l,  m)] = dspher_to_dcart(S, dep_dφ * p_div_sinθ, ep * dp_dθ)
+		end
+	end
 
-# 	return Y, dY
-# end
+	return Y, dY
+end
 
 
 # ---------------------- batched evaluation code 

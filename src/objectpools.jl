@@ -43,10 +43,11 @@ Base.size(pA::CachedArray, args...) = size(pA.A, args...)
 
 Base.parent(pA::CachedArray) = pA.A
 
+ArrayCache(T, N) = ArrayCache{T, N}() 
 
-function ArrayCache(T, N)
+function ArrayCache{T, N}() where {T, N}
    nt = nthreads() 
-   cache = [ Stack{Array{T, N}}() for _1=:nt ] 
+   cache = [ Stack{Array{T, N}}() for _ = 1:nt ] 
    return ArrayCache{T, N}(cache)
 end
 
@@ -69,7 +70,7 @@ function acquire!(c::ArrayCache{T}, len::Integer) where {T}
 end
 
 release!(c::ArrayCache, cA::CachedArray{1}) = 
-      push!(c.vecs[threadid()], cA.A)
+      push!(c.cache[threadid()], cA.A)
 
 
 # ## Alternative Array Cache Implementation 
