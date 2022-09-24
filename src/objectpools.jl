@@ -52,19 +52,22 @@ function ArrayCache{T, N}() where {T, N}
 end
 
 
-acquire!(c::ArrayCache{T, 1}, len::Integer, ::Type{T}, ) where {T} = 
-         acquire!(c, len)
+acquire!(c::ArrayCache{T, 1}, len::Integer, ::Type{T}) where {T} = 
+         acquire!(c, (len,))
 
 acquire!(c::ArrayCache{T}, len::Integer, ::Type{S}) where {T, S} =
          Vector{S}(undef, len)
 
-function acquire!(c::ArrayCache{T}, len::Integer) where {T}
+acquire!(c::ArrayCache{T, N}, sz::NTuple{N, <: Integer}, ::Type{S}) where {T, N, S} =
+         Array{S, N}(undef, sz)
+
+function acquire!(c::ArrayCache{T, N}, sz::NTuple{N, <: Integer}) where {T, N}
    stack = c.cache[threadid()]
    if isempty(stack)
-      A = Vector{T}(undef, len)
+      A = Array{T, N}(undef, sz)
    else 
       A = pop!(stack)
-      resize!(A, len)
+      resize!(A, sz...)
    end
    return CachedArray(A, c)
 end

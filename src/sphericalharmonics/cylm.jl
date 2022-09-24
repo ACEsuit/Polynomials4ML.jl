@@ -8,6 +8,8 @@ struct CYlmBasis{T}
    ppool::ArrayCache{Complex{T}, 2}
 	pool_d::ArrayCache{SVector{3, Complex{T}}, 1}
    ppool_d::ArrayCache{SVector{3, Complex{T}}, 2}
+	pool_s::ArrayCache{SphericalCoords{T}, 1}
+	pool_t::ArrayCache{Complex{T}, 1}
 end
 
 CYlmBasis(maxL::Integer, T::Type=Float64) = 
@@ -18,7 +20,9 @@ CYlmBasis(alp::ALPolynomials{T}) where {T} =
 		         ArrayCache{Complex{T}, 1}(), 
                ArrayCache{Complex{T}, 2}(), 
                ArrayCache{SVector{3, Complex{T}}, 1}(), 
-               ArrayCache{SVector{3, Complex{T}}, 2}())
+               ArrayCache{SVector{3, Complex{T}}, 2}(), 
+					ArrayCache{SphericalCoords{T}, 1}(),
+					ArrayCache{Complex{T}, 1}() )
 
 Base.show(io::IO, basis::CYlmBasis) = 
       print(io, "CYlmBasis(L=$(maxL(basis)))")
@@ -85,19 +89,36 @@ end
 
 # ---------------------- evaluation interface code 
 
-function evaluate(basis::CYlmBasis, R::AbstractVector{<: Real})
-	Y = acquire!(basis.pool, length(basis), _valtype(basis, R))
-	evaluate!(parent(Y), basis, R)
+function evaluate(basis::CYlmBasis, x::AbstractVector{<: Real})
+	Y = acquire!(basis.pool, length(basis), _valtype(basis, x))
+	evaluate!(parent(Y), basis, x)
 	return Y 
 end
 
-function evaluate!(Y, basis::CYlmBasis, R::AbstractVector{<: Real})
-	@assert length(R) == 3
+function evaluate!(Y, basis::CYlmBasis, x::AbstractVector{<: Real})
 	L = maxL(basis)
-	S = cart2spher(R) 
+	S = cart2spher(x) 
 	P = evaluate(basis.alp, S)
 	cYlm!(Y, maxL(basis), S, P)
 	release!(P)
+	return Y
+end
+
+function evaluate(basis::CYlmBasis, X::AbstractVector{<: AbstractVector})
+	Y = acquire!(basis.ppool, (length(X), length(basis)))
+	evaluate!(parent(Y), basis, X)
+	return Y 
+end
+
+function evaluate!(Y, basis::CYlmBasis, 
+						 X::AbstractVector{<: AbstractVector})
+	L = maxL(basis)
+	S = acquire!(basis.pool_s, length(X))
+	map!(x -> cart2spher(x), parent(S), X)
+	P = evaluate(basis.alp, S)
+	cYlm!(Y, maxL(basis), S, P, basis)
+	release!(P)
+	release!(S)
 	return Y
 end
 
@@ -116,11 +137,10 @@ function evaluate_ed(SH::CYlmBasis, R::AbstractVector)
 end
 
 function evaluate_ed!(Y, dY, SH::CYlmBasis, R::AbstractVector)
-	@assert length(R) == 3
 	L = maxL(SH)
 	S = cart2spher(R)
 	P, dP = _evaluate_ed(SH.alp, S)
-	cYlm_ed!(Y, dY, maxL(SH), S, P, dP)
+	cYlm_ed!(Y, dY, maxL(SH), S, P, dP, SH)
 	release!(P)
 	release!(dP)
 	return Y, dY
@@ -209,31 +229,47 @@ end
 
 
 
-# """
-# evaluate complex spherical harmonics
-# """
-# function cYlm!(Y, L, S::AbstractVector{<: SphericalCoords}, P::AbstractMatrix)
-# 	@assert length(P) >= sizeP(L)
-# 	@assert length(Y) >= sizeY(L)
-#    @assert abs(S.cosθ) <= 1.0
+"""
+evaluate complex spherical harmonics
+"""
+function cYlm!(Y, L, S::AbstractVector{<: SphericalCoords}, P::AbstractMatrix, basis)
+	nS = length(S) 
+	@assert length(P) >= sizeP(L)
+	@assert size(Y, 2) >= sizeY(L)
+	@assert size(Y, 1) >= nS 
 
-# 	ep = 1 / sqrt(2) + im * 0
-# 	for l = 0:L
-# 		Y[index_y(l, 0)] = P[index_p(l, 0)] * ep
-# 	end
+	t = acquire!(basis.pool_t, nS)
+	fill!(t, 1 / sqrt(2) + im * 0)
+	for l = 0:L 
+		i_yl0 = index_y(l, 0)
+		i_pl0 = index_p(l, 0)
+		for i = 1:nS
+			@assert abs(S[1].cosθ) <= 1.0
+			Y[i, i_yl0] = P[i, i_pl0] * t[i] 
+		end
+	end
 
-#    sig = 1
-#    ep_fact = S.cosφ + im * S.sinφ
-# 	for m in 1:L
-# 		sig *= -1
-# 		ep *= ep_fact            # ep =   exp(i *   m  * φ)
-# 		em = sig * conj(ep)      # ep = ± exp(i * (-m) * φ)
-# 		for l in m:L
-# 			p = P[index_p(l,m)]
-# 			@inbounds Y[index_y(l, -m)] = em * p   # (-1)^m * p * exp(-im*m*phi) / sqrt(2)
-# 			@inbounds Y[index_y(l,  m)] = ep * p   #          p * exp( im*m*phi) / sqrt(2)
-# 		end
-# 	end
+   sig = 1
+	for m in 1:L
+		sig *= -1
+		for i = 1:nS
+			# t[i] =   exp(i *   m  * φ[i])   ... previously called ep 
+			# and the previous em = ± exp(i * (-m) * φ) becomes sig * conj(t[i])
+			t[i] *= S[i].cosφ + im * S[i].sinφ
+		end
 
-# 	return Y
-# end
+		for l in m:L
+			i_plm = index_p(l,m)
+			i_ylm⁺ = index_y(l,  m)
+			i_ylm⁻ = index_y(l, -m)
+			for i = 1:nS
+				p = P[i, i_plm]
+				Y[i, i_ylm⁻] = (sig * p) * conj(t[i])
+				Y[i, i_ylm⁺] = t[i] * p  
+			end
+		end
+	end
+
+	return Y
+end
+

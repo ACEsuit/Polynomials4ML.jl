@@ -13,12 +13,15 @@ struct ALPolynomials{T}
 	B::Vector{T}
 	pool::ArrayCache{T, 1}
 	ppool::ArrayCache{T, 2}
+   pool_t::ArrayCache{T, 1}
 end
 
 
 ALPolynomials(L::Integer, A::Vector{T}, B::Vector{T}) where {T}  = 
 		ALPolynomials(L, A, B, 
-                    ArrayCache{T, 1}(), ArrayCache{T, 2}())
+                    ArrayCache{T, 1}(), 
+                    ArrayCache{T, 2}(), 
+                    ArrayCache{T, 1}() )
 
 Base.length(alp::ALPolynomials) = sizeP(alp.L)
 
@@ -71,15 +74,31 @@ end
 
 
 
-# -------------------- serial evaluation codes
-
-
+# -------------------- evaluation interface
 
 function evaluate(alp::ALPolynomials, S::SphericalCoords) 
 	P = acquire!(alp.pool, length(alp), _valtype(alp, S))
 	evaluate!(parent(P), alp, S)
 	return P 
 end
+
+function evaluate(alp::ALPolynomials, S::AbstractVector{<: SphericalCoords}) 
+	P = acquire!(alp.ppool, (length(S), length(alp)), _valtype(alp, S[1]))
+	evaluate!(parent(P), alp, S)
+	return P 
+end
+
+function _evaluate_ed(alp::ALPolynomials, S::SphericalCoords) 
+	VT = _valtype(alp, S)
+	P = acquire!(alp.pool, length(alp), VT)
+	dP = acquire!(alp.pool, length(alp), VT)
+	_evaluate_ed!(parent(P), parent(dP), alp::ALPolynomials, S::SphericalCoords)
+	return P, dP 
+end
+
+
+# -------------------- serial evaluation codes
+
 
 function evaluate!(P, alp::ALPolynomials, S::SphericalCoords)
 	L = alp.L 
@@ -114,13 +133,6 @@ function evaluate!(P, alp::ALPolynomials, S::SphericalCoords)
 end
 
 
-function _evaluate_ed(alp::ALPolynomials, S::SphericalCoords) 
-	VT = _valtype(alp, S)
-	P = acquire!(alp.pool, length(alp), VT)
-	dP = acquire!(alp.pool, length(alp), VT)
-	_evaluate_ed!(parent(P), parent(dP), alp::ALPolynomials, S::SphericalCoords)
-	return P, dP 
-end
 
 # this doesn't use the standard name because it doesn't 
 # technically perform the derivative w.r.t. S, but w.r.t. θ
@@ -184,3 +196,52 @@ function _evaluate_ed!(P, dP, alp::ALPolynomials, S::SphericalCoords)
 end
 
 
+
+# ------------------ batched evaluation 
+
+
+function evaluate!(P, alp::ALPolynomials, 
+                   S::AbstractVector{<: SphericalCoords})
+	L = alp.L 
+	A = alp.A 
+	B = alp.B 
+   nS = length(S) 
+	@assert length(A) >= sizeP(L)
+	@assert length(B) >= sizeP(L)
+	@assert size(P, 2) >= sizeP(L)
+	@assert size(P, 1) >= length(S)
+
+   t = acquire!(alp.pool_t, length(S)) # temp from the serial version 
+	t0 = sqrt(0.5/π)
+   i_p00 = index_p(0, 0)
+   for i=1:nS
+	   P[i, i_p00] = t[i] = t0  
+   end
+	if L == 0; return P; end
+
+   for i = 1:nS
+	   P[i, index_p(1, 0)] = S[i].cosθ * sqrt(3) * t[i]
+	   t[i] = - sqrt(1.5) * S[i].sinθ * t[i]
+	   P[i, index_p(1, 1)] = t[i]
+   end
+
+	for l in 2:L
+		il = ((l*(l+1)) ÷ 2) + 1
+		ilm1 = il - l
+		ilm2 = ilm1 - l + 1
+		for m in 0:(l-2)
+         for i = 1:nS
+            P[i, il+m] = A[il+m] * (     S[i].cosθ * P[i, ilm1+m]
+                                         + B[il+m] * P[i, ilm2+m] )
+         end
+		end
+
+      for i = 1:nS
+         P[i, il+l-1] = sqrt(2 * (l - 1) + 3) * S[i].cosθ * t[i]
+         t[i] = -sqrt(1.0 + 0.5 / l) * S[i].sinθ * t[i]
+         P[i, il+l] = t[i]
+      end
+	end
+
+	return P
+end

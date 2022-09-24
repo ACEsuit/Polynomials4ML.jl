@@ -57,3 +57,11 @@ end
 include("alp.jl")
 
 include("cylm.jl")
+
+
+# ---------------------------- Auxiliary functions 
+
+function rand_sphere() 
+	r = @SVector randn(3)
+	return r / norm(r)
+end
