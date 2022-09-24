@@ -11,7 +11,7 @@ struct ArrayCache{T, N}
    cache::Vector{Stack{Array{T, N}}}
 end
 
-struct CachedArray{N, T} <: AbstractArray{T, N} 
+struct CachedArray{T, N} <: AbstractArray{T, N} 
    A::Array{T, N}
    pool::ArrayCache{T}
 end
@@ -55,24 +55,33 @@ end
 acquire!(c::ArrayCache{T, 1}, len::Integer, ::Type{T}) where {T} = 
          acquire!(c, (len,))
 
-acquire!(c::ArrayCache{T}, len::Integer, ::Type{S}) where {T, S} =
+acquire!(c::ArrayCache{T, 1}, len::Integer) where {T} = 
+         acquire!(c, (len,))
+
+acquire!(c::ArrayCache{T, 1}, len::Integer, ::Type{S}) where {T, S} =
          Vector{S}(undef, len)
 
-acquire!(c::ArrayCache{T, N}, sz::NTuple{N, <: Integer}, ::Type{S}) where {T, N, S} =
-         Array{S, N}(undef, sz)
+acquire!(c::ArrayCache{T, N}, sz::NTuple{N, <: Integer}, ::Type{T}) where {T, N} = 
+         acquire!(c, sz) 
+
+# acquire!(c::ArrayCache{T, N}, sz::NTuple{N, <: Integer}, ::Type{S}) where {T, N, S} =
+#          Array{S, N}(undef, sz)
 
 function acquire!(c::ArrayCache{T, N}, sz::NTuple{N, <: Integer}) where {T, N}
    stack = c.cache[threadid()]
+   _resize!(A::Array{T, 1}, sz::Tuple) where {T} = resize!(A, sz[1])
+   _resize!(A::Array{T, N}, sz::Tuple) where {T, N} = resize!(A, sz)
    if isempty(stack)
       A = Array{T, N}(undef, sz)
    else 
       A = pop!(stack)
-      resize!(A, sz...)
+      @assert size(A) == sz
+      # _resize!(A, sz)
    end
    return CachedArray(A, c)
 end
 
-release!(c::ArrayCache, cA::CachedArray{1}) = 
+release!(c::ArrayCache{T, N}, cA::CachedArray{T, N})  where {T, N} = 
       push!(c.cache[threadid()], cA.A)
 
 

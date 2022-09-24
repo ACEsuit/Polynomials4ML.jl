@@ -10,6 +10,7 @@ struct CYlmBasis{T}
    ppool_d::ArrayCache{SVector{3, Complex{T}}, 2}
 	pool_s::ArrayCache{SphericalCoords{T}, 1}
 	pool_t::ArrayCache{Complex{T}, 1}
+	pool_tr::ArrayCache{T, 1}
 end
 
 CYlmBasis(maxL::Integer, T::Type=Float64) = 
@@ -22,7 +23,8 @@ CYlmBasis(alp::ALPolynomials{T}) where {T} =
                ArrayCache{SVector{3, Complex{T}}, 1}(), 
                ArrayCache{SVector{3, Complex{T}}, 2}(), 
 					ArrayCache{SphericalCoords{T}, 1}(),
-					ArrayCache{Complex{T}, 1}() )
+					ArrayCache{Complex{T}, 1}(), 
+					ArrayCache{T, 1}() )
 
 Base.show(io::IO, basis::CYlmBasis) = 
       print(io, "CYlmBasis(L=$(maxL(basis)))")
@@ -114,7 +116,7 @@ function evaluate!(Y, basis::CYlmBasis,
 						 X::AbstractVector{<: AbstractVector})
 	L = maxL(basis)
 	S = acquire!(basis.pool_s, length(X))
-	map!(x -> cart2spher(x), parent(S), X)
+	map!(cart2spher, S, X)
 	P = evaluate(basis.alp, S)
 	cYlm!(Y, maxL(basis), S, P, basis)
 	release!(P)
@@ -237,39 +239,49 @@ function cYlm!(Y, L, S::AbstractVector{<: SphericalCoords}, P::AbstractMatrix, b
 	@assert length(P) >= sizeP(L)
 	@assert size(Y, 2) >= sizeY(L)
 	@assert size(Y, 1) >= nS 
-
 	t = acquire!(basis.pool_t, nS)
-	fill!(t, 1 / sqrt(2) + im * 0)
-	for l = 0:L 
-		i_yl0 = index_y(l, 0)
-		i_pl0 = index_p(l, 0)
-		for i = 1:nS
-			@assert abs(S[1].cosθ) <= 1.0
-			Y[i, i_yl0] = P[i, i_pl0] * t[i] 
-		end
+	co = acquire!(basis.pool_tr, nS)
+	si = acquire!(basis.pool_tr, nS)
+	for i = 1:nS
+		t[i] = 1 / sqrt(2) + im * 0
+		co[i] = S[i].cosθ
+		si[i] = S[i].sinθ
 	end
 
-   sig = 1
-	for m in 1:L
-		sig *= -1
-		for i = 1:nS
-			# t[i] =   exp(i *   m  * φ[i])   ... previously called ep 
-			# and the previous em = ± exp(i * (-m) * φ) becomes sig * conj(t[i])
-			t[i] *= S[i].cosφ + im * S[i].sinφ
-		end
-
-		for l in m:L
-			i_plm = index_p(l,m)
-			i_ylm⁺ = index_y(l,  m)
-			i_ylm⁻ = index_y(l, -m)
+	@inbounds begin 
+		for l = 0:L 
+			i_yl0 = index_y(l, 0)
+			i_pl0 = index_p(l, 0)
 			for i = 1:nS
-				p = P[i, i_plm]
-				Y[i, i_ylm⁻] = (sig * p) * conj(t[i])
-				Y[i, i_ylm⁺] = t[i] * p  
+				Y[i, i_yl0] = P[i, i_pl0] * t[i] 
 			end
 		end
-	end
 
+		sig = 1
+		for m in 1:L
+			sig *= -1
+			for i = 1:nS
+				# t[i] =   exp(i *   m  * φ[i])   ... previously called ep 
+				# and the previous em = ± exp(i * (-m) * φ) becomes sig * conj(t[i])
+				t[i] *= co[i] + im * si[i]
+			end
+
+			for l in m:L
+				i_plm = index_p(l,m)
+				i_ylm⁺ = index_y(l,  m)
+				i_ylm⁻ = index_y(l, -m)
+				for i = 1:nS
+					p = P[i, i_plm]
+					Y[i, i_ylm⁻] = (sig * p) * conj(t[i])
+					Y[i, i_ylm⁺] = t[i] * p  
+				end
+			end
+		end
+	end 
+
+	release!(t)
+	release!(co)
+	release!(si)
 	return Y
 end
 

@@ -201,7 +201,7 @@ end
 
 
 function evaluate!(P, alp::ALPolynomials, 
-                   S::AbstractVector{<: SphericalCoords})
+                   S::AbstractVector{<: SphericalCoords} )
 	L = alp.L 
 	A = alp.A 
 	B = alp.B 
@@ -211,37 +211,62 @@ function evaluate!(P, alp::ALPolynomials,
 	@assert size(P, 2) >= sizeP(L)
 	@assert size(P, 1) >= length(S)
 
-   t = acquire!(alp.pool_t, length(S)) # temp from the serial version 
-	t0 = sqrt(0.5/π)
-   i_p00 = index_p(0, 0)
-   for i=1:nS
-	   P[i, i_p00] = t[i] = t0  
-   end
-	if L == 0; return P; end
+   # NB: There are 3 minimal allocations here because a CachedArray is not 
+   #     a bitstype. Removing this allocation appears to improve the performance 
+   #     but around 1%, so not even close to worthwhile. 
+   _t = acquire!(alp.pool_t, length(S)) # temp from the serial version 
+   _co = acquire!(alp.pool_t, length(S)) 
+   _si = acquire!(alp.pool_t, length(S)) 
+   t = parent(_t)
+   co = parent(_co)
+   si = parent(_si)
 
-   for i = 1:nS
-	   P[i, index_p(1, 0)] = S[i].cosθ * sqrt(3) * t[i]
-	   t[i] = - sqrt(1.5) * S[i].sinθ * t[i]
-	   P[i, index_p(1, 1)] = t[i]
-   end
-
-	for l in 2:L
-		il = ((l*(l+1)) ÷ 2) + 1
-		ilm1 = il - l
-		ilm2 = ilm1 - l + 1
-		for m in 0:(l-2)
-         for i = 1:nS
-            P[i, il+m] = A[il+m] * (     S[i].cosθ * P[i, ilm1+m]
-                                         + B[il+m] * P[i, ilm2+m] )
-         end
-		end
+   @inbounds begin 
+      t0 = sqrt(0.5/π)
+      i_p00 = index_p(0, 0)
+      for i=1:nS
+         P[i, i_p00] = t[i] = t0  
+         co[i] = S[i].cosθ
+         si[i] = S[i].sinθ
+      end
+      if L == 0; return P; end
 
       for i = 1:nS
-         P[i, il+l-1] = sqrt(2 * (l - 1) + 3) * S[i].cosθ * t[i]
-         t[i] = -sqrt(1.0 + 0.5 / l) * S[i].sinθ * t[i]
-         P[i, il+l] = t[i]
+         P[i, index_p(1, 0)] = co[i] * sqrt(3) * t[i]
+         t[i] = - sqrt(1.5) * si[i] * t[i]
+         P[i, index_p(1, 1)] = t[i]
       end
-	end
 
+      for l in 2:L
+         il = ((l*(l+1)) ÷ 2) + 1
+         ilm1 = il - l
+         ilm2 = ilm1 - l + 1
+         for m in 0:(l-2)
+            i0 = il+m 
+            i1 = ilm1+m 
+            i2 = ilm2+m 
+            a = A[i0] 
+            b = B[i0] 
+            @simd for i = 1:nS
+               P[i, i0] = a * fma(co[i], P[i, i1], b * P[i, i2])
+            end
+         end
+
+         a = sqrt(2 * (l - 1) + 3)
+         b = -sqrt(1.0 + 0.5 / l)
+         i1 = il+l-1 
+         i2 = il+l 
+         @simd for i = 1:nS
+            @fastmath P[i, i1] = a * co[i] * t[i]
+            @fastmath t[i] = b * si[i] * t[i]
+            P[i, i2] = t[i]
+         end
+      end
+
+   end 
+
+   release!(_co)
+   release!(_si)
+   release!(_t)
 	return P
 end
