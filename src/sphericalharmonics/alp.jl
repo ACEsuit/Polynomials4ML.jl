@@ -13,7 +13,9 @@ struct ALPolynomials{T}
 	B::Vector{T}
 	pool::ArrayCache{T, 1}
 	ppool::ArrayCache{T, 2}
-   pool_t::ArrayCache{T, 1}
+   tmp_t::TempArray{T, 1}
+   tmp_co::TempArray{T, 1}
+   tmp_si::TempArray{T, 1}
 end
 
 
@@ -21,7 +23,9 @@ ALPolynomials(L::Integer, A::Vector{T}, B::Vector{T}) where {T}  =
 		ALPolynomials(L, A, B, 
                     ArrayCache{T, 1}(), 
                     ArrayCache{T, 2}(), 
-                    ArrayCache{T, 1}() )
+                    TempArray{T, 1}(), 
+						  TempArray{T, 1}(), 
+						  TempArray{T, 1}() )
 
 Base.length(alp::ALPolynomials) = sizeP(alp.L)
 
@@ -214,12 +218,9 @@ function evaluate!(P, alp::ALPolynomials,
    # NB: There are 3 minimal allocations here because a CachedArray is not 
    #     a bitstype. Removing this allocation appears to improve the performance 
    #     but around 1%, so not even close to worthwhile. 
-   _t = acquire!(alp.pool_t, length(S)) # temp from the serial version 
-   _co = acquire!(alp.pool_t, length(S)) 
-   _si = acquire!(alp.pool_t, length(S)) 
-   t = parent(_t)
-   co = parent(_co)
-   si = parent(_si)
+   t = acquire!(alp.tmp_t, length(S)) # temp from the serial version 
+   co = acquire!(alp.tmp_co, length(S)) 
+   si = acquire!(alp.tmp_si, length(S)) 
 
    @inbounds begin 
       t0 = sqrt(0.5/π)
@@ -265,8 +266,5 @@ function evaluate!(P, alp::ALPolynomials,
 
    end 
 
-   release!(_co)
-   release!(_si)
-   release!(_t)
 	return P
 end

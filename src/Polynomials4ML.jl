@@ -1,6 +1,8 @@
 module Polynomials4ML
 
 include("objectpools.jl")
+using Polynomials4ML.ObjectPools: TempArray, CachedArray, ArrayCache
+
 
 include("interface.jl")
 

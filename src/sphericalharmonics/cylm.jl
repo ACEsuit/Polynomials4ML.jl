@@ -1,3 +1,6 @@
+
+
+
 """
 complex spherical harmonics
 """
@@ -8,9 +11,10 @@ struct CYlmBasis{T}
    ppool::ArrayCache{Complex{T}, 2}
 	pool_d::ArrayCache{SVector{3, Complex{T}}, 1}
    ppool_d::ArrayCache{SVector{3, Complex{T}}, 2}
-	pool_s::ArrayCache{SphericalCoords{T}, 1}
-	pool_t::ArrayCache{Complex{T}, 1}
-	pool_tr::ArrayCache{T, 1}
+	tmp_s::TempArray{SphericalCoords{T}, 1}
+	tmp_t::TempArray{Complex{T}, 1}
+	tmp_sin::TempArray{T, 1}
+	tmp_cos::TempArray{T, 1}
 end
 
 CYlmBasis(maxL::Integer, T::Type=Float64) = 
@@ -22,9 +26,10 @@ CYlmBasis(alp::ALPolynomials{T}) where {T} =
                ArrayCache{Complex{T}, 2}(), 
                ArrayCache{SVector{3, Complex{T}}, 1}(), 
                ArrayCache{SVector{3, Complex{T}}, 2}(), 
-					ArrayCache{SphericalCoords{T}, 1}(),
-					ArrayCache{Complex{T}, 1}(), 
-					ArrayCache{T, 1}() )
+					TempArray{SphericalCoords{T}, 1}(),
+					TempArray{Complex{T}, 1}(), 
+					TempArray{T, 1}(), 
+					TempArray{T, 1}() )
 
 Base.show(io::IO, basis::CYlmBasis) = 
       print(io, "CYlmBasis(L=$(maxL(basis)))")
@@ -115,12 +120,11 @@ end
 function evaluate!(Y, basis::CYlmBasis, 
 						 X::AbstractVector{<: AbstractVector})
 	L = maxL(basis)
-	S = acquire!(basis.pool_s, length(X))
+	S = acquire!(basis.tmp_s, length(X))
 	map!(cart2spher, S, X)
 	P = evaluate(basis.alp, S)
 	cYlm!(Y, maxL(basis), S, P, basis)
 	release!(P)
-	release!(S)
 	return Y
 end
 
@@ -239,16 +243,17 @@ function cYlm!(Y, L, S::AbstractVector{<: SphericalCoords}, P::AbstractMatrix, b
 	@assert length(P) >= sizeP(L)
 	@assert size(Y, 2) >= sizeY(L)
 	@assert size(Y, 1) >= nS 
-	t = acquire!(basis.pool_t, nS)
-	co = acquire!(basis.pool_tr, nS)
-	si = acquire!(basis.pool_tr, nS)
-	for i = 1:nS
-		t[i] = 1 / sqrt(2) + im * 0
-		co[i] = S[i].cosθ
-		si[i] = S[i].sinθ
-	end
+	t = acquire!(basis.tmp_t, nS)
+	co = acquire!(basis.tmp_cos, nS)
+	si = acquire!(basis.tmp_sin, nS)
 
 	@inbounds begin 
+		for i = 1:nS
+			t[i] = 1 / sqrt(2) + im * 0
+			co[i] = S[i].cosφ
+			si[i] = S[i].sinφ
+		end
+	
 		for l = 0:L 
 			i_yl0 = index_y(l, 0)
 			i_pl0 = index_p(l, 0)
@@ -279,9 +284,6 @@ function cYlm!(Y, L, S::AbstractVector{<: SphericalCoords}, P::AbstractMatrix, b
 		end
 	end 
 
-	release!(t)
-	release!(co)
-	release!(si)
 	return Y
 end
 
