@@ -192,11 +192,14 @@ basis = CYlmBasis(5)
 R = [ rand_sphere() for _ = 1:32 ] 
 
 Yb = evaluate(basis, R)
+Yb1, dYb1 = evaluate_ed(basis, R)
 
 Ys = copy(Yb)
+dYs = copy(dYb1)
 for i = 1:length(R)
    Ys[i, :] = evaluate(basis, R[i])
 end
 
-Yb ≈ Ys
+Yb ≈ Ys ≈ Yb1 
+dYs ≈ dYb1 
 

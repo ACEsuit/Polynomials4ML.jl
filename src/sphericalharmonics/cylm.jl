@@ -129,31 +129,50 @@ function evaluate!(Y, basis::CYlmBasis,
 end
 
 
-function evaluate_d(SH::CYlmBasis, R::AbstractVector)
+function evaluate_d(SH::CYlmBasis, 
+						 R::Union{AbstractVector{<: Real}, 
+						 			 AbstractVector{<: AbstractVector}} )
 	B, dB = evaluate_ed(SH, R) 
 	release!(B)
 	return dB 
 end 
 
-function evaluate_ed(SH::CYlmBasis, R::AbstractVector)
+function evaluate_ed(SH::CYlmBasis, R::AbstractVector{<: Real})
 	Y = acquire!(SH.pool, length(SH), _valtype(SH, R))
 	dY = acquire!(SH.pool_d, length(SH), _gradtype(SH, R))
 	evaluate_ed!(parent(Y), parent(dY), SH, R)
 	return Y, dY
 end
 
-function evaluate_ed!(Y, dY, SH::CYlmBasis, R::AbstractVector)
+function evaluate_ed!(Y, dY, SH::CYlmBasis, R::AbstractVector{<: Real})
 	L = maxL(SH)
 	S = cart2spher(R)
 	P, dP = _evaluate_ed(SH.alp, S)
-	cYlm_ed!(Y, dY, maxL(SH), S, P, dP, SH)
+	cYlm_ed!(Y, dY, maxL(SH), S, P, dP)
 	release!(P)
 	release!(dP)
 	return Y, dY
 end
 
 
+function evaluate_ed(SH::CYlmBasis, R::AbstractVector{<: AbstractVector})
+	nR = length(R); nY = length(SH)
+	Y = acquire!(SH.ppool, (nR, nY), _valtype(SH, R[1]))
+	dY = acquire!(SH.ppool_d, (nR, nY), _gradtype(SH, R[1]))
+	evaluate_ed!(parent(Y), parent(dY), SH, R)
+	return Y, dY
+end
 
+function evaluate_ed!(Y, dY, SH::CYlmBasis, R::AbstractVector{<: AbstractVector})
+	L = maxL(SH)
+	S = acquire!(SH.tmp_s, length(R))
+	map!(cart2spher, S, R)
+	P, dP = _evaluate_ed(SH.alp, S)
+	cYlm_ed!(Y, dY, maxL(SH), S, P, dP, SH)
+	release!(P)
+	release!(dP)
+	return Y, dY
+end
 
 # ---------------------- serial evaluation code 
 
@@ -285,5 +304,83 @@ function cYlm!(Y, L, S::AbstractVector{<: SphericalCoords}, P::AbstractMatrix, b
 	end 
 
 	return Y
+end
+
+
+
+"""
+evaluate gradients of complex spherical harmonics
+"""
+function cYlm_ed!(Y, dY, L, S::AbstractVector{<: SphericalCoords}, 
+				      P::AbstractMatrix, dP::AbstractMatrix, 
+						basis::CYlmBasis)
+
+   nS = length(S)
+	@assert size(P, 2) >= sizeP(L)
+	@assert size(P, 1) >= nS
+	@assert size(dP, 2) >= sizeP(L)
+	@assert size(dP, 1) >= nS
+	@assert size(Y, 2) >= sizeY(L)
+	@assert size(Y, 1) >= nS
+	@assert size(dY, 2) >= sizeY(L)
+	@assert size(dY, 1) >= nS
+	t = acquire!(basis.tmp_t, nS)
+	co = acquire!(basis.tmp_cos, nS)
+	si = acquire!(basis.tmp_sin, nS)
+
+	@inbounds begin 
+		for i = 1:nS 
+			t[i] = 1 / sqrt(2) + im * 0
+			co[i] = S[i].cosφ
+			si[i] = S[i].sinφ
+		end
+	end
+	
+	# m = 0 case
+	ep = 1 / sqrt(2)
+	for l = 0:L
+		i_yl0 = index_y(l, 0)
+		i_pl0 = index_p(l, 0)
+		for i = 1:nS
+			Y[i, i_yl0] = P[i_pl0] * t[i]
+			dY[i, i_yl0] = dspher_to_dcart(S[i], 0.0, dP[i_pl0] * t[i])
+		end
+	end
+
+   sig = 1
+	for m in 1:L
+		sig *= -1
+		for i = 1:nS 
+			# ep_fact = S.cosφ + im * S.sinφ
+			# ep *= ep_fact            # ep =   exp(i *   m  * φ)
+			# em = sig * conj(ep)      # ep = ± exp(i * (-m) * φ)
+			t[i] *= co[i] + im * si[i]
+		end
+
+		# dep_dφ = im *   m  * ep
+		# dem_dφ = im * (-m) * em
+		for l in m:L
+			i_plm = index_p(l,m)
+			i_ylm⁺ = index_y(l,  m)
+			i_ylm⁻ = index_y(l, -m)
+			for i = 1:nS 
+				em = sig * conj(t[i])
+				ep = t[i] 
+
+				p_div_sinθ = P[i, i_plm] 
+				Y[i, i_ylm⁻] = em * p_div_sinθ * si[i] 
+				Y[i, i_ylm⁺] = ep * p_div_sinθ * si[i]
+
+				dp_dθ = dP[i, i_plm]
+				dep_dφ = im *   m  * ep
+				dem_dφ = im * (-m) * em
+
+				dY[i, i_ylm⁻] = dspher_to_dcart(S[i], dem_dφ * p_div_sinθ, em * dp_dθ)
+				dY[i, i_ylm⁺] = dspher_to_dcart(S[i], dep_dφ * p_div_sinθ, ep * dp_dθ)				
+			end 
+		end
+	end # @inbounds 
+
+	return Y, dY
 end
 

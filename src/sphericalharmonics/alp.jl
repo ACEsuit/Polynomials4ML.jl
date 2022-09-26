@@ -14,6 +14,7 @@ struct ALPolynomials{T}
 	pool::ArrayCache{T, 1}
 	ppool::ArrayCache{T, 2}
    tmp_t::TempArray{T, 1}
+   tmp_td::TempArray{T, 1}
    tmp_co::TempArray{T, 1}
    tmp_si::TempArray{T, 1}
 end
@@ -25,6 +26,7 @@ ALPolynomials(L::Integer, A::Vector{T}, B::Vector{T}) where {T}  =
                     ArrayCache{T, 2}(), 
                     TempArray{T, 1}(), 
 						  TempArray{T, 1}(), 
+						  TempArray{T, 1}(), 
 						  TempArray{T, 1}() )
 
 Base.length(alp::ALPolynomials) = sizeP(alp.L)
@@ -34,8 +36,6 @@ import Base.==
 		((B1.L == B2.L) && (B1.A ≈ B2.A) && (B1.B ≈ B2.B))
 
 
-_valtype(alp::ALPolynomials{T}, x::SphericalCoords{S}) where {T, S} = 
-			promote_type(T, S) 
 
 
 # ---------------------- Indexing
@@ -80,6 +80,9 @@ end
 
 # -------------------- evaluation interface
 
+_valtype(alp::ALPolynomials{T}, x::SphericalCoords{S}) where {T, S} = 
+			promote_type(T, S) 
+
 function evaluate(alp::ALPolynomials, S::SphericalCoords) 
 	P = acquire!(alp.pool, length(alp), _valtype(alp, S))
 	evaluate!(parent(P), alp, S)
@@ -96,7 +99,15 @@ function _evaluate_ed(alp::ALPolynomials, S::SphericalCoords)
 	VT = _valtype(alp, S)
 	P = acquire!(alp.pool, length(alp), VT)
 	dP = acquire!(alp.pool, length(alp), VT)
-	_evaluate_ed!(parent(P), parent(dP), alp::ALPolynomials, S::SphericalCoords)
+	_evaluate_ed!(parent(P), parent(dP), alp, S)
+	return P, dP 
+end
+
+function _evaluate_ed(alp::ALPolynomials, S::AbstractVector{<: SphericalCoords}) 
+	VT = _valtype(alp, S[1])
+	P = acquire!(alp.ppool, (length(S), length(alp)), VT)
+	dP = acquire!(alp.ppool, (length(S), length(alp)), VT)
+	_evaluate_ed!(parent(P), parent(dP), alp, S)
 	return P, dP 
 end
 
@@ -267,4 +278,98 @@ function evaluate!(P, alp::ALPolynomials,
    end 
 
 	return P
+end
+
+
+
+
+function _evaluate_ed!(P, dP, alp::ALPolynomials, S::AbstractVector{<: SphericalCoords})
+	L = alp.L 
+	A = alp.A 
+	B = alp.B 
+   nS = length(S) 
+	@assert length(A) >= sizeP(L)
+	@assert length(B) >= sizeP(L)
+	@assert size(P, 2) >= sizeP(L)
+	@assert size(P, 1) >= length(S)
+	@assert size(dP, 2) >= sizeP(L)
+	@assert size(dP, 1) >= length(S)
+
+   # t = 0.0 # acquire!(alp.tmp_t, length(S)) # temp from the serial version 
+   td = acquire!(alp.tmp_td, length(S)) # temp_d from the serial version 
+   co = acquire!(alp.tmp_co, length(S)) 
+   si = acquire!(alp.tmp_si, length(S)) 
+
+	t0 = sqrt(0.5/π)
+	t = acquire!(alp.tmp_t, length(S)) # temp_d from the serial version  
+	
+	@inbounds begin 
+		i_p00 = index_p(0, 0)
+		for i = 1:nS 
+			co[i] = S[i].cosθ 
+			si[i] = S[i].sinθ
+			P[i, i_p00] = t0    # temp = sqrt(0.5/π)
+		   dP[i, i_p00] = td[i] = 0.0	
+		end
+	
+		if L == 0; return P, dP; end
+
+		i_p10 = index_p(1, 0)
+		i_p11 = index_p(1, 1)
+		for i = 1:nS 
+			P[i, i_p10] = co[i] * sqrt(3) * t0
+			dP[i, i_p10] = - si[i] * sqrt(3) * t0 + co[i] * sqrt(3) * td[i] 
+			t[i] = - sqrt(1.5) * t[i]
+			td1 = - sqrt(1.5) * (co[i] * t0 + si[i] * td[i])
+			P[i, i_p11] = t[i]
+			dP[i, i_p11] = td[i] = td1
+		end
+
+
+		for l in 2:L
+			m = 0
+			i_plm = index_p(l, m)
+			i_pl⁻m = index_p(l-1, m)
+			i_pl⁻⁻m = index_p(l-2, m)
+			A_lm = A[i_plm]
+			B_lm = B[i_plm]
+			for i = 1:nS 
+				P[i, i_plm] = A_lm * (co[i] * P[i, i_pl⁻m] + B_lm * P[i, i_pl⁻⁻m] )
+				dP[i_plm] = A_lm * (- si[i] * P[i, i_pl⁻m] + co[i] * dP[i, i_pl⁻m]
+			            			   + B_lm * dP[i, i_pl⁻⁻m] )
+			end
+
+			for m in 1:(l-2)
+				i_plm = index_p(l, m)
+				i_pl⁻m = index_p(l-1, m)
+				i_pl⁻⁻m = index_p(l-2, m)
+				A_lm = A[i_plm]
+				B_lm = B[i_plm]
+				for i = 1:nS 
+					P[i, i_plm] = A_lm * ( co[i] * P[i, i_pl⁻m] + B_lm * P[i, i_pl⁻⁻m] )
+					dP[i, i_plm] = A_lm * ( - si[i]^2 * P[i, i_pl⁻m]
+												   + co[i] * dP[i_pl⁻m]
+				            				   + B_lm * dP[i, i_pl⁻⁻m] )
+				end
+			end
+
+			m = l-1
+			i_plm = index_p(l, m)
+
+			for i = 1:nS
+				P[i, i_plm] = sqrt(2 * m + 3) * co[i] * t[i]
+				dP[i, i_plm] = sqrt(2 * m + 3) * (-si[i]^2 * t[i] + co[i] * td[i] )
+			end
+
+			i_pll = index_p(l, l)
+			for i = 1:nS 
+				t[i] = - sqrt(1.0 + 0.5 / l) * si[i] * t[i]
+				td[i] = - sqrt(1.0 + 0.5 / l) * si[i] * (co[i] * t[i]  + td[i])
+				P[i, i_pll] = t[i]
+				dP[i, i_pll] = td[i]
+			end
+		end
+	end
+
+	return P, dP
 end
