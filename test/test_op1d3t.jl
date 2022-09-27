@@ -32,6 +32,7 @@ test_derivatives(legendre, () -> 2*rand()-1)
 ##
 
 for ntest = 1:3
+   local N, G
    α = 1 + rand() 
    β = 1 + rand() 
    @info("Test the Random Jacobi Polynomials")

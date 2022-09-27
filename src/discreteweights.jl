@@ -76,4 +76,7 @@ function orthpolybasis(N::Integer, W::DiscreteWeights{TW}; TX = Float64) where {
 end
 
 
-
+orthpolybasis(N::Integer, X::AbstractVector{<: Real}, W::AbstractVector{<: Real}, 
+              normalizeW=false; kwargs...) = 
+      orthpolybasis(N, DiscreteWeights(X, W, normalizeW); kwargs...)
+              
