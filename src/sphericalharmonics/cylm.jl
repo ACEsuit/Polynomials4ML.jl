@@ -312,9 +312,8 @@ end
 evaluate gradients of complex spherical harmonics
 """
 function cYlm_ed!(Y, dY, L, S::AbstractVector{<: SphericalCoords}, 
-				      P::AbstractMatrix, dP::AbstractMatrix, 
-						basis::CYlmBasis)
-
+					      P::AbstractMatrix, dP::AbstractMatrix, 
+							basis::CYlmBasis)
    nS = length(S)
 	@assert size(P, 2) >= sizeP(L)
 	@assert size(P, 1) >= nS
@@ -324,63 +323,58 @@ function cYlm_ed!(Y, dY, L, S::AbstractVector{<: SphericalCoords},
 	@assert size(Y, 1) >= nS
 	@assert size(dY, 2) >= sizeY(L)
 	@assert size(dY, 1) >= nS
-	t = acquire!(basis.tmp_t, nS)
+	ep = acquire!(basis.tmp_t, nS)
 	co = acquire!(basis.tmp_cos, nS)
 	si = acquire!(basis.tmp_sin, nS)
 
-	@inbounds begin 
-		for i = 1:nS 
-			t[i] = 1 / sqrt(2) + im * 0
-			co[i] = S[i].cosφ
-			si[i] = S[i].sinφ
-		end
-	end
-	
 	# m = 0 case
-	ep = 1 / sqrt(2)
-	for l = 0:L
-		i_yl0 = index_y(l, 0)
-		i_pl0 = index_p(l, 0)
-		for i = 1:nS
-			Y[i, i_yl0] = P[i_pl0] * t[i]
-			dY[i, i_yl0] = dspher_to_dcart(S[i], 0.0, dP[i_pl0] * t[i])
-		end
-	end
+	# ep = 1 / sqrt(2)
+	fill!(ep, 1 / sqrt(2))
 
-   sig = 1
-	for m in 1:L
-		sig *= -1
-		for i = 1:nS 
-			# ep_fact = S.cosφ + im * S.sinφ
-			# ep *= ep_fact            # ep =   exp(i *   m  * φ)
-			# em = sig * conj(ep)      # ep = ± exp(i * (-m) * φ)
-			t[i] *= co[i] + im * si[i]
-		end
+	@inbounds begin 
 
-		# dep_dφ = im *   m  * ep
-		# dem_dφ = im * (-m) * em
-		for l in m:L
-			i_plm = index_p(l,m)
-			i_ylm⁺ = index_y(l,  m)
-			i_ylm⁻ = index_y(l, -m)
+		for l = 0:L
+			i_yl0 = index_y(l, 0)
+			i_pl0 = index_p(l, 0)
 			for i = 1:nS 
-				em = sig * conj(t[i])
-				ep = t[i] 
-
-				p_div_sinθ = P[i, i_plm] 
-				Y[i, i_ylm⁻] = em * p_div_sinθ * si[i] 
-				Y[i, i_ylm⁺] = ep * p_div_sinθ * si[i]
-
-				dp_dθ = dP[i, i_plm]
-				dep_dφ = im *   m  * ep
-				dem_dφ = im * (-m) * em
-
-				dY[i, i_ylm⁻] = dspher_to_dcart(S[i], dem_dφ * p_div_sinθ, em * dp_dθ)
-				dY[i, i_ylm⁺] = dspher_to_dcart(S[i], dep_dφ * p_div_sinθ, ep * dp_dθ)				
-			end 
+				Y[i, i_yl0] = P[i, i_pl0] * ep[i]
+				dY[i, i_yl0] = dspher_to_dcart(S[i], 0.0, dP[i, i_pl0] * ep[i])
+			end
 		end
-	end # @inbounds 
+
+		sig = 1
+		# ep_fact = S.cosφ + im * S.sinφ
+
+		for m in 1:L
+			sig *= -1
+			# ep *= ep_fact            # ep =   exp(i *   m  * φ)
+			for i = 1:nS
+				ep[i] *= S[i].cosφ + im * S[i].sinφ
+			end
+			# em = sig * conj(ep)      # em = ± exp(i * (-m) * φ)
+			# dep_dφ = im *   m  * ep
+			# dem_dφ = im * (-m) * em
+			for l in m:L
+				i_plm = index_p(l,m)
+				i_ylm⁺ = index_y(l,  m)
+				i_ylm⁻ = index_y(l, -m)
+				for i = 1:nS 
+					em = sig * conj(ep[i])
+					dep_dφ = im *   m  * ep[i]
+					dem_dφ = im * (-m) * em
+
+					p_div_sinθ = P[i, i_plm]
+					Y[i, i_ylm⁻] = em * p_div_sinθ * S[i].sinθ
+					Y[i, i_ylm⁺] = ep[i] * p_div_sinθ * S[i].sinθ
+
+					dp_dθ = dP[i, i_plm]
+					dY[i, i_ylm⁻] = dspher_to_dcart(S[i], dem_dφ * p_div_sinθ, em * dp_dθ)
+					dY[i, i_ylm⁺] = dspher_to_dcart(S[i], dep_dφ * p_div_sinθ, ep[i] * dp_dθ)
+				end
+			end
+		end
+
+	end 
 
 	return Y, dY
 end
-

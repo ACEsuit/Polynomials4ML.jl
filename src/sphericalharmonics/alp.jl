@@ -151,7 +151,7 @@ end
 
 # this doesn't use the standard name because it doesn't 
 # technically perform the derivative w.r.t. S, but w.r.t. θ
-# further, P doesn't store P but (P if m = 0) or (P * sinθ if m > 0)
+# further, P doesn't store P but (P if m == 0) or (P * sinθ if m > 0)
 # this is done for numerical stability 
 function _evaluate_ed!(P, dP, alp::ALPolynomials, S::SphericalCoords)
 	L = alp.L 
@@ -295,80 +295,78 @@ function _evaluate_ed!(P, dP, alp::ALPolynomials, S::AbstractVector{<: Spherical
 	@assert size(dP, 2) >= sizeP(L)
 	@assert size(dP, 1) >= length(S)
 
-   # t = 0.0 # acquire!(alp.tmp_t, length(S)) # temp from the serial version 
-   td = acquire!(alp.tmp_td, length(S)) # temp_d from the serial version 
-   co = acquire!(alp.tmp_co, length(S)) 
-   si = acquire!(alp.tmp_si, length(S)) 
+	temp1 = acquire!(alp.tmp_t, length(S))
+	temp_d = acquire!(alp.tmp_td, length(S))
+	cosθ = acquire!(alp.tmp_co, length(S))
+	sinθ = acquire!(alp.tmp_si, length(S))
 
-	t0 = sqrt(0.5/π)
-	t = acquire!(alp.tmp_t, length(S)) # temp_d from the serial version  
-	
-	@inbounds begin 
-		i_p00 = index_p(0, 0)
+	temp = sqrt(0.5/π)
+	i_p00 = index_p(0, 0)
+	for i = 1:nS 
+		cosθ[i] = S[i].cosθ
+		sinθ[i] = S[i].sinθ
+		P[i, i_p00] = temp
+		temp_d[i] = 0.0
+		dP[i, i_p00] = temp_d[i]
+	end
+	if L == 0; return P, dP; end
+
+	i_p10 = index_p(1, 0)
+	i_p11 = index_p(1, 1)
+	for i = 1:nS 
+		P[i, i_p10] = cosθ[i] * sqrt(3) * temp
+		dP[i, i_p10] = -sinθ[i] * sqrt(3) * temp + cosθ[i] * sqrt(3) * temp_d[i]
+		temp1[i], temp_d[i] = ( - sqrt(1.5) * temp,
+								- sqrt(1.5) * (cosθ[i] * temp + sinθ[i] * temp_d[i]) )
+		P[i, i_p11] = temp1[i]
+		dP[i, i_p11] = temp_d[i]
+	end
+
+	for l in 2:L
+		m = 0
+		i_plm = index_p(l, m)
+		i_pl⁻¹m = index_p(l-1, m)
+		i_pl⁻²m = index_p(l-2, m)
 		for i = 1:nS 
-			co[i] = S[i].cosθ 
-			si[i] = S[i].sinθ
-			P[i, i_p00] = t0    # temp = sqrt(0.5/π)
-		   dP[i, i_p00] = td[i] = 0.0	
-		end
-	
-		if L == 0; return P, dP; end
+			P[i, i_plm] =
+					A[i_plm] * (     cosθ[i] * P[i, i_pl⁻¹m]
+									+ B[i_plm] * P[i, i_pl⁻²m] )
+			dP[i, i_plm] =
+				A[i_plm] * (
+								- sinθ[i] * P[i, i_pl⁻¹m]
+								+ cosθ[i] * dP[i, i_pl⁻¹m]
+								+ B[i_plm] * dP[i, i_pl⁻²m] )
+		end 
 
-		i_p10 = index_p(1, 0)
-		i_p11 = index_p(1, 1)
+		for m in 1:(l-2)
+			i_plm = index_p(l, m)
+			i_pl⁻¹m = index_p(l-1, m)
+			i_pl⁻²m = index_p(l-2, m)
+			for i = 1:nS 
+				P[i, i_plm] =
+						A[i_plm] * (     cosθ[i] * P[i, i_pl⁻¹m]
+										+ B[i_plm] * P[i, i_pl⁻²m] )
+				dP[i, i_plm] =
+					A[i_plm] * (
+									- sinθ[i]^2 * P[i, i_pl⁻¹m]
+									+ cosθ[i] * dP[i, i_pl⁻¹m]
+									+ B[i_plm] * dP[i, i_pl⁻²m] )
+			end 
+		end
+
+		i_pll⁻¹ = index_p(l, l-1)
+		i_pll = index_p(l, l)
 		for i = 1:nS 
-			P[i, i_p10] = co[i] * sqrt(3) * t0
-			dP[i, i_p10] = - si[i] * sqrt(3) * t0 + co[i] * sqrt(3) * td[i] 
-			t[i] = - sqrt(1.5) * t[i]
-			td1 = - sqrt(1.5) * (co[i] * t0 + si[i] * td[i])
-			P[i, i_p11] = t[i]
-			dP[i, i_p11] = td[i] = td1
+			P[i, i_pll⁻¹] = sqrt(2 * (l - 1) + 3) * cosθ[i] * temp1[i]
+			dP[i, i_pll⁻¹] = sqrt(2 * (l - 1) + 3) * (
+												-sinθ[i]^2 * temp1[i] + cosθ[i] * temp_d[i] )
+			(temp1[i], temp_d[i]) = (
+						-sqrt(1.0+0.5/l) * sinθ[i] * temp1[i],
+						-sqrt(1.0+0.5/l) * (cosθ[i] * temp1[i] * sinθ[i] + sinθ[i] * temp_d[i]) )
+			P[i, i_pll] = temp1[i]
+			dP[i, i_pll] = temp_d[i]
 		end
 
-
-		for l in 2:L
-			m = 0
-			i_plm = index_p(l, m)
-			i_pl⁻m = index_p(l-1, m)
-			i_pl⁻⁻m = index_p(l-2, m)
-			A_lm = A[i_plm]
-			B_lm = B[i_plm]
-			for i = 1:nS 
-				P[i, i_plm] = A_lm * (co[i] * P[i, i_pl⁻m] + B_lm * P[i, i_pl⁻⁻m] )
-				dP[i_plm] = A_lm * (- si[i] * P[i, i_pl⁻m] + co[i] * dP[i, i_pl⁻m]
-			            			   + B_lm * dP[i, i_pl⁻⁻m] )
-			end
-
-			for m in 1:(l-2)
-				i_plm = index_p(l, m)
-				i_pl⁻m = index_p(l-1, m)
-				i_pl⁻⁻m = index_p(l-2, m)
-				A_lm = A[i_plm]
-				B_lm = B[i_plm]
-				for i = 1:nS 
-					P[i, i_plm] = A_lm * ( co[i] * P[i, i_pl⁻m] + B_lm * P[i, i_pl⁻⁻m] )
-					dP[i, i_plm] = A_lm * ( - si[i]^2 * P[i, i_pl⁻m]
-												   + co[i] * dP[i_pl⁻m]
-				            				   + B_lm * dP[i, i_pl⁻⁻m] )
-				end
-			end
-
-			m = l-1
-			i_plm = index_p(l, m)
-
-			for i = 1:nS
-				P[i, i_plm] = sqrt(2 * m + 3) * co[i] * t[i]
-				dP[i, i_plm] = sqrt(2 * m + 3) * (-si[i]^2 * t[i] + co[i] * td[i] )
-			end
-
-			i_pll = index_p(l, l)
-			for i = 1:nS 
-				t[i] = - sqrt(1.0 + 0.5 / l) * si[i] * t[i]
-				td[i] = - sqrt(1.0 + 0.5 / l) * si[i] * (co[i] * t[i]  + td[i])
-				P[i, i_pll] = t[i]
-				dP[i, i_pll] = td[i]
-			end
-		end
 	end
 
 	return P, dP

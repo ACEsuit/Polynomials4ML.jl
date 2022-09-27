@@ -182,24 +182,43 @@ end
 println()
 
 
-## 
 
+##
 
-@info("Check consistency of standard and batched evaluation ")
-
+@info("Check consistency of standard and batched ALP evaluation ")
 using Polynomials4ML: rand_sphere
 basis = CYlmBasis(5)
 R = [ rand_sphere() for _ = 1:32 ] 
+
+S = cart2spher.(R)
+P1, dP1 = Polynomials4ML._evaluate_ed(basis.alp, S)
+P2 = copy(P1) 
+dP2 = copy(dP1)
+
+for i = 1:length(R)
+   P2[i, :], dP2[i, :] = Polynomials4ML._evaluate_ed(basis.alp, S[i])
+end
+
+println_slim(@test P2 ≈ P1)
+println_slim(@test dP2 ≈ dP2)
+
+## 
+
+@info("Check consistency of standard and batched Ylm evaluation ")
 
 Yb = evaluate(basis, R)
 Yb1, dYb1 = evaluate_ed(basis, R)
 
 Ys = copy(Yb)
-dYs = copy(dYb1)
+Ys2 = copy(Ys)
+dYs2 = copy(dYb1)
+
 for i = 1:length(R)
    Ys[i, :] = evaluate(basis, R[i])
+   Ys2[i, :], dYs2[i, :] = evaluate_ed(basis, R[i])
 end
 
-Yb ≈ Ys ≈ Yb1 
-dYs ≈ dYb1 
+println_slim(@test Yb ≈ Ys ≈ Ys2 ≈ Yb1) 
+println_slim(@test dYb1 ≈ dYs2)
 
+##
