@@ -54,20 +54,14 @@ function ArrayCache{T, N}() where {T, N}
 end
 
 
-acquire!(c::ArrayCache{T, 1}, len::Integer, ::Type{T}) where {T} = 
-         acquire!(c, (len,))
+acquire!(c::ArrayCache, len::Integer, args...) = 
+         acquire!(c, (len,), args...)
 
-acquire!(c::ArrayCache{T, 1}, len::Integer) where {T} = 
-         acquire!(c, (len,))
-
-acquire!(c::ArrayCache{T, 1}, len::Integer, ::Type{S}) where {T, S} =
-         Vector{S}(undef, len)
+acquire!(c::ArrayCache{T, N}, sz::NTuple{N, <: Integer}, ::Type{S}) where {N, T, S} =
+         Array{S, N}(undef, sz)
 
 acquire!(c::ArrayCache{T, N}, sz::NTuple{N, <: Integer}, ::Type{T}) where {T, N} = 
-         acquire!(c, sz) 
-
-# acquire!(c::ArrayCache{T, N}, sz::NTuple{N, <: Integer}, ::Type{S}) where {T, N, S} =
-#          Array{S, N}(undef, sz)
+         acquire!(c, sz)
 
 function acquire!(c::ArrayCache{T, N}, sz::NTuple{N, <: Integer}) where {T, N}
    stack = c.cache[threadid()]
