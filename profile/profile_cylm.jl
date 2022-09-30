@@ -22,11 +22,11 @@ time_batched!(P_batched, basis, X)
 
 ## 
 
-@profview let basis = basis, X = X, P_batched = P_batched 
-   for n = 1:30_000 
-      time_batched!(P_batched, basis, X)
-   end
-end
+# @profview let basis = basis, X = X, P_batched = P_batched 
+#    for n = 1:30_000 
+#       time_batched!(P_batched, basis, X)
+#    end
+# end
 
 ##
 
@@ -48,11 +48,11 @@ time_batched!(P_batched, alp, S)
 
 ##
 
-@profview let alp = alp, S = S, P_batched = P_batched 
-   for n = 1:100_000 
-      time_batched!(P_batched, alp, S)
-   end
-end
+# @profview let alp = alp, S = S, P_batched = P_batched 
+#    for n = 1:100_000 
+#       time_batched!(P_batched, alp, S)
+#    end
+# end
 
 ##
 
@@ -183,8 +183,8 @@ Yi = imag.(Y)
 
 
 
-@profview let Y= Y, L=L, cosθ=cosθ, sinθ=sinθ, P=P, t =t 
-   for n = 1:50_000 
-      _cYlm!(Y, L, cosθ, sinθ, P, t)
-   end
-end
+# @profview let Y= Y, L=L, cosθ=cosθ, sinθ=sinθ, P=P, t =t 
+#    for n = 1:50_000 
+#       _cYlm!(Y, L, cosθ, sinθ, P, t)
+#    end
+# end

@@ -2,9 +2,6 @@
 
 using StaticArrays, LinearAlgebra
 
-import Polynomials4ML.ObjectPools: acquire!, release!, 
-				ArrayCache, CachedArray
-
 export CYlmBasis
 
 
