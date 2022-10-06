@@ -260,7 +260,7 @@ function evaluate!(P, alp::ALPolynomials,
             a = A[i0] 
             b = B[i0] 
             @simd for i = 1:nS
-               P[i, i0] = a * fma(co[i], P[i, i1], b * P[i, i2])
+               P[i, i0] = a * muladd(co[i], P[i, i1], b * P[i, i2])
             end
          end
 
@@ -268,7 +268,7 @@ function evaluate!(P, alp::ALPolynomials,
          b = -sqrt(1.0 + 0.5 / l)
          i1 = il+l-1 
          i2 = il+l 
-         @simd for i = 1:nS
+         for i = 1:nS
             @fastmath P[i, i1] = a * co[i] * t[i]
             @fastmath t[i] = b * si[i] * t[i]
             P[i, i2] = t[i]
