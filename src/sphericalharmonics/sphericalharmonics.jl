@@ -55,6 +55,7 @@ include("alp.jl")
 
 include("cylm.jl")
 
+include("rylm.jl")
 
 # ---------------------------- Auxiliary functions 
 
