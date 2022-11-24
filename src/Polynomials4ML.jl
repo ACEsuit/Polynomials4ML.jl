@@ -8,6 +8,8 @@ include("orthopolybasis.jl")
 include("discreteweights.jl")
 include("jacobiweights.jl")
 
+include("monomials.jl")
+
 include("trig.jl")
 include("sphericalharmonics/sphericalharmonics.jl")
 

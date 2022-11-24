@@ -28,6 +28,8 @@ OrthPolyBasis1D3T(A, B, C) = OrthPolyBasis1D3T(A, B, C, Dict{String, Any}())
 
 export OrthPolyBasis1D3T
 
+natural_indices(basis::OrthPolyBasis1D3T) = 0:length(basis.A)-1
+
 Base.length(basis::OrthPolyBasis1D3T) = length(basis.A)
 
 # ----------------- interface functions 
@@ -121,16 +123,16 @@ function evaluate!(P, basis::OrthPolyBasis1D3T, X::AbstractVector)
       @inbounds for i = 1:nX 
          P[i, 2] = basis.A[2] * X[i] + basis.B[2]
       end
-      for n = 3:N
+      for n = 3:N    # TODO -> try @threads here 
          an = basis.A[n]; bn = basis.B[n]; cn = basis.C[n]
-         @inbounds @avx for i = 1:nX 
-            p = fma(X[i], an, bn)
-            P[i, n] = fma(p, P[i, n-1], cn * P[i, n-2])
+         @inbounds @simd ivdep for i = 1:nX 
+            p = muladd(X[i], an, bn)
+            P[i, n] = muladd(p, P[i, n-1], cn * P[i, n-2])
          end
       end
    end
    return P
-end
+end    
 
 
 
@@ -156,11 +158,11 @@ function evaluate_ed!(P, dP, basis::OrthPolyBasis1D3T, X::AbstractVector)
          end
          for n = 3:N
             an = basis.A[n]; bn = basis.B[n]; cn = basis.C[n]
-            @avx for i = 1:nX 
-               axb = fma(an, X[i], bn)
-               P[i, n] = fma(axb, P[i, n-1], cn * P[i, n-2]) 
-               q = fma(cn,  dP[i, n-2], an * P[i, n-1])
-               dP[i, n] = fma(axb, dP[i, n-1], q)
+            @simd ivdep for i = 1:nX 
+               axb = muladd(an, X[i], bn)
+               P[i, n] = muladd(axb, P[i, n-1], cn * P[i, n-2]) 
+               q = muladd(cn,  dP[i, n-2], an * P[i, n-1])
+               dP[i, n] = muladd(axb, dP[i, n-1], q)
             end
             # P[n] = axb * P[n-1] + basis.C[n] * P[n-2]
             # dP[n] = axb * dP[n-1] + basis.C[n] * dP[n-2] + basis.A[n] * P[n-1]
@@ -197,14 +199,14 @@ function evaluate_ed2!(P, dP, ddP, basis::OrthPolyBasis1D3T, X::AbstractVector)
          end
          for n = 3:N
             an = basis.A[n]; bn = basis.B[n]; cn = basis.C[n]
-            @avx for i = 1:nX 
-               axb = fma(an, X[i], bn)
-               P[i, n] = fma(axb, P[i, n-1], cn * P[i, n-2]) 
-               q = fma(cn,  dP[i, n-2], an * P[i, n-1])
-               dP[i, n] = fma(axb, dP[i, n-1], q)
+            @simd ivdep for i = 1:nX 
+               axb = muladd(an, X[i], bn)
+               P[i, n] = muladd(axb, P[i, n-1], cn * P[i, n-2]) 
+               q = muladd(cn,  dP[i, n-2], an * P[i, n-1])
+               dP[i, n] = muladd(axb, dP[i, n-1], q)
                q1 = 2 * an * dP[i, n-1]
-               q2 = fma(cn, ddP[i, n-2], q1)
-               ddP[i, n] = fma(axb, ddP[i, n-1], q2)
+               q2 = muladd(cn, ddP[i, n-2], q1)
+               ddP[i, n] = muladd(axb, ddP[i, n-1], q2)
             end
             # P[n] = axb * P[n-1] + basis.C[n] * P[n-2]
             # dP[n] = axb * dP[n-1] + basis.C[n] * dP[n-2] + basis.A[n] * P[n-1]

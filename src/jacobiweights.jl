@@ -3,6 +3,7 @@
 
 export chebyshev_basis, legendre_basis, jacobi_basis
 
+using SpecialFunctions
 using QuadGK
 
 struct JacobiWeights{T}
@@ -38,7 +39,16 @@ function orthpolybasis(N::Integer, W::JacobiWeights{T}) where {T}
    basis = OrthPolyBasis1D3T(A, B, C, meta)
    if W.normalize
       integrand = x -> evaluate(basis, x).^2 * ((1-x)^α * (1+x)^β)
-      g = sqrt.(quadgk(integrand, -1.0, 1.0)[1])
+      g = sqrt.(quadgk(integrand, -1.0+1e-15, 1.0-1e-15; atol=1e-10)[1])
+
+      # new implementation - incorrect
+      # g0 = sqrt(quadgk(x -> (1-x)^α * (1+x)^β, -1.0+1e-15, 1.0-1e-15; atol=1e-12)[1])
+      # nrm_jacobi(n) = (n == 0) ? g0 : T( big(2^(α+β+1))  * 
+      #                         big(gamma(n+α+1)) * big(gamma(n+β+1)) / big(gamma(n+α+β+1))
+      #                         / big(2*n+α+β+1) / big(factorial(n)) )
+      # g = [ nrm_jacobi(n) for n = 0:N-1 ]
+      # display([g g1])
+
       basis.A[1] /= g[1] 
       basis.A[2] /= g[2] 
       basis.B[2] /= g[2] 
