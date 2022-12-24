@@ -104,7 +104,7 @@ function evaluate_ed2!(P, dP, ddP, basis::OrthPolyBasis1D3T, x)
 end
 
 
-
+using Base.Threads
 
 # P should be a matrix now and we will write basis(X[i]) into P[i, :]; 
 # this is the format the optimizes memory access. 
