@@ -1,11 +1,4 @@
-module RT 
-
-import Polynomials4ML
-using Polynomials4ML: PolyBasis4ML
-import Polynomials4ML: evaluate!, 
-                       evaluate_ed!, 
-                       evaluate_ed2!, 
-                       natural_indices, _alloc
+export RTrigBasis
 
 struct RTrigBasis <: PolyBasis4ML
    N::Int
@@ -74,6 +67,29 @@ function evaluate!(P::AbstractMatrix, basis::RTrigBasis,
    return P 
 end 
 
+function evaluate_ed!(P::AbstractVector, dP::AbstractVector, 
+                      basis::RTrigBasis, θ::Real)
+   N = basis.N 
+   nX = length(θ)
+   @assert N  >= 1 
+   @assert length(P) >= length(basis)  
+   @assert length(dP) >= length(basis) 
+
+   @inbounds begin 
+      P[1] = 1
+      dP[1] = 0
+      for k = 1:N 
+         sk, ck = sincos(k * θ)
+         P[2*k] = ck
+         P[2*k+1] = sk
+         dP[2*k] = -k*sk
+         dP[2*k+1] = k*ck
+      end
+   end
+   return P, dP 
+end 
+
+
 function evaluate_ed!(P::AbstractMatrix, dP::AbstractMatrix, basis::RTrigBasis, 
                       θ::AbstractVector{<: Real})
    N = basis.N 
@@ -81,6 +97,8 @@ function evaluate_ed!(P::AbstractMatrix, dP::AbstractMatrix, basis::RTrigBasis,
    @assert N  >= 1 
    @assert size(P, 2) >= length(basis) # 2N+1
    @assert size(P, 1) >= nX
+   @assert size(dP, 2) >= length(basis) # 2N+1
+   @assert size(dP, 1) >= nX
 
    @inbounds begin 
       @simd ivdep for i = 1:nX 
@@ -103,6 +121,34 @@ function evaluate_ed!(P::AbstractMatrix, dP::AbstractMatrix, basis::RTrigBasis,
 end 
 
 
+function evaluate_ed2!(P::AbstractVector, dP::AbstractVector, ddP::AbstractVector,
+                       basis::RTrigBasis, θ::Real)
+   N = basis.N 
+   @assert N  >= 1 
+   @assert length(P) >= length(basis) # 2N+1
+   @assert length(dP) >= length(basis) # 2N+1
+   @assert length(ddP) >= length(basis) # 2N+1
+
+   @inbounds begin 
+      P[1] = 1
+      dP[1] = 0
+      ddP[1] = 0
+
+      for k = 1:N 
+         sk, ck = sincos(k * θ)
+         P[2*k] = ck
+         P[2*k+1] = sk
+         dP[2*k] = -k*sk
+         dP[2*k+1] = k*ck
+         ddP[2*k] = -k^2*ck
+         ddP[2*k+1] = -k^2*sk
+      end
+   end
+   return P, dP, ddP 
+end 
+
+
+
 function evaluate_ed2!(P::AbstractMatrix, dP::AbstractMatrix, ddP::AbstractMatrix, basis::RTrigBasis, 
                       θ::AbstractVector{<: Real})
    N = basis.N 
@@ -110,6 +156,10 @@ function evaluate_ed2!(P::AbstractMatrix, dP::AbstractMatrix, ddP::AbstractMatri
    @assert N  >= 1 
    @assert size(P, 2) >= length(basis) # 2N+1
    @assert size(P, 1) >= nX
+   @assert size(dP, 2) >= length(basis) # 2N+1
+   @assert size(dP, 1) >= nX
+   @assert size(ddP, 2) >= length(basis) # 2N+1
+   @assert size(ddP, 1) >= nX
 
    @inbounds begin 
       @simd ivdep for i = 1:nX 
@@ -134,6 +184,3 @@ function evaluate_ed2!(P::AbstractMatrix, dP::AbstractMatrix, ddP::AbstractMatri
    return P, dP, ddP 
 end 
 
-
-
-end
