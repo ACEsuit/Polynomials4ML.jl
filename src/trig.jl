@@ -20,12 +20,6 @@ end
 CTrigBasis(N::Integer, T = Float64, meta = Dict{String, Any}()) = 
          CTrigBasis{T}(N, meta)
 
-# TODO 
-# struct RTrigPolys{T}
-#    N::Int
-#    # ----------------- metadata 
-#    meta::Dict{String, Any}
-# end
 
 
 # ----------------- interface functions 
