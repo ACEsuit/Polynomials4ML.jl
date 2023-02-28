@@ -35,12 +35,30 @@ _alloc(basis::MonoBasis, X::AbstractVector{T2}) where {T2 <: Number} =
             
 # ----------------- main evaluation code 
 
-function evaluate!(P, basis::MonoBasis, x) 
+function evaluate!(P, basis::MonoBasis, x::Number) 
    N = basis.N 
    @assert length(P) >= length(basis) 
    @inbounds P[1] = 1 
    @inbounds for n = 1:N 
       P[n+1] = x * P[n]
+   end
+   return P 
+end
+
+function evaluate!(P, basis::MonoBasis, X::AbstractVector)
+   N = basis.N 
+   nX = length(X) 
+   @assert size(P, 2) >= N+1
+   @assert size(P, 1) >= nX 
+   @inbounds begin 
+      @simd ivdep for i = 1:nX 
+         P[i, 1] = 1 
+      end
+      for n = 1:N 
+         @simd ivdep for i = 1:nX
+            P[i, n+1] = X[i] * P[i, n]
+         end
+      end
    end
    return P 
 end
