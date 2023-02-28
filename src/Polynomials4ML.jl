@@ -11,6 +11,7 @@ include("jacobiweights.jl")
 include("monomials.jl")
 
 include("trig.jl")
+include("rtrig.jl")
 include("sphericalharmonics/sphericalharmonics.jl")
 
 include("testing.jl")
