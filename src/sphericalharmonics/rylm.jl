@@ -10,6 +10,8 @@ struct RYlmBasis{T}
 	tmp_s::TempArray{SphericalCoords{T}, 1}
 	tmp_sin::TempArray{T, 1}
 	tmp_cos::TempArray{T, 1}
+	tmp_sinθ::TempArray{T, 1}
+	tmp_cosθ::TempArray{T, 1}
 	tmp_sinm::TempArray{T, 1}
 	tmp_cosm::TempArray{T, 1}
 end
@@ -24,6 +26,8 @@ RYlmBasis(alp::ALPolynomials{T}) where {T} =
                 ArrayCache{SVector{3, T}, 1}(), 
                 ArrayCache{SVector{3, T}, 2}(), 
 					 TempArray{SphericalCoords{T}, 1}(),
+					 TempArray{T, 1}(), 
+					 TempArray{T, 1}(), 
 					 TempArray{T, 1}(), 
 					 TempArray{T, 1}(), 
 					 TempArray{T, 1}(), 
@@ -268,14 +272,17 @@ function rYlm_ed!(Y::AbstractMatrix, dY::AbstractMatrix, L, S::AbstractVector, P
 
    sinφ = acquire!(basis.tmp_sin, nX)
    cosφ = acquire!(basis.tmp_cos, nX)
+   sinθ = acquire!(basis.tmp_sinθ, nX)
+   cosθ = acquire!(basis.tmp_cosθ, nX)
    sinmφ = acquire!(basis.tmp_sinm, nX)
    cosmφ = acquire!(basis.tmp_cosm, nX)
 
-   # @inbounds 
-	begin 
-      for i = 1:nX 
+   @inbounds begin 
+      @simd ivdep for i = 1:nX 
          sinφ[i] = S[i].sinφ
          cosφ[i] = S[i].cosφ
+			sinθ[i] = S[i].sinθ
+			cosθ[i] = S[i].cosθ
          sinmφ[i] = 0.0
          cosmφ[i] = 1.0
       end
@@ -284,14 +291,14 @@ function rYlm_ed!(Y::AbstractMatrix, dY::AbstractMatrix, L, S::AbstractVector, P
       for l = 0:L
          i_yl0 = index_y(l, 0)
          i_pl0 = index_p(l, 0)
-         for i = 1:nX
+         @simd ivdep  for i = 1:nX
             Y[i, i_yl0] = P[i, i_pl0] * oort2
 				dY[i, i_yl0] = dspher_to_dcart(S[i], 0.0, dP[i, i_pl0] * oort2)
          end
       end
 
       for m in 1:L
-         for i = 1:nX
+         @simd ivdep  for i = 1:nX
             cmi = cosmφ[i]
             smi = sinmφ[i]
             cosmφ[i] = cmi * cosφ[i] - smi * sinφ[i]
@@ -302,10 +309,22 @@ function rYlm_ed!(Y::AbstractMatrix, dY::AbstractMatrix, L, S::AbstractVector, P
             i_plm = index_p(l, m)
             i_ylm⁺ = index_y(l, m)
             i_ylm⁻ = index_y(l, -m)
-            for i = 1:nX
-					s = S[i] 
+            # @simd ivdep for i = 1:nX
+            #    p_div_sinθ = P[i, i_plm]
+				# 	p = p_div_sinθ * sinθ[i]
+            #    Y[i, i_ylm⁺] =  p * cosmφ[i]
+            #    Y[i, i_ylm⁻] = -p * sinmφ[i]
+				# 	a = - m * cosmφ[i] * P[i, i_plm]
+				# 	b = - sinmφ[i] * dP[i, i_plm]
+				# 	c = - m * sinmφ[i] * P[i, i_plm]
+				# 	d = cosmφ[i] * dP[i, i_plm]
+				# 	dY[i, i_ylm⁻] = dspher_to_dcart(1.0, sinφ[i], cosφ[i], sinθ[i], cosθ[i], a, b)
+				# 	dY[i, i_ylm⁺] = dspher_to_dcart(1.0, sinφ[i], cosφ[i], sinθ[i], cosθ[i], c, d)
+            # end
+
+            @simd ivdep for i = 1:nX
                p_div_sinθ = P[i, i_plm]
-					p = p_div_sinθ * s.sinθ
+					p = p_div_sinθ * sinθ[i]
                Y[i, i_ylm⁺] =  p * cosmφ[i]
                Y[i, i_ylm⁻] = -p * sinmφ[i]
 					#
@@ -321,8 +340,10 @@ function rYlm_ed!(Y::AbstractMatrix, dY::AbstractMatrix, L, S::AbstractVector, P
 					b = - sinmφ[i] * dp_dθ
 					c = - m * sinmφ[i] * p_div_sinθ
 					d = cosmφ[i] * dp_dθ
-					dY[i, i_ylm⁻] = dspher_to_dcart(s, a, b)
-					dY[i, i_ylm⁺] = dspher_to_dcart(s, c, d)
+					# dY[i, i_ylm⁻] = dspher_to_dcart(1.0, sinφ[i], cosφ[i], sinθ[i], cosθ[i], a, b)
+					# dY[i, i_ylm⁺] = dspher_to_dcart(1.0, sinφ[i], cosφ[i], sinθ[i], cosθ[i], c, d)
+					dY[i, i_ylm⁻] = dspher_to_dcart(S[i], a, b)
+					dY[i, i_ylm⁺] = dspher_to_dcart(S[i], c, d)
             end
          end
       end

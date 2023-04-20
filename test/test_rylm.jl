@@ -60,23 +60,6 @@ println_slim(@test Y1 ≈ Y2)
 
 ##
 
-# quick performance test 
-
-using BenchmarkTools
-
-using Polynomials4ML: release!
-maxL = 20 
-nX = 64 
-rSH = RYlmBasis(maxL)
-X = [ rand_sphere() for i = 1:nX ]
-
-@info("quick performance test")
-@info("Real, single input")
-@btime ( Y = evaluate($rSH, $(X[1])); release!(Y); )
-@info("Real, $nX inputs")
-@btime ( Y = evaluate($rSH, $X); release!(Y); )
-@info("Complex, $nX inputs")
-@btime ( Y = evaluate($cSH, $X); release!(Y); )
 
 ##
 
@@ -122,3 +105,44 @@ for i = 1:length(X)
 end
 println_slim(@test Y0 ≈ Y1 ≈ Y2)
 println_slim(@test dY1 ≈ dY2)
+
+##
+
+
+# quick performance test 
+
+using BenchmarkTools
+
+using Polynomials4ML: release!
+maxL = 10 
+nX = 32 
+rSH = RYlmBasis(maxL)
+cSH = CYlmBasis(maxL)
+X = [ rand_sphere() for i = 1:nX ]
+
+@info("quick performance test")
+@info("Real, single input")
+@btime ( Y = evaluate($rSH, $(X[1])); release!(Y); )
+@info("Real, $nX inputs")
+@btime ( Y = evaluate($rSH, $X); release!(Y); )
+@info("Complex, $nX inputs")
+@btime ( Y = evaluate($cSH, $X); release!(Y); )
+
+@info("Real, grad, single input")
+@btime begin Y, dY = evaluate_ed($rSH, $(X[1])); release!(Y); release!(dY); end 
+@info("Real, grad, $nX inputs")
+@btime begin Y, dY = evaluate_ed($rSH, $X); release!(Y); release!(dY); end
+@info("Complex, $nX inputs")
+@btime begin Y, dY = evaluate_ed($cSH, $X); release!(Y); release!(dY); end
+
+##
+
+# @profview let rSH = rSH, X = X
+#    for nruns = 1:30_000 
+#       Y, dY = evaluate_ed(rSH, X)
+#       release!(Y); release!(dY); 
+#    end
+# end
+
+##
+
