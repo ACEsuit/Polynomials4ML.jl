@@ -76,6 +76,26 @@ function evaluate!(Y, basis::RYlmBasis,
 end
 
 
+function evaluate_ed(basis::RYlmBasis, x::AbstractVector{<: Real})
+	Y = acquire!(basis.pool, length(basis))
+	dY = acquire!(basis.pool_d, length(basis))
+	evaluate_ed!(parent(Y), parent(dY), basis, x)
+	return Y, dY 
+end
+
+function evaluate_ed!(Y, dY, basis::RYlmBasis, 
+						     x::AbstractVector{<: Real})
+	L = maxL(basis)
+	s = cart2spher(x)
+	P, dP = _evaluate_ed(basis.alp, s)
+	rYlm_ed!(parent(Y), parent(dY), maxL(basis), s, parent(P), parent(dP))
+	release!(P)
+	release!(dP)
+	return Y
+end
+
+
+
 """
 evaluate real spherical harmonics
 """
@@ -112,7 +132,7 @@ end
 """
 evaluate gradients of real spherical harmonics
 """
-function rYlm_d!(Y, dY, L, S, P, dP)
+function rYlm_ed!(Y, dY, L, S, P, dP)
 	@assert length(P) >= sizeP(L)
 	@assert length(Y) >= sizeY(L)
    @assert abs(S.cosθ) <= 1.0

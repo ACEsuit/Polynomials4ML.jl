@@ -7,7 +7,7 @@ using Polynomials4ML: SphericalCoords, index_y,
 using Polynomials4ML: evaluate, evaluate_d, evaluate_ed 
 using Polynomials4ML.Testing: print_tf, println_slim 
 
-verbose = true
+verbose = false
 
 ##
 
@@ -69,33 +69,38 @@ nX = 64
 rSH = RYlmBasis(maxL)
 X = [ rand_sphere() for i = 1:nX ]
 
+@info("quick performance test")
+@info("Real, single input")
 @btime ( Y = evaluate($rSH, $(X[1])); release!(Y); )
+@info("Real, $nX inputs")
 @btime ( Y = evaluate($rSH, $X); release!(Y); )
+@info("Complex, $nX inputs")
+@btime ( Y = evaluate($cSH, $X); release!(Y); )
 
 ##
 
-# @info("Test: check derivatives of real spherical harmonics")
-# for nsamples = 1:30
-#    R = @SVector rand(3)
-#    SH = RSHBasis(5)
-#    Y, dY = evaluate_ed(SH, R)
-#    DY = Matrix(transpose(hcat(dY...)))
-#    errs = []
-#    verbose && @printf("     h    | error \n")
-#    for p = 2:10
-#       h = 0.1^p
-#       DYh = similar(DY)
-#       Rh = Vector(R)
-#       for i = 1:3
-#          Rh[i] += h
-#          DYh[:, i] = (evaluate(SH, SVector(Rh...)) - Y) / h
-#          Rh[i] -= h
-#       end
-#       push!(errs, norm(DY - DYh, Inf))
-#       verbose && @printf(" %.2e | %.2e \n", h, errs[end])
-#    end
-#    success = (minimum(errs[2:end]) < 1e-3 * maximum(errs[1:3])) || (minimum(errs) < 1e-10)
-#    print_tf(@test success)
-# end
-# println()
+@info("Test: check derivatives of real spherical harmonics")
+for nsamples = 1:30
+   R = @SVector rand(3)
+   rSH = RYlmBasis(5)
+   Y, dY = evaluate_ed(rSH, R)
+   DY = Matrix(transpose(hcat(dY...)))
+   errs = []
+   verbose && @printf("     h    | error \n")
+   for p = 2:10
+      h = 0.1^p
+      DYh = similar(DY)
+      Rh = Vector(R)
+      for i = 1:3
+         Rh[i] += h
+         DYh[:, i] = (evaluate(rSH, SVector(Rh...)) - Y) / h
+         Rh[i] -= h
+      end
+      push!(errs, norm(DY - DYh, Inf))
+      verbose && @printf(" %.2e | %.2e \n", h, errs[end])
+   end
+   success = (minimum(errs[2:end]) < 1e-3 * maximum(errs[1:3])) || (minimum(errs) < 1e-10)
+   print_tf(@test success)
+end
+println()
 
