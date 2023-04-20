@@ -37,6 +37,7 @@ cSH = CYlmBasis(maxL)
 rSH = RYlmBasis(maxL)
 
 for nsamples = 1:30
+   local R 
    R = rand_sphere()
    cY = evaluate(cSH, R)
    rY = evaluate(rSH, R)
@@ -81,6 +82,7 @@ X = [ rand_sphere() for i = 1:nX ]
 
 @info("Test: check derivatives of real spherical harmonics")
 for nsamples = 1:30
+   local R, rSH, h 
    R = @SVector rand(3)
    rSH = RYlmBasis(5)
    Y, dY = evaluate_ed(rSH, R)
@@ -104,3 +106,19 @@ for nsamples = 1:30
 end
 println()
 
+
+##
+
+@info("Check consistency of serial and batched gradients")
+
+rSH = RYlmBasis(10)
+X = [ rand_sphere() for i = 1:21 ]
+Y0 = evaluate(rSH, X)
+Y1, dY1 = evaluate_ed(rSH, X)
+Y2 = similar(Y1); dY2 = similar(dY1)
+for i = 1:length(X)
+   Y2[i, :] = evaluate(rSH, X[i])
+   dY2[i, :] = evaluate_ed(rSH, X[i])[2]
+end
+println_slim(@test Y0 ≈ Y1 ≈ Y2)
+println_slim(@test dY1 ≈ dY2)

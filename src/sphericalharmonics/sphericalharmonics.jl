@@ -2,7 +2,7 @@
 
 using StaticArrays, LinearAlgebra
 
-export CYlmBasis
+export CYlmBasis, RYlmBasis
 
 
 # --------------------------------------------------------
