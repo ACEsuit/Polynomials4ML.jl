@@ -10,6 +10,8 @@ struct RYlmBasis{T}
 	tmp_s::TempArray{SphericalCoords{T}, 1}
 	tmp_sin::TempArray{T, 1}
 	tmp_cos::TempArray{T, 1}
+	tmp_sinθ::TempArray{T, 1}
+	tmp_cosθ::TempArray{T, 1}
 	tmp_sinm::TempArray{T, 1}
 	tmp_cosm::TempArray{T, 1}
 end
@@ -24,6 +26,8 @@ RYlmBasis(alp::ALPolynomials{T}) where {T} =
                 ArrayCache{SVector{3, T}, 1}(), 
                 ArrayCache{SVector{3, T}, 2}(), 
 					 TempArray{SphericalCoords{T}, 1}(),
+					 TempArray{T, 1}(), 
+					 TempArray{T, 1}(), 
 					 TempArray{T, 1}(), 
 					 TempArray{T, 1}(), 
 					 TempArray{T, 1}(), 
@@ -55,7 +59,7 @@ function evaluate!(Y, basis::RYlmBasis, x::AbstractVector{<: Real})
 	P = evaluate(basis.alp, S)
 	rYlm!(Y, maxL(basis), S, P)
 	release!(P)
-	return Y
+	return nothing 
 end
 
 function evaluate(basis::RYlmBasis, X::AbstractVector{<: AbstractVector})
@@ -65,16 +69,57 @@ function evaluate(basis::RYlmBasis, X::AbstractVector{<: AbstractVector})
 end
 
 function evaluate!(Y, basis::RYlmBasis, 
-						 X::AbstractVector{<: AbstractVector})
+						 X::AbstractVector{<: AbstractVector{<: Real}})
 	L = maxL(basis)
 	S = acquire!(basis.tmp_s, length(X))
 	map!(cart2spher, S, X)
 	P = evaluate(basis.alp, S)
 	rYlm!(parent(Y), maxL(basis), S, parent(P), basis)
 	release!(P)
-	return Y
+	return nothing 
 end
 
+
+function evaluate_ed(basis::RYlmBasis, x::AbstractVector{<: Real})
+	Y = acquire!(basis.pool, length(basis))
+	dY = acquire!(basis.pool_d, length(basis))
+	evaluate_ed!(parent(Y), parent(dY), basis, x)
+	return Y, dY 
+end
+
+function evaluate_ed!(Y, dY, basis::RYlmBasis, 
+						     x::AbstractVector{<: Real})
+	L = maxL(basis)
+	s = cart2spher(x)
+	P, dP = _evaluate_ed(basis.alp, s)
+	rYlm_ed!(parent(Y), parent(dY), maxL(basis), s, parent(P), parent(dP))
+	release!(P)
+	release!(dP)
+	return nothing 
+end
+
+
+function evaluate_ed(basis::RYlmBasis, X::AbstractVector{<: AbstractVector{<: Real}})
+	Y = acquire!(basis.bpool, (length(X), length(basis)))
+	dY = acquire!(basis.bpool_d, (length(X), length(basis)))
+	evaluate_ed!(parent(Y), parent(dY), basis, X)
+	return Y, dY 
+end
+
+function evaluate_ed!(Y, dY, basis::RYlmBasis, 
+						     X::AbstractVector{<: AbstractVector{<: Real}})
+	L = maxL(basis)
+	S = acquire!(basis.tmp_s, length(X))
+	map!(cart2spher, S, X)
+	P, dP = _evaluate_ed(basis.alp, S)
+	rYlm_ed!(parent(Y), parent(dY), maxL(basis), S, parent(P), parent(dP), basis)
+	release!(P)
+	release!(dP)
+	return nothing 
+end
+
+
+# -------------------- actual kernels 
 
 """
 evaluate real spherical harmonics
@@ -105,14 +150,14 @@ function rYlm!(Y, L, S, P::AbstractVector)
 		end
 	end
 
-	return Y
+	return nothing 
 end
 
 
 """
 evaluate gradients of real spherical harmonics
 """
-function rYlm_d!(Y, dY, L, S, P, dP)
+function rYlm_ed!(Y, dY, L, S, P, dP)
 	@assert length(P) >= sizeP(L)
 	@assert length(Y) >= sizeY(L)
    @assert abs(S.cosθ) <= 1.0
@@ -149,16 +194,14 @@ function rYlm_d!(Y, dY, L, S, P, dP)
 		end
 	end
 
-	return dY
+	return nothing 
 end
 
 
 
 # ---------------------- Batched evaluation
 
-"""
-evaluate real spherical harmonics
-"""
+
 function rYlm!(Y::Matrix, L, S::AbstractVector, P::Matrix, basis::RYlmBasis)
    nX = length(S) 
 	@assert size(P, 1) >= nX
@@ -210,7 +253,151 @@ function rYlm!(Y::Matrix, L, S::AbstractVector, P::Matrix, basis::RYlmBasis)
 
    end # inbounds 
 
-	return Y
+	return nothing 
 end
 
 
+
+
+function rYlm_ed!(Y::AbstractMatrix, dY::AbstractMatrix, L, S::AbstractVector, P, dP, basis)
+   nX = length(S) 
+	@assert size(P, 1) >= nX
+   @assert size(P, 2) >= sizeP(L)
+	@assert size(dP, 1) >= nX
+   @assert size(dP, 2) >= sizeP(L)
+   @assert size(Y, 1) >= nX
+	@assert size(Y, 2) >= sizeY(L)
+   @assert size(dY, 1) >= nX
+	@assert size(dY, 2) >= sizeY(L)
+
+   sinφ = acquire!(basis.tmp_sin, nX)
+   cosφ = acquire!(basis.tmp_cos, nX)
+   sinθ = acquire!(basis.tmp_sinθ, nX)
+   cosθ = acquire!(basis.tmp_cosθ, nX)
+   sinmφ = acquire!(basis.tmp_sinm, nX)
+   cosmφ = acquire!(basis.tmp_cosm, nX)
+
+   @inbounds begin 
+      @simd ivdep for i = 1:nX 
+         sinφ[i] = S[i].sinφ
+         cosφ[i] = S[i].cosφ
+			sinθ[i] = S[i].sinθ
+			cosθ[i] = S[i].cosθ
+         sinmφ[i] = 0.0
+         cosmφ[i] = 1.0
+      end
+
+      oort2 = 1 / sqrt(2)
+      for l = 0:L
+         i_yl0 = index_y(l, 0)
+         i_pl0 = index_p(l, 0)
+         @simd ivdep  for i = 1:nX
+            Y[i, i_yl0] = P[i, i_pl0] * oort2
+				dY[i, i_yl0] = dspher_to_dcart(S[i], 0.0, dP[i, i_pl0] * oort2)
+         end
+      end
+
+      for m in 1:L
+         @simd ivdep  for i = 1:nX
+            cmi = cosmφ[i]
+            smi = sinmφ[i]
+            cosmφ[i] = cmi * cosφ[i] - smi * sinφ[i]
+            sinmφ[i] = smi * cosφ[i] + cmi * sinφ[i]
+         end
+
+         for l in m:L
+            i_plm = index_p(l, m)
+            i_ylm⁺ = index_y(l, m)
+            i_ylm⁻ = index_y(l, -m)
+
+            @simd ivdep for i = 1:nX
+               p_div_sinθ = P[i, i_plm]
+					p = p_div_sinθ * sinθ[i]
+               Y[i, i_ylm⁺] =  p * cosmφ[i]
+               Y[i, i_ylm⁻] = -p * sinmφ[i]
+					#
+					# ec = exp(i * m  * φ) / sqrt(2)
+					# 	dec_dφ = im * m * ec
+					#  imag(dec_dφ) = m * real(ec) = m * cos(m * φ) / sqrt(2)
+					#  imag(ex) = sin(m * φ) / sqrt(2)
+					#  real(dec_dφ) = -m * imag(ec) = -m * sin(m * φ) / sqrt(2)
+					#  real(ec) = cos(m * φ) / sqrt(2)
+					#
+					dp_dθ = dP[i, i_plm]
+					a = - m * cosmφ[i] * p_div_sinθ
+					b = - sinmφ[i] * dp_dθ
+					c = - m * sinmφ[i] * p_div_sinθ
+					d = cosmφ[i] * dp_dθ
+					# dY[i, i_ylm⁻] = dspher_to_dcart(1.0, sinφ[i], cosφ[i], sinθ[i], cosθ[i], a, b)
+					# dY[i, i_ylm⁺] = dspher_to_dcart(1.0, sinφ[i], cosφ[i], sinθ[i], cosθ[i], c, d)
+					dY[i, i_ylm⁻] = dspher_to_dcart(S[i], a, b)
+					dY[i, i_ylm⁺] = dspher_to_dcart(S[i], c, d)
+            end
+         end
+      end
+
+   end # inbounds 
+
+	return nothing 
+end
+
+
+##  ---------------- Laplacian Implementation 
+
+function _lap(basis::RYlmBasis, Y::AbstractVector) 
+	ΔY = acquire!(basis.pool, length(Y))
+	_lap!(parent(ΔY), basis, Y)
+	return ΔY
+end
+
+function _lap!(ΔY, basis::RYlmBasis, Y::AbstractVector) 
+	for i = 1:length(Y)
+		l = idx2l(i)
+		ΔY[i] = - Y[i] * l * (l+1)
+	end
+	return nothing 
+end 
+
+function _lap(basis::RYlmBasis, Y::AbstractMatrix) 
+	ΔY = acquire!(basis.bpool, size(Y))
+	_lap!(parent(ΔY), basis, Y)
+	return ΔY
+end
+
+function _lap!(ΔY, basis::RYlmBasis, Y::AbstractMatrix) 
+	@assert size(ΔY, 1) >= size(Y, 1)
+	@assert size(ΔY, 2) >= size(Y, 2)
+	@assert size(Y, 2) >= length(basis)
+	nX = size(Y, 1)
+	@inbounds for l = 0:maxL(basis)
+		λ = - l * (l+1)
+		for m = -l:l
+			i = index_y(l, m)
+			@simd ivdep for j = 1:nX 
+				ΔY[j, i] = λ * Y[j, i]
+			end
+		end
+	end
+	return nothing 
+end 
+
+function laplacian(basis::RYlmBasis, X)
+	Y = evaluate(basis, X)
+	ΔY = _lap(basis, Y)
+	release!(Y)
+	return ΔY
+end
+
+function laplacian!(ΔY, basis::RYlmBasis, X)
+	Y = evaluate(basis, X)
+	_lap!(ΔY, basis, Y)
+	release!(Y)
+	return ΔY
+end
+
+
+function eval_grad_laplace(basis::RYlmBasis, X)
+	Y, dY = evaluate_ed(basis, X)
+	ΔY = _lap(basis, Y)
+	return Y, dY, ΔY
+end

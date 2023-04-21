@@ -2,7 +2,7 @@
 
 using StaticArrays, LinearAlgebra
 
-export CYlmBasis
+export CYlmBasis, RYlmBasis
 
 
 # --------------------------------------------------------
@@ -48,6 +48,12 @@ function dspher_to_dcart(S, f_φ_div_sinθ, f_θ)
 			            (S.cosφ * f_φ_div_sinθ) + (S.sinφ * S.cosθ * f_θ),
 			 			                                 - (   S.sinθ * f_θ) ) / r
 end
+
+dspher_to_dcart(r, sinφ, cosφ, sinθ, cosθ, f_φ_div_sinθ, f_θ) = 
+   	SVector( - (sinφ * f_φ_div_sinθ) + (cosφ * cosθ * f_θ),
+			            (cosφ * f_φ_div_sinθ) + (sinφ * cosθ * f_θ),
+			 			                                 - (   sinθ * f_θ) ) / (r+eps(r))
+
 
 
 

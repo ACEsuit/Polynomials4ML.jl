@@ -93,6 +93,8 @@ function idx2lm(i::Integer)
 	return l, m 
 end 
 
+idx2l(i::Integer) = floor(Int, sqrt(i-1) + 1e-10)
+
 
 # ---------------------- evaluation interface code 
 
