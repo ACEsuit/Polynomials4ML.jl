@@ -309,18 +309,6 @@ function rYlm_ed!(Y::AbstractMatrix, dY::AbstractMatrix, L, S::AbstractVector, P
             i_plm = index_p(l, m)
             i_ylm⁺ = index_y(l, m)
             i_ylm⁻ = index_y(l, -m)
-            # @simd ivdep for i = 1:nX
-            #    p_div_sinθ = P[i, i_plm]
-				# 	p = p_div_sinθ * sinθ[i]
-            #    Y[i, i_ylm⁺] =  p * cosmφ[i]
-            #    Y[i, i_ylm⁻] = -p * sinmφ[i]
-				# 	a = - m * cosmφ[i] * P[i, i_plm]
-				# 	b = - sinmφ[i] * dP[i, i_plm]
-				# 	c = - m * sinmφ[i] * P[i, i_plm]
-				# 	d = cosmφ[i] * dP[i, i_plm]
-				# 	dY[i, i_ylm⁻] = dspher_to_dcart(1.0, sinφ[i], cosφ[i], sinθ[i], cosθ[i], a, b)
-				# 	dY[i, i_ylm⁺] = dspher_to_dcart(1.0, sinφ[i], cosφ[i], sinθ[i], cosθ[i], c, d)
-            # end
 
             @simd ivdep for i = 1:nX
                p_div_sinθ = P[i, i_plm]
@@ -351,4 +339,65 @@ function rYlm_ed!(Y::AbstractMatrix, dY::AbstractMatrix, L, S::AbstractVector, P
    end # inbounds 
 
 	return nothing 
+end
+
+
+##  ---------------- Laplacian Implementation 
+
+function _lap(basis::RYlmBasis, Y::AbstractVector) 
+	ΔY = acquire!(basis.pool, length(Y))
+	_lap!(parent(ΔY), basis, Y)
+	return ΔY
+end
+
+function _lap!(ΔY, basis::RYlmBasis, Y::AbstractVector) 
+	for i = 1:length(Y)
+		l = idx2l(i)
+		ΔY[i] = - Y[i] * l * (l+1)
+	end
+	return nothing 
+end 
+
+function _lap(basis::RYlmBasis, Y::AbstractMatrix) 
+	ΔY = acquire!(basis.bpool, size(Y))
+	_lap!(parent(ΔY), basis, Y)
+	return ΔY
+end
+
+function _lap!(ΔY, basis::RYlmBasis, Y::AbstractMatrix) 
+	@assert size(ΔY, 1) >= size(Y, 1)
+	@assert size(ΔY, 2) >= size(Y, 2)
+	@assert size(Y, 2) >= length(basis)
+	nX = size(Y, 1)
+	@inbounds for l = 0:maxL(basis)
+		λ = - l * (l+1)
+		for m = -l:l
+			i = index_y(l, m)
+			@simd ivdep for j = 1:nX 
+				ΔY[j, i] = λ * Y[j, i]
+			end
+		end
+	end
+	return nothing 
+end 
+
+function laplacian(basis::RYlmBasis, X)
+	Y = evaluate(basis, X)
+	ΔY = _lap(basis, Y)
+	release!(Y)
+	return ΔY
+end
+
+function laplacian!(ΔY, basis::RYlmBasis, X)
+	Y = evaluate(basis, X)
+	_lap!(ΔY, basis, Y)
+	release!(Y)
+	return ΔY
+end
+
+
+function eval_grad_laplace(basis::RYlmBasis, X)
+	Y, dY = evaluate_ed(basis, X)
+	ΔY = _lap(basis, Y)
+	return Y, dY, ΔY
 end

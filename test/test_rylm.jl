@@ -106,14 +106,52 @@ end
 println_slim(@test Y0 ≈ Y1 ≈ Y2)
 println_slim(@test dY1 ≈ dY2)
 
-##
+
+## -- check the laplacian implementation 
+
+using LinearAlgebra: tr
+using ForwardDiff
+P4 = Polynomials4ML
+
+function fwdΔ(rYlm, x)
+   Y = evaluate(rYlm, x)
+   nY = length(Y)
+   _j(x) = ForwardDiff.jacobian(x -> evaluate(rSH, x), x)[:]
+   _h(x) = reshape(ForwardDiff.jacobian(_j, x), (nY, 3, 3))
+   H = _h(x)
+   return [ tr(H[i, :, :]) for i = 1:nY ]
+end
+
+for x in X 
+   ΔY = P4.laplacian(rSH, x)
+   ΔYfwd = fwdΔ(rSH, x)
+   print_tf(@test ΔYfwd ≈ ΔY)
+end
+println() 
+
+@info("check batched laplacian")
+ΔY1 = P4.laplacian(rSH, X)
+ΔY2 = similar(ΔY1)
+for (i, x) in enumerate(X)
+   ΔY2[i, :] = P4.laplacian(rSH, x)
+end
+println_slim(@test ΔY1 ≈ ΔY2)
 
 
-# quick performance test 
+@info("check eval_grad_laplace")
+Y1, dY1, ΔY1 = P4.eval_grad_laplace(rSH, X)
+Y2, dY2 = evaluate_ed(rSH, X)
+ΔY2 = P4.laplacian(rSH, X)
+println_slim(@test Y1 ≈ Y2)
+println_slim(@test dY1 ≈ dY2)
+println_slim(@test ΔY1 ≈ ΔY2)
+
+
+## quick performance test 
 
 using BenchmarkTools
-
 using Polynomials4ML: release!
+
 maxL = 10 
 nX = 32 
 rSH = RYlmBasis(maxL)
@@ -135,14 +173,10 @@ X = [ rand_sphere() for i = 1:nX ]
 @info("Complex, $nX inputs")
 @btime begin Y, dY = evaluate_ed($cSH, $X); release!(Y); release!(dY); end
 
-##
+@info("laplacian, batched")
+@btime begin ΔY = $(P4.laplacian)($rSH, $X); release!(ΔY); end 
 
-# @profview let rSH = rSH, X = X
-#    for nruns = 1:30_000 
-#       Y, dY = evaluate_ed(rSH, X)
-#       release!(Y); release!(dY); 
-#    end
-# end
+@info("eval_grad_laplace")
+@btime begin Y, dY, ΔY = $(P4.eval_grad_laplace)($rSH, $X); release!(Y); release!(dY); release!(ΔY); end 
 
 ##
-
