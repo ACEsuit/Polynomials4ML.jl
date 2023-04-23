@@ -20,7 +20,7 @@ function explicit_solid_harmonics(l::Int,m::Int,X::AbstractVector)
             return cumprod(collect(1:l))[end]
         end
     end 
-    x,y,z = X
+    x, y, z = X
     Nlm = (-1)^((m+abs(m))/2) * 1/(2^(abs(m))*cumprod2(l)) * sqrt((2l+1)/(4*pi) * cumprod2(l+abs(m)) * cumprod2(l-abs(m)))
     a = 0
     for t = 0:Int(floor((l-abs(m))/2))

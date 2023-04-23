@@ -2,7 +2,7 @@
 
 using StaticArrays, LinearAlgebra
 
-export CYlmBasis, RYlmBasis, CRlmBasis
+export CYlmBasis, RYlmBasis, CRlmBasis, RRlmBasis
 
 
 # --------------------------------------------------------
@@ -78,6 +78,8 @@ include("cylm.jl")
 include("crlm.jl")
 
 include("rylm.jl")
+
+include("rrlm.jl")
 
 # ---------------------------- Auxiliary functions 
 
