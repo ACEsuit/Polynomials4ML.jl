@@ -60,7 +60,7 @@ for n = 1:nsamples
    SH = CYlmBasis(3)
    Y = evaluate(SH, R)
    Yex = explicit_shs(θ, φ)
-   print_tf((@test Y ≈ Yex || norm(Y - Yes, Inf) < 1e-12))
+   print_tf((@test Y ≈ Yex || norm(Y - Yex, Inf) < 1e-12))
 end
 println()
 
