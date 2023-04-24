@@ -130,8 +130,15 @@ function rRlm!(Y, L, S, P::AbstractVector)
     @assert abs(S.cosθ) <= 1.0
 
     oort2 = 1 / sqrt(2)
-	rL = ones(Float64, L+2)
-	aL = ones(Float64, L+1)
+
+	T = typeof(S.cosθ)
+
+	rL = Array{T}(undef, L + 2)
+	aL = Array{T}(undef, L + 1)
+
+	rL[1] = 1.0
+	aL[1] = 1.0
+
 	for l = 0:L
 		aL[l+1] = sqrt(4*pi/(2*l+1))
 		Y[index_y(l, 0)] = P[index_p(l, 0)] * oort2 * rL[l+1] * aL[l+1]
@@ -202,6 +209,7 @@ end
 # ---------------------- Batched evaluation
 function rRlm!(Y::Matrix, L, S::AbstractVector, P::Matrix, basis::RRlmBasis)
     nX = length(S) 
+	
     @assert size(P, 1) >= nX
     @assert size(P, 2) >= sizeP(L)
     @assert size(Y, 1) >= nX
@@ -211,7 +219,8 @@ function rRlm!(Y::Matrix, L, S::AbstractVector, P::Matrix, basis::RRlmBasis)
     cosφ = acquire!(basis.tmp_cos, nX)
     sinmφ = acquire!(basis.tmp_sinm, nX)
     cosmφ = acquire!(basis.tmp_cosm, nX)
- 
+	T = typeof(sinφ[1])
+
     @inbounds begin 
         for i = 1:nX 
             sinφ[i] = S[i].sinφ
@@ -220,9 +229,14 @@ function rRlm!(Y::Matrix, L, S::AbstractVector, P::Matrix, basis::RRlmBasis)
             cosmφ[i] = 1.0
         end
  
-        oort2 = 1 / sqrt(2)
-        rL = ones(Float64, nX, L+2)
-	    aL = ones(Float64, L+1)
+        oort2 = 1 / sqrt(2)		
+
+		rL = Matrix{T}(undef, nX, L + 2)
+		aL = Array{T}(undef, L + 1)
+
+		rL[:, 1] .= 1.0
+		aL[1] = 1.0
+
         for l = 0:L
             aL[l+1] = sqrt(4*pi/(2*l+1))
             i_yl0 = index_y(l, 0)

@@ -167,6 +167,24 @@ using LinearAlgebra: tr
 using ForwardDiff
 P4 = Polynomials4ML
 
+function fwdΔ(rYlm, x)
+   Y = evaluate(rYlm, x)
+   nY = length(Y)
+   _j(x) = ForwardDiff.jacobian(x -> evaluate(rSH, x), x)[:]
+   _h(x) = reshape(ForwardDiff.jacobian(_j, x), (nY, 3, 3))
+   H = _h(x)
+   return [ tr(H[i, :, :]) for i = 1:nY ]
+end
+
+for x in X 
+   ΔY = P4.laplacian(rSH, x)
+   ΔYfwd = fwdΔ(rSH, x)
+   @show norm(ΔYfwd)
+   print_tf(@test norm(ΔYfwd ≈ ΔY) < 1e-12)
+end
+println() 
+
+
 @info("check batched laplacian")
 ΔY1 = P4.laplacian(rSH, X)
 ΔY2 = similar(ΔY1)
