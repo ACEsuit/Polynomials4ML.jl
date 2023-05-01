@@ -14,7 +14,9 @@ include("monomials.jl")
 
 include("trig.jl")
 include("rtrig.jl")
+
 include("sphericalharmonics/sphericalharmonics.jl")
+include("atomicorbitalsradials/atomicorbitalsradials.jl")
 
 include("testing.jl")
 
