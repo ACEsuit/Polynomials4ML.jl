@@ -2,6 +2,8 @@ module Polynomials4ML
 
 using ObjectPools: ArrayCache, TempArray, acquire!, release!
 
+function degree end 
+
 include("interface.jl")
 
 include("orthopolybasis.jl")

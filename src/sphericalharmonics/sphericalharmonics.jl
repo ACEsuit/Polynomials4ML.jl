@@ -63,6 +63,13 @@ include("cylm.jl")
 
 include("rylm.jl")
 
+const YlmBasis = Union{RYlmBasis, CYlmBasis}
+
+natural_indices(basis::YlmBasis) = 
+		[ NamedTuple{(:l, :m)}(idx2lm(i)) for i = 1:length(basis) ]
+
+degree(basis::YlmBasis, b::NamedTuple) = b.l 
+
 # ---------------------------- Auxiliary functions 
 
 function rand_sphere() 

@@ -42,8 +42,7 @@ _valtype(sh::RYlmBasis{T}, x::AbstractVector{S}) where {T <: Real, S <: Real} =
 Base.length(basis::RYlmBasis) = sizeY(maxL(basis))
 
 Base.show(io::IO, basis::RYlmBasis) = 
-      print(io, "RYlmBasis(L=$(maxL(basis)))")
-
+      print(io, "RYlmBasis(L=$(maxL(basis)))")		
 
 # ---------------------- Interfaces
 
