@@ -4,6 +4,8 @@ using Polynomials4ML: evaluate, evaluate_d, evaluate_ed
 using Polynomials4ML.Testing: print_tf, println_slim 
 using ForwardDiff
 
+##
+
 @info("Testing GaussianBasis")
 n1 = 5 # degree
 n2 = 3 
@@ -23,9 +25,11 @@ fdRnl = vcat([ ForwardDiff.derivative(r -> evaluate(bRnl, [r,]), r)
 fddRnl = vcat([ ForwardDiff.derivative(r -> evaluate_ed(bRnl, [r,])[2], r)
                for r in rr ]...) 
 
-@show Rnl ≈ Rnl1 ≈ Rnl2 
-@show dRnl1 ≈ dRnl2 ≈ fdRnl
-@show ddRnl2 ≈ fddRnl
+println_slim(@test  Rnl ≈ Rnl1 ≈ Rnl2 )
+println_slim(@test  dRnl1 ≈ dRnl2 ≈ fdRnl )
+println_slim(@test  ddRnl2 ≈ fddRnl )
+
+##
 
 @info("Testing SlaterBasis")
 n1 = 5 # degree
@@ -46,9 +50,11 @@ fdRnl = vcat([ ForwardDiff.derivative(r -> evaluate(bRnl, [r,]), r)
 fddRnl = vcat([ ForwardDiff.derivative(r -> evaluate_ed(bRnl, [r,])[2], r)
                for r in rr ]...) 
 
-@show Rnl ≈ Rnl1 ≈ Rnl2 
-@show dRnl1 ≈ dRnl2 ≈ fdRnl
-@show ddRnl2 ≈ fddRnl
+println_slim(@test  Rnl ≈ Rnl1 ≈ Rnl2  )
+println_slim(@test  dRnl1 ≈ dRnl2 ≈ fdRnl )
+println_slim(@test  ddRnl2 ≈ fddRnl )
+
+##
 
 @info("Testing STOBasis")
 n1 = 5 # degree
@@ -69,6 +75,6 @@ fdRnl = vcat([ ForwardDiff.derivative(r -> evaluate(bRnl, [r,]), r)
 fddRnl = vcat([ ForwardDiff.derivative(r -> evaluate_ed(bRnl, [r,])[2], r)
                for r in rr ]...) 
 
-@show Rnl ≈ Rnl1 ≈ Rnl2 
-@show dRnl1 ≈ dRnl2 ≈ fdRnl
-@show ddRnl2 ≈ fddRnl
+println_slim(@test  Rnl ≈ Rnl1 ≈ Rnl2  )
+println_slim(@test  dRnl1 ≈ dRnl2 ≈ fdRnl )
+println_slim(@test  ddRnl2 ≈ fddRnl )

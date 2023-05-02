@@ -12,7 +12,8 @@ struct AtomicOrbitalsRadials{TP, TD, TI, TZ}
    meta::Dict{String, Any}
 end
 
-AtomicOrbitalsRadials(Pn, Dn, spec, ζ; meta = Dict{String, Any}()) = AtomicOrbitalsRadials(Pn, Dn, spec, ζ, meta)
+AtomicOrbitalsRadials(Pn, Dn, spec, ζ; meta = Dict{String, Any}()) = 
+        AtomicOrbitalsRadials(Pn, Dn, spec, ζ, meta)
 
 Base.length(basis::AtomicOrbitalsRadials) = length(basis.spec)
 
@@ -25,10 +26,10 @@ _alloc(basis::AtomicOrbitalsRadials, rr::Vector{T}) where {T <: Real} =
 
 evaluate(basis::AtomicOrbitalsRadials, r::Number) = evaluate(basis, [r,])[:]
 
-function evaluate(basis::AtomicOrbitalsRadials, R::AbstractVector)
+function evaluate(basis::AtomicOrbitalsRadials, R::AbstractVector{<: Real})
     nR = length(R)
-    Pn = Polynomials4ML.evaluate(basis.Pn, R) # Pn(x)
-    Dn = evaluate(basis.Dn, basis.ζ, R) # Dn(x)
+    Pn = Polynomials4ML.evaluate(basis.Pn, R) # Pn(r)
+    Dn = evaluate(basis.Dn, basis.ζ, R) # Dn(r)
     Rnl = _alloc(basis, R) 
 
     for (i, b) in enumerate(basis.spec)

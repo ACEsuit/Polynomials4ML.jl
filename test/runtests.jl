@@ -9,5 +9,5 @@ using Test
     @testset "Complex SphericalHarmonics" begin include("test_cylm.jl"); end
     @testset "Real SphericalHarmonics" begin include("test_rylm.jl"); end
     # @testset "Solid Harmonics" begin include("test_rlm.jl"); end
-    # @testset "Rnl" begin include("test_rnl.jl"); end
+    @testset "Rnl" begin include("test_rnl.jl"); end
 end
