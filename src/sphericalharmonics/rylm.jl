@@ -34,12 +34,8 @@ RYlmBasis(alp::ALPolynomials{T}) where {T} =
 					 TempArray{T, 1}() )
 
 
-maxL(sh::RYlmBasis) = sh.alp.L
-
 _valtype(sh::RYlmBasis{T}, x::AbstractVector{S}) where {T <: Real, S <: Real} = 
          promote_type(T, S)
-
-Base.length(basis::RYlmBasis) = sizeY(maxL(basis))
 
 Base.show(io::IO, basis::RYlmBasis) = 
       print(io, "RYlmBasis(L=$(maxL(basis)))")		

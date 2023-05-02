@@ -7,19 +7,19 @@ using Polynomials4ML.Testing: print_tf, println_slim
 
 verbose = false
 
+##
+
 nX = 10
 L = 20
 X = [ rand_sphere() for i = 1:nX ]
 @info("Testing consistency of Complex spherical harmonics")
 basis = CYlmBasis(L)
-basis1 = CRlmBasis(L, false)
 
+basis1 = CRlmBasis(L, false)
 Rnl = evaluate(basis,X)
 Rnl1, dRnl1 = evaluate_ed(basis,X)
-
 Ynl = evaluate(basis1,X)
 Ynl1, dYnl1 = evaluate_ed(basis1,X)
-
 @show Rnl ≈ Rnl1 ≈ Ynl ≈ Ynl1 
 @show dRnl1 ≈ dYnl1 
 

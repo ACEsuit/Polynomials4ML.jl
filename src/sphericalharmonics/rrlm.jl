@@ -1,19 +1,17 @@
 """
-real spherical harmonics: SH = false: 
+real spherical harmonics:
 
 Yₗ⁰ = P̄ₗ⁰/√2
 Yₗᵐ =  Re(P̄ₗᵐ(cosθ)/√2 exp(imφ))
 Yₗ⁻ᵐ = -Im(P̄ₗᵐ(cosθ)/√2 exp(imφ))
 
-solid harmonics: SH = true: 
+solid harmonics:
 
 Sₗ⁰ = √(4π/2l+1) rˡP̄ₗ⁰/√2
 Sₗᵐ = (-1)ᵐ√(8π/2l+1) rˡ Re(P̄ₗᵐ(cosθ)/√2 exp(imφ))
 Sₗ⁻ᵐ = (-1)ᵐ√(8π/2l+1) rˡIm(P̄ₗᵐ(cosθ)/√2 exp(imφ))
 """
-
-
-struct RRlmBasis{T} <: RlmBasis
+struct RRlmBasis{T}
     alp::ALPolynomials{T}
    # ----------------------------
 	pool::ArrayCache{T, 1}
@@ -30,13 +28,12 @@ struct RRlmBasis{T} <: RlmBasis
 	tmp_r::TempArray{T, 1}
 	tmp_rL::TempArray{T, 2}
 	tmp_aL::TempArray{T, 1}
-	SH::Bool
 end
 
-RRlmBasis(maxL::Integer, SH::Bool, T::Type=Float64) = 
-      RRlmBasis(ALPolynomials(maxL, T), SH)
+RRlmBasis(maxL::Integer, T::Type=Float64) = 
+      RRlmBasis(ALPolynomials(maxL, T))
 
-RRlmBasis(alp::ALPolynomials{T}, SH::Bool) where {T} = 
+RRlmBasis(alp::ALPolynomials{T}) where {T} = 
       RRlmBasis(alp, 
 		          ArrayCache{T, 1}(), 
                 ArrayCache{T, 2}(), 
@@ -51,8 +48,7 @@ RRlmBasis(alp::ALPolynomials{T}, SH::Bool) where {T} =
 					 TempArray{T, 1}(), 
 					 TempArray{T, 1}(),
 					 TempArray{T, 2}(),
-					 TempArray{T, 1}(),
-					 SH)
+					 TempArray{T, 1}())
 
 _valtype(sh::RRlmBasis{T}, x::AbstractVector{S}) where {T <: Real, S <: Real} = 
          promote_type(T, S)
@@ -66,7 +62,7 @@ Base.show(io::IO, basis::RRlmBasis) =
 # ---------------------- evaluation interface code 
 function evaluate!(Y, basis::RRlmBasis, X::AbstractVector{<: Real})
 	L = maxL(basis)
-	S = cart2spher(X;SH = basis.SH) 
+	S = cart2spher(X)
 	P = evaluate(basis.alp, S)
 	rRlm!(Y, maxL(basis), S, P, basis)
 	release!(P)
@@ -76,7 +72,7 @@ end
 function evaluate!(Y, basis::RRlmBasis, 
 						 X::AbstractVector{<: AbstractVector{<: Real}})
 	S = acquire!(basis.tmp_s, length(X))
-	map!(X->cart2spher(X, SH = basis.SH), S, X) 
+	map!(cart2spher, S, X) 
 	P = evaluate(basis.alp, S)
 	rRlm!(parent(Y), maxL(basis), S, parent(P), basis)
 	release!(P)
@@ -99,7 +95,7 @@ end
 
 function evaluate_ed!(Y, dY, basis::RRlmBasis, 
 						     X::AbstractVector{<: Real})
-	S = cart2spher(X;SH = basis.SH) 
+	S = cart2spher(X)
 	P, dP = _evaluate_ed(basis.alp, S)
 	rRlm_ed!(parent(Y), parent(dY), maxL(basis), S, parent(P), parent(dP), basis)
 	release!(P)
@@ -110,7 +106,7 @@ end
 function evaluate_ed!(Y, dY, basis::RRlmBasis, 
 						     X::AbstractVector{<: AbstractVector{<: Real}})
 	S = acquire!(basis.tmp_s, length(X))
-	map!(X->cart2spher(X, SH = basis.SH), S, X) 
+	map!(cart2spher, S, X) 
 	P, dP = _evaluate_ed(basis.alp, S)
 	rRlm_ed!(parent(Y), parent(dY), maxL(basis), S, parent(P), parent(dP), basis)
 	release!(P)
@@ -135,11 +131,13 @@ function rRlm!(Y, L, S::SphericalCoords, P::AbstractVector, basis::RRlmBasis)
 	rL[1] = 1
 
 	for l = 0:L
-		if basis.SH
-			aL[l+1] = sqrt(4*pi/(2*l+1))
-		else
-			aL[l+1] = 1
-		end
+		aL[l+1] = sqrt(4*pi/(2*l+1))
+		# TODO: discuss this scaling please !!!! 
+		# if basis.SH
+		# 	aL[l+1] = sqrt(4*pi/(2*l+1))
+		# else
+		# 	aL[l+1] = 1
+		# end
 		Y[index_y(l, 0)] = P[index_p(l, 0)] * oort2 * rL[l+1] * aL[l+1]
 		rL[l+2] = rL[l+1] * S.r
 	end
@@ -149,10 +147,13 @@ function rRlm!(Y, L, S::SphericalCoords, P::AbstractVector, basis::RRlmBasis)
 	ec = 1.0 + 0 * im
     ec_fact = S.cosφ + im * S.sinφ
 	for m in 1:L
-		if basis.SH
 			sig⁺ *= -1
 			sig⁻ = sig⁺
-		end
+		# TODO: discuss this please !!!!
+		# if basis.SH
+		# 	sig⁺ *= -1
+		# 	sig⁻ = sig⁺
+		# end
 		ec *= ec_fact
 		for l in m:L
 			p = P[index_p(l,m)] * rL[l+1] * aL[l+1]
@@ -179,13 +180,14 @@ function rRlm_ed!(Y, dY, L, S, P, dP, basis::RRlmBasis)
 	fill!(rL,1.0)
 
 	for l = 0:L
-		if basis.SH
-			aL[l+1] = sqrt(4*pi/(2*l+1))
-		else
-			aL[l+1] = 1
-		end
+		aL[l+1] = sqrt(4*pi/(2*l+1))
+		# if basis.SH
+		# 	aL[l+1] = sqrt(4*pi/(2*l+1))
+		# else
+		# 	aL[l+1] = 1
+		# end
 		Y[index_y(l, 0)] = P[index_p(l, 0)] * oort2 * rL[l+1] * aL[l+1]
-		dY[index_y(l, 0)] = dspher_to_dcart(S, l * Y[index_y(l, 0)], 0.0, rL[l+1] * aL[l+1] * dP[index_p(l, 0)] * oort2, SH = basis.SH)
+		dY[index_y(l, 0)] = dspher_to_dcart(S, l * Y[index_y(l, 0)], 0.0, rL[l+1] * aL[l+1] * dP[index_p(l, 0)] * oort2)
 		rL[l+2] = rL[l+1] * S.r
 	end
 
@@ -194,10 +196,12 @@ function rRlm_ed!(Y, dY, L, S, P, dP, basis::RRlmBasis)
 	sig⁺ = 1
 	sig⁻ = -1
 	for m in 1:L
-		if basis.SH
-			sig⁺ *= -1
-			sig⁻ = sig⁺
-		end
+		sig⁺ *= -1
+		sig⁻ = sig⁺
+	# if basis.SH
+	# 		sig⁺ *= -1
+	# 		sig⁻ = sig⁺
+	# 	end
 		ec *= ec_fact          # ec = exp(i * m  * φ) / sqrt(2)
 		dec_dφ = im * m * ec
 		for l in m:L
@@ -207,9 +211,9 @@ function rRlm_ed!(Y, dY, L, S, P, dP, basis::RRlmBasis)
 			Y[index_y(l,  m)] =  p * real(ec) * sig⁺
 			Y[index_y(l, -m)] =  p * imag(ec) * sig⁻
 			dY[index_y(l,  m)] = dspher_to_dcart(S, l * Y[index_y(l, m)],  real(dec_dφ) * p_div_sinθ * sig⁺,
-															      real(ec) * dp_dθ * sig⁺, SH = basis.SH)
+															      real(ec) * dp_dθ * sig⁺)
 			dY[index_y(l, -m)] = dspher_to_dcart(S, l * Y[index_y(l, -m)], imag(dec_dφ) * p_div_sinθ * sig⁻,
-															    imag(ec) * dp_dθ * sig⁻, SH = basis.SH)
+															    imag(ec) * dp_dθ * sig⁻)
 		end
 	end
 
@@ -246,11 +250,12 @@ function rRlm!(Y::Matrix, L, S::AbstractVector{<: SphericalCoords}, P::AbstractM
  
         oort2 = 1 / sqrt(2)
         for l = 0:L
-            if basis.SH
-				aL[l+1] = sqrt(4*pi/(2*l+1))
-			else
-				aL[l+1] = 1
-			end
+			aL[l+1] = sqrt(4*pi/(2*l+1))
+         #    if basis.SH
+			# 	aL[l+1] = sqrt(4*pi/(2*l+1))
+			# else
+			# 	aL[l+1] = 1
+			# end
             i_yl0 = index_y(l, 0)
             i_pl0 = index_p(l, 0)
             for i = 1:nX
@@ -262,10 +267,12 @@ function rRlm!(Y::Matrix, L, S::AbstractVector{<: SphericalCoords}, P::AbstractM
         sig⁺ = 1
 		sig⁻ = -1
         for m in 1:L
-            if basis.SH
-				sig⁺ *= -1
-				sig⁻ = sig⁺
-			end
+			sig⁺ *= -1
+			sig⁻ = sig⁺
+			# if basis.SH
+			# 	sig⁺ *= -1
+			# 	sig⁻ = sig⁺
+			# end
             @avx for i = 1:nX
                 cmi = cosmφ[i]
                 smi = sinmφ[i]
@@ -325,16 +332,17 @@ function rRlm_ed!(Y::AbstractMatrix, dY::AbstractMatrix, L, S::AbstractVector, P
  
         oort2 = 1 / sqrt(2)
         for l = 0:L
-            if basis.SH
-				aL[l+1] = sqrt(4*pi/(2*l+1))
-			else
-				aL[l+1] = 1
-			end
+			aL[l+1] = sqrt(4*pi/(2*l+1))
+			# if basis.SH
+			# 	aL[l+1] = sqrt(4*pi/(2*l+1))
+			# else
+			# 	aL[l+1] = 1
+			# end
             i_yl0 = index_y(l, 0)
             i_pl0 = index_p(l, 0)
             @simd ivdep  for i = 1:nX
                 Y[i, i_yl0] = P[i, i_pl0] * oort2 * rL[i, l+1] * aL[l+1]
-                dY[i, i_yl0] = dspher_to_dcart(S[i], l * Y[i, i_yl0], 0.0, rL[i, l+1] * aL[l+1] * dP[i, i_pl0] * oort2, SH = basis.SH)
+                dY[i, i_yl0] = dspher_to_dcart(S[i], l * Y[i, i_yl0], 0.0, rL[i, l+1] * aL[l+1] * dP[i, i_pl0] * oort2)
                 rL[i, l+2] = rL[i, l+1] * r[i]
             end
         end
@@ -342,10 +350,12 @@ function rRlm_ed!(Y::AbstractMatrix, dY::AbstractMatrix, L, S::AbstractVector, P
         sig⁺ = 1
 		sig⁻ = -1
         for m in 1:L
-            if basis.SH
-				sig⁺ *= -1
-				sig⁻ = sig⁺
-			end
+			sig⁺ *= -1
+			sig⁻ = sig⁺
+			# if basis.SH
+			# 	sig⁺ *= -1
+			# 	sig⁻ = sig⁺
+			# end
             @simd ivdep  for i = 1:nX
                 cmi = cosmφ[i]
                 smi = sinmφ[i]
@@ -368,8 +378,8 @@ function rRlm_ed!(Y::AbstractMatrix, dY::AbstractMatrix, L, S::AbstractVector, P
                     b = sinmφ[i] * dp_dθ * sig⁻
                     c = -sig⁺ * m * sinmφ[i] * p_div_sinθ 
                     d = sig⁺ * cosmφ[i] * dp_dθ
-                    dY[i, i_ylm⁻] = dspher_to_dcart(S[i], l * Y[i, i_ylm⁻], a, b, SH = basis.SH)
-                    dY[i, i_ylm⁺] = dspher_to_dcart(S[i], l * Y[i, i_ylm⁺], c, d, SH = basis.SH)
+                    dY[i, i_ylm⁻] = dspher_to_dcart(S[i], l * Y[i, i_ylm⁻], a, b)
+                    dY[i, i_ylm⁺] = dspher_to_dcart(S[i], l * Y[i, i_ylm⁺], c, d)
                 end
             end
         end
@@ -388,14 +398,15 @@ function _lap(basis::RRlmBasis, Y::AbstractVector)
 end
 
 function _lap!(ΔY, basis::RRlmBasis, Y::AbstractVector)
-	if !basis.SH
-		for i = 1:length(Y)
-			l = idx2l(i)
-			ΔY[i] = - Y[i] * l * (l+1)
-		end
-	else
-		ΔY .= 0
-	end
+	# if !basis.SH
+	# 	for i = 1:length(Y)
+	# 		l = idx2l(i)
+	# 		ΔY[i] = - Y[i] * l * (l+1)
+	# 	end
+	# else
+	# ΔY .= 0
+	# end
+	ΔY .= 0
 	return nothing 
 end 
 
@@ -410,19 +421,20 @@ function _lap!(ΔY, basis::RRlmBasis, Y::AbstractMatrix)
 	@assert size(ΔY, 2) >= size(Y, 2)
 	@assert size(Y, 2) >= length(basis)
 	nX = size(Y, 1)
-	if !basis.SH
-		@inbounds for l = 0:maxL(basis)
-			λ = - l * (l+1)
-			for m = -l:l
-				i = index_y(l, m)
-				@simd ivdep for j = 1:nX 
-					ΔY[j, i] = λ * Y[j, i]
-				end
-			end
-		end
-	else
-		ΔY .= 0
-	end
+	# if !basis.SH
+	# 	@inbounds for l = 0:maxL(basis)
+	# 		λ = - l * (l+1)
+	# 		for m = -l:l
+	# 			i = index_y(l, m)
+	# 			@simd ivdep for j = 1:nX 
+	# 				ΔY[j, i] = λ * Y[j, i]
+	# 			end
+	# 		end
+	# 	end
+	# else
+	# 	ΔY .= 0
+	# end
+	ΔY .= 0
 	return nothing 
 end 
 

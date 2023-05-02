@@ -34,11 +34,6 @@ CYlmBasis(alp::ALPolynomials{T}) where {T} =
 Base.show(io::IO, basis::CYlmBasis) = 
       print(io, "CYlmBasis(L=$(maxL(basis)))")
 
-"""
-max L degree for which the alp coefficients have been precomputed
-"""
-maxL(sh::CYlmBasis) = sh.alp.L
-
 _valtype(sh::CYlmBasis{T}, x::AbstractVector{S}) where {T <: Real, S <: Real} = 
 			Complex{promote_type(T, S)}
 
@@ -49,7 +44,6 @@ import Base.==
 ==(B1::CYlmBasis, B2::CYlmBasis) =
 		(B1.alp == B2.alp) && (typeof(B1) == typeof(B2))
 
-Base.length(basis::CYlmBasis) = sizeY(maxL(basis))
 
 
 # ---------------------- FIO

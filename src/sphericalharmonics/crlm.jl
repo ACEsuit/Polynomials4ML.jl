@@ -1,16 +1,15 @@
 """
-complex spherical harmonics: SH = false: 
+complex spherical harmonics: 
 
 Yₗ⁰(θ, φ) = P̄ₗ⁰(cosθ)/√2
 Yₗᵐ(θ, φ) = P̄ₗᵐ(cosθ)exp(imφ)/√2
 Yₗ⁻ᵐ(θ, φ) = (-1)ᵐ P̄ₗᵐ(cosθ)/√2 exp(-imφ)
 
-solid harmonics: SH = true: 
+solid harmonics:
 
 γₗᵐ(r, θ, φ) = rˡYₗᵐ(θ, φ)
 """
-
-struct CRlmBasis{T} <: RlmBasis
+struct CRlmBasis{T}
     alp::ALPolynomials{T}
    # ----------------------------
 	pool::ArrayCache{Complex{T}, 1}
@@ -23,13 +22,12 @@ struct CRlmBasis{T} <: RlmBasis
 	tmp_cos::TempArray{T, 1}
 	tmp_r::TempArray{T, 1}
 	tmp_rL::TempArray{T, 2}
-	SH::Bool
 end
 
-CRlmBasis(maxL::Integer, SH::Bool, T::Type=Float64) = 
-      CRlmBasis(ALPolynomials(maxL, T), SH)
+CRlmBasis(maxL::Integer, T::Type=Float64) = 
+      CRlmBasis(ALPolynomials(maxL, T))
 
-CRlmBasis(alp::ALPolynomials{T}, SH) where {T} = 
+CRlmBasis(alp::ALPolynomials{T}) where {T} = 
         CRlmBasis(alp, 
 		         ArrayCache{Complex{T}, 1}(), 
                ArrayCache{Complex{T}, 2}(), 
@@ -40,8 +38,7 @@ CRlmBasis(alp::ALPolynomials{T}, SH) where {T} =
 					TempArray{T, 1}(), 
 					TempArray{T, 1}(),
 					TempArray{T, 1}(),
-					TempArray{T, 2}(),
-					SH)
+					TempArray{T, 2}() )
 
 Base.show(io::IO, basis::CRlmBasis) = 
       print(io, "CRlmBasis(L=$(maxL(basis)))")
@@ -58,7 +55,7 @@ import Base.==
 
 # ---------------------- evaluation interface code 
 function evaluate!(Y, basis::CRlmBasis, X::AbstractVector{<: Real})
-	S = cart2spher(X;SH = basis.SH) 
+	S = cart2spher(X) 
 	P = evaluate(basis.alp, S)
 	cRlm!(Y, maxL(basis), S, P, basis)
 	release!(P)
@@ -68,7 +65,7 @@ end
 function evaluate!(Y, basis::CRlmBasis, 
 						 X::AbstractVector{<: AbstractVector})
 	S = acquire!(basis.tmp_s, length(X))
-	map!(X->cart2spher(X, SH = basis.SH), S, X) 
+	map!(X->cart2spher(X), S, X) 
 	P = evaluate(basis.alp, S)
 	cRlm!(Y, maxL(basis), S, P, basis)
 	release!(P)
@@ -99,7 +96,7 @@ function evaluate_ed(basis::CRlmBasis, X::AbstractVector{<: AbstractVector})
 end
 
 function evaluate_ed!(Y, dY, basis::CRlmBasis, X::AbstractVector{<: Real})
-	S = cart2spher(X; SH = basis.SH) 
+	S = cart2spher(X) 
 	P, dP = _evaluate_ed(basis.alp, S)
 	cRlm_ed!(Y, dY, maxL(basis), S, P, dP, basis)
 	release!(P)
@@ -109,7 +106,7 @@ end
 
 function evaluate_ed!(Y, dY, basis::CRlmBasis, X::AbstractVector{<: AbstractVector})
 	S = acquire!(basis.tmp_s, length(X))
-	map!(X->cart2spher(X, SH = basis.SH), S, X) 
+	map!(X->cart2spher(X), S, X) 
 	P, dP = _evaluate_ed(basis.alp, S)
 	cRlm_ed!(Y, dY, maxL(basis), S, P, dP, basis)
 	release!(P)
@@ -170,7 +167,7 @@ function cRlm_ed!(Y, dY, L, S::SphericalCoords, P, dP, basis::CRlmBasis)
 	for l = 0:L
 		Y[index_y(l, 0)] =  P[index_p(l, 0)] * ep * rL[l+1]
 		# f_r_times_r
-		dY[index_y(l, 0)] = dspher_to_dcart(S, l * Y[index_y(l, 0)], 0.0, rL[l+1] * dP[index_p(l, 0)] * ep;SH = basis.SH)
+		dY[index_y(l, 0)] = dspher_to_dcart(S, l * Y[index_y(l, 0)], 0.0, rL[l+1] * dP[index_p(l, 0)] * ep)
 		rL[l+2] = rL[l+1] * S.r
 	end
 
@@ -189,8 +186,8 @@ function cRlm_ed!(Y, dY, L, S::SphericalCoords, P, dP, basis::CRlmBasis)
 			@inbounds Y[index_y(l,  m)] = ep * p_div_sinθ * S.sinθ 
 			dp_dθ = dP[index_p(l,m)] * rL[l+1]
 			# f_r_times_r
-			@inbounds dY[index_y(l, -m)] = dspher_to_dcart(S, l * Y[index_y(l, -m)], dem_dφ * p_div_sinθ , em * dp_dθ;SH = basis.SH)
-			@inbounds dY[index_y(l,  m)] = dspher_to_dcart(S, l * Y[index_y(l, m)], dep_dφ * p_div_sinθ, ep * dp_dθ;SH = basis.SH)
+			@inbounds dY[index_y(l, -m)] = dspher_to_dcart(S, l * Y[index_y(l, -m)], dem_dφ * p_div_sinθ , em * dp_dθ)
+			@inbounds dY[index_y(l,  m)] = dspher_to_dcart(S, l * Y[index_y(l, m)], dep_dφ * p_div_sinθ, ep * dp_dθ)
 		end
 	end
 
@@ -289,7 +286,7 @@ function cRlm_ed!(Y, dY, L, S::AbstractVector{<: SphericalCoords},
 			i_pl0 = index_p(l, 0)
 			for i = 1:nS 
 				Y[i, i_yl0] = P[i, i_pl0] * ep[i] * rL[i, l+1]
-				dY[i, i_yl0] = dspher_to_dcart(S[i], l * Y[i, i_yl0], 0.0, rL[i, l+1] *  dP[i, i_pl0] * ep[i];SH = basis.SH)		
+				dY[i, i_yl0] = dspher_to_dcart(S[i], l * Y[i, i_yl0], 0.0, rL[i, l+1] *  dP[i, i_pl0] * ep[i])
 				rL[i, l+2] = rL[i, l+1] * r[i]
 			end
 		end
@@ -320,8 +317,8 @@ function cRlm_ed!(Y, dY, L, S::AbstractVector{<: SphericalCoords},
 					Y[i, i_ylm⁺] = ep[i] * p_div_sinθ * S[i].sinθ
 
 					dp_dθ = dP[i, i_plm] * rL[i, l+1]
-					dY[i, i_ylm⁻] = dspher_to_dcart(S[i], l * Y[i, i_ylm⁻], dem_dφ * p_div_sinθ, em * dp_dθ;SH = basis.SH)
-					dY[i, i_ylm⁺] = dspher_to_dcart(S[i], l * Y[i, i_ylm⁺], dep_dφ * p_div_sinθ, ep[i] * dp_dθ;SH = basis.SH)
+					dY[i, i_ylm⁻] = dspher_to_dcart(S[i], l * Y[i, i_ylm⁻], dem_dφ * p_div_sinθ, em * dp_dθ)
+					dY[i, i_ylm⁺] = dspher_to_dcart(S[i], l * Y[i, i_ylm⁺], dep_dφ * p_div_sinθ, ep[i] * dp_dθ)
 				end
 			end
 		end
