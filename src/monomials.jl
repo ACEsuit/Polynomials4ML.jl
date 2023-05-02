@@ -6,7 +6,7 @@ export MonoBasis
 """
 Standard Monomials. This should very rarely be used.
 """
-struct MonoBasis <: PolyBasis4ML
+struct MonoBasis <: AbstractPoly4MLBasis
    N::Int
    # ----------------- metadata 
    meta::Dict{String, Any}

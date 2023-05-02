@@ -14,7 +14,7 @@ using LoopVectorization
 Orthogonality is achieved with respect to a user-specified distribution, which
 can be either continuous or discrete but must have a density function.
 """
-struct OrthPolyBasis1D3T{T} <: PolyBasis4ML
+struct OrthPolyBasis1D3T{T} <: AbstractPoly4MLBasis
    # ----------------- the recursion coefficients
    A::Vector{T}
    B::Vector{T}

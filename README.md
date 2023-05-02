@@ -44,6 +44,6 @@ dP = evaluate_d(basis, x)
 P, dP = evaluate_ed(basis, x)
 
 # second derivatives 
-ddP = evaluate_dd(basis, x)
+ddP = evaluate_d2(basis, x)
 P, dP, ddP = evaluate_ed2(basis, x)
 ```

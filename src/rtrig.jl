@@ -1,6 +1,6 @@
 export RTrigBasis
 
-struct RTrigBasis <: PolyBasis4ML
+struct RTrigBasis <: AbstractPoly4MLBasis
    N::Int
    # ----------------- metadata 
    meta::Dict{String, Any}

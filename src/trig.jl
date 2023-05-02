@@ -11,7 +11,7 @@ constructed in the order
 where `θ` is input variable. These polynomials are orthonormal w.r.t. the 
 normalized L2-inner product on the torus. 
 """
-struct CTrigBasis{T} <: PolyBasis4ML
+struct CTrigBasis{T} <: AbstractPoly4MLBasis
    N::Int
    # ----------------- metadata 
    meta::Dict{String, Any}
