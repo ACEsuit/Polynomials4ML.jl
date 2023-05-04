@@ -34,6 +34,8 @@ index(basis::CTrigBasis, m::Integer) =
 
 Base.length(basis::CTrigBasis) = 2 * basis.N + 1 
 
+_valtype(basis::CTrigBasis, x::Real) = complex(typeof(x))
+
 _alloc(basis::CTrigBasis{T1}, x::T2) where {T1, T2 <: Number} = 
             zeros(promote_type(Complex{T1}, T2), length(basis))
 

@@ -26,6 +26,8 @@ index(basis::MonoBasis, m::Integer) = m+1
 
 Base.length(basis::MonoBasis) = basis.N+1
 
+_valtype(basis::MonoBasis, x::Number) = typeof(x)
+
 _alloc(basis::MonoBasis, x::T2) where {T2 <: Number} = 
             zeros(T2, length(basis))
 

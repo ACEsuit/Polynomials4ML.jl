@@ -21,6 +21,7 @@ end
 RTrigBasis(N::Integer, meta = Dict{String, Any}()) = 
          RTrigBasis{T}(N, meta)
 
+_valtype(basis::RTrigBasis, x::Real) = typeof(x) 
 
 _alloc(basis::RTrigBasis, x::Real) = zeros(typeof(x), length(basis))
 
