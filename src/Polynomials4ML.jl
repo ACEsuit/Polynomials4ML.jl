@@ -7,7 +7,7 @@ import ACEbase: evaluate, evaluate_d, evaluate_ed, evaluate_d2, evaluate_ed2,
                 evaluate!, evaluate_d!, evaluate_ed!, evaluate_d2!, evaluate_ed2!
 import ACEbase.FIO: read_dict, write_dict
 
-function natural_indices end 
+function natural_indices end   # could rename this get_spec or similar ... 
 function index end
 function orthpolybasis end
 function degree end 
