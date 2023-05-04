@@ -12,6 +12,11 @@ function index end
 function orthpolybasis end
 function degree end 
 
+# some stuff to allow bases to overload some lux functionality ... 
+function lux end 
+function _init_luxparams end 
+function _init_luxstate end 
+
 export natural_indices, 
        index, 
        evaluate, 
@@ -40,6 +45,8 @@ include("trig.jl")
 include("rtrig.jl")
 
 include("sphericalharmonics/sphericalharmonics.jl")
+
+include("lux.jl")
 
 include("testing.jl")
 
