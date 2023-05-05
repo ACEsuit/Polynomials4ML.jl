@@ -1,4 +1,4 @@
-using OrthogonalPolynomials
+using Polynomials4ML
 using Documenter
 
 DocMeta.setdocmeta!(Polynomials4ML, :DocTestSetup, :(using Polynomials4ML); recursive=true)

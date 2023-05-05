@@ -44,7 +44,7 @@ jobs:
       - uses: julia-actions/setup-julia@v1
         with:
           version: '1'
-      - run: julia --project=docs -e 'using Pkg; pkg"registry add https://github.com/ACEsuit/ACEregistry.git; dev ."'
+      - run: julia --project=docs -e 'using Pkg; pkg"registry add https://github.com/ACEsuit/ACEregistry.git"'
       - uses: julia-actions/julia-buildpkg@v1
       - uses: julia-actions/julia-docdeploy@v1
         env:
@@ -52,6 +52,6 @@ jobs:
       - run: |
           julia --project=docs -e '
             using Documenter: DocMeta, doctest
-            using OrthogonalPolynomials
-            DocMeta.setdocmeta!(OrthogonalPolynomials, :DocTestSetup, :(using OrthogonalPolynomials); recursive=true)
-            doctest(OrthogonalPolynomials)'
+            using Polynomials4ML
+            DocMeta.setdocmeta!(Polynomials4ML, :DocTestSetup, :(using Polynomials4ML); recursive=true)
+            doctest(Polynomials4ML)'
