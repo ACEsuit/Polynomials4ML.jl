@@ -8,7 +8,3 @@ Documentation for [Polynomials4ML](https://github.com/ACEsuit/Polynomials4ML.jl)
 
 ```@index
 ```
-
-```@autodocs
-Modules = [Polynomials4ML]
-```

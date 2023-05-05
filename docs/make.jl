@@ -16,6 +16,8 @@ makedocs(;
     ),
     pages=[
         "Home" => "index.md",
+        "API" => "public_interface.md", 
+        "Docstrings" => "docstrings.md",
     ],
 )
 
