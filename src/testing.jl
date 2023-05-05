@@ -1,17 +1,12 @@
 module Testing
 
 using Polynomials4ML: evaluate!, evaluate_ed!, evaluate_ed2!, 
-               evaluate, evaluate_d, evaluate_ed, evaluate_dd, evaluate_ed2 , 
+               evaluate, evaluate_d, evaluate_ed, evaluate_d2, evaluate_ed2 , 
                _alloc
 
 using Test, ForwardDiff
 
-print_tf(::Test.Pass) = printstyled("+", bold=true, color=:green)
-print_tf(::Test.Fail) = printstyled("-", bold=true, color=:red)
-print_tf(::Tuple{Test.Error,Bool}) = printstyled("x", bold=true, color=:magenta)
-
-println_slim(::Test.Pass) = printstyled("Test Passed\n", bold=true, color=:green)
-println_slim(::Test.Fail) = printstyled("Test Failed\n", bold=true, color=:red)
+using ACEbase.Testing: print_tf, println_slim
 
 
 
@@ -57,7 +52,7 @@ function test_derivatives(basis, generate_x, nX = 32, ntest = 8)
       P2, dP2 = evaluate_ed(basis, x)
       dP3 = evaluate_d(basis, x)
       P4, dP4, ddP4 = evaluate_ed2(basis, x)
-      ddP5 = evaluate_dd(basis, x)
+      ddP5 = evaluate_d2(basis, x)
       print_tf(@test P1 ≈ P2 ≈ P4 )
       print_tf(@test dP2 ≈ dP3 ≈ dP4)
       print_tf(@test ddP4 ≈ ddP5)
@@ -86,7 +81,7 @@ function test_derivatives(basis, generate_x, nX = 32, ntest = 8)
    for (i, x) in enumerate(X)
       bP1[i, :] = evaluate(basis, x)
       bdP1[i, :] = evaluate_d(basis, x)
-      bddP1[i, :] = evaluate_dd(basis, x)
+      bddP1[i, :] = evaluate_d2(basis, x)
    end
       
    bP2 = evaluate(basis, X)

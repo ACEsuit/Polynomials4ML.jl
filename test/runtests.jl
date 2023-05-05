@@ -8,4 +8,6 @@ using Test
     @testset "Real Trig Polys" begin include("test_rtrig.jl"); end
     @testset "SphericalHarmonics" begin include("test_cylm.jl"); end
     @testset "SphericalHarmonics" begin include("test_rylm.jl"); end
+
+    @testset "Lux" begin include("test_lux.jl"); end 
 end

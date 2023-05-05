@@ -4,7 +4,7 @@
 """
 complex spherical harmonics
 """
-struct CYlmBasis{T}
+struct CYlmBasis{T} <: AbstractPoly4MLBasis
 	alp::ALPolynomials{T}
    # ----------------------------
 	pool::ArrayCache{Complex{T}, 1}

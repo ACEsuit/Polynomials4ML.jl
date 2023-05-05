@@ -14,7 +14,7 @@ using LoopVectorization
 Orthogonality is achieved with respect to a user-specified distribution, which
 can be either continuous or discrete but must have a density function.
 """
-struct OrthPolyBasis1D3T{T} <: PolyBasis4ML
+struct OrthPolyBasis1D3T{T} <: AbstractPoly4MLBasis
    # ----------------- the recursion coefficients
    A::Vector{T}
    B::Vector{T}
@@ -34,13 +34,20 @@ index(basis::OrthPolyBasis1D3T, m::Integer) = m + 1
 
 Base.length(basis::OrthPolyBasis1D3T) = length(basis.A)
 
+
 # ----------------- interface functions 
 
-_alloc(basis::OrthPolyBasis1D3T{T1}, x::T2) where {T1, T2 <: Number} = 
-            zeros(promote_type(T1, T2), length(basis))
+_valtype(basis::OrthPolyBasis1D3T{T1}, x::T2) where {T1, T2} = 
+            promote_type(T1, T2)
 
-_alloc(basis::OrthPolyBasis1D3T{T1}, X::AbstractVector{T2}) where {T1, T2 <: Number} = 
-            zeros(promote_type(T1, T2), length(X), length(basis))
+_valtype(basis::OrthPolyBasis1D3T{T1}, TX::Type{T2}) where {T1, T2} = 
+            promote_type(T1, T2)         
+
+_alloc(basis::OrthPolyBasis1D3T, x::Number) = 
+            zeros(_valtype(basis, typeof(x)), length(basis))
+
+_alloc(basis::OrthPolyBasis1D3T, X::AbstractVector{T2}) where {T2 <: Number} = 
+            zeros(_valtype(basis, T2), length(X), length(basis))
 
 # ----------------- main evaluation code 
 

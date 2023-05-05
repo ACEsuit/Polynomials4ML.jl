@@ -1,6 +1,6 @@
 export RYlmBasis 
 
-struct RYlmBasis{T}
+struct RYlmBasis{T} <: AbstractPoly4MLBasis
 	alp::ALPolynomials{T}
    # ----------------------------
 	pool::ArrayCache{T, 1}
