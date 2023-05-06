@@ -1,4 +1,17 @@
 
+# Public API 
+
+This page documents the public API, i.e. the list of bases and functions that are considered relatively stable and for which we aim to strictly impose semver backward compatibility. The basis sets that are considered stable are the following (please see inline documentation for initialization): 
+
+* [`OrthPolyBasis1D3T`](@ref)
+   - [`jacobi_basis` ](@ref)
+   - [`legendre_basis`](@ref)
+   - [`chebyshev_basis` ](@ref)
+* [`CTrigBasis`](@ref)
+* [`RTrigBasis` ](@ref)
+* [`CYlmBasis`](@ref)
+* [`RYlmBasis` ](@ref)
+
 ## In-place Evaluation  
 
 This section documents the in-place evaluation interface. *All* basis sets implemented in this package should provide this interface as a minimal requirement. 
@@ -32,6 +45,7 @@ P, dP = evaluate_ed(basis, X)
 P, dP, ddP = evaluate_ed2(basis, X)
 ```
 
-The meaning of the different symbols is exactly the same as described above. The only difference is that the output arrays `P`, `dP`, `ddP` are now allocated and will have precise the correct shape to match the shape of the input. 
-
+The meaning of the different symbols is exactly the same as described above. The only difference is that the output containers `P`, `dP`, `ddP` are now allocated. 
+Their type should be stable (if not, please file a bug report), but unspecified in the sense that the output type is not semver-stable for the time being. 
+If you need a sem-ver stable output then it is best to follow the above with a `collect`.
 

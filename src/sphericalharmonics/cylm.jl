@@ -1,8 +1,14 @@
 
 
-
 """
-complex spherical harmonics
+`CYlmBasis(maxL, T=Float64): `
+
+Complex spherical harmonics; see tests to see how they are normalized, and  `idx2lm` on how they are ordered. The ordering is not guarenteed to be semver-stable.
+
+The input variable is normally an `rr::SVector{3, T}`. This `rr` need not be normalized (i.e. on the unit sphere). The derivatives account for this, i.e. they are valid even when `norm(rr) != 1`.
+
+* `maxL` : maximum degree of the spherical harmonics
+* `T` : type used to store the coefficients for the associated legendre functions
 """
 struct CYlmBasis{T} <: AbstractPoly4MLBasis
 	alp::ALPolynomials{T}
@@ -63,37 +69,6 @@ Base.length(basis::CYlmBasis) = sizeY(maxL(basis))
 # 		CYlmBasis(D["maxL"], read_dict(D["T"]))
 
 
-
-# ---------------------- Indexing
-
-"""
-`sizeY(maxL):`
-Return the size of the set of spherical harmonics ``Y_{l,m}(θ,φ)`` of
-degree less than or equal to the given maximum degree `maxL`
-"""
-sizeY(maxL) = (maxL + 1) * (maxL + 1)
-
-"""
-`index_y(l,m):`
-Return the index into a flat array of real spherical harmonics `Y_lm`
-for the given indices `(l,m)`. `Y_lm` are stored in l-major order i.e.
-```
-	[Y(0,0), Y(1,-1), Y(1,0), Y(1,1), Y(2,-2), ...]
-```
-"""
-index_y(l::Integer, m::Integer) = m + l + (l*l) + 1
-
-"""
-Inverse of `index_y`: given an index into a vector of Ylm values, return the 
-`l, m` indices.
-"""
-function idx2lm(i::Integer) 
-	l = floor(Int, sqrt(i-1) + 1e-10)
-	m = i - (l + (l*l) + 1)
-	return l, m 
-end 
-
-idx2l(i::Integer) = floor(Int, sqrt(i-1) + 1e-10)
 
 
 # ---------------------- evaluation interface code 

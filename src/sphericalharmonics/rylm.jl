@@ -1,5 +1,15 @@
 export RYlmBasis 
 
+"""
+`RYlmBasis(maxL, T=Float64): `
+
+Real spherical harmonics; see tests to see how they are normalized, and  `idx2lm` on how they are ordered. The ordering is not guarenteed to be semver-stable.
+
+The input variable is normally an `rr::SVector{3, T}`. This `rr` need not be normalized (i.e. on the unit sphere). The derivatives account for this, i.e. they are valid even when `norm(rr) != 1`.
+
+* `maxL` : maximum degree of the spherical harmonics
+* `T` : type used to store the coefficients for the associated legendre functions
+"""
 struct RYlmBasis{T} <: AbstractPoly4MLBasis
 	alp::ALPolynomials{T}
    # ----------------------------
