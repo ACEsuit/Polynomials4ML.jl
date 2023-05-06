@@ -48,6 +48,8 @@ include("rtrig.jl")
 
 include("sphericalharmonics/sphericalharmonics.jl")
 
+include("sparseproduct.jl")
+
 include("lux.jl")
 
 include("testing.jl")
