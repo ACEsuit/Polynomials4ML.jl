@@ -5,10 +5,26 @@ using LinearAlgebra: norm
 using BenchmarkTools
 using Polynomials4ML
 using ACEbase.Testing: fdtest
+using Printf
+
+function grad_test(f, df, X)
+   F = f(X) 
+   ∇F = df(X)
+   nX, nF = size(F)
+   U = randn(nX)
+   V = randn(nF) ./ (1:nF).^2
+   f0 = U' * F * V
+   ∇f0 = [ U' * ∇F[i, :, :] * V for i = 1:nX ]
+   EE = Matrix(I, (nX, nX))
+   for h in 0.1.^(2:10)
+      gh = [ (U'*f(X + h * EE[:, i])*V - f0) / h for i = 1:nX ]
+      @printf(" %.1e | %.2e \n", h, norm(gh - ∇f0, Inf))
+   end
+end
 
 N1 = 10
-N2 = 20
-N3 = 30 
+N2 = 5
+N3 = 5
 
 B1 = randn(N1)
 B2 = randn(N2)
@@ -65,23 +81,19 @@ for N = 1:5
 end
 println() 
 
-@info("Testing _rrule_eval")
+@info("Testing _rrule_evaluate")
+using LinearAlgebra: dot 
+bBB = ( randn(nX, N1), randn(nX, N2), randn(nX, N3) )
+bUU = ( randn(nX, N1), randn(nX, N2), randn(nX, N3) )
+_BB(t) = ( bBB[1] + t * bUU[1], bBB[2] + t * bUU[2], bBB[3] + t * bUU[3] )
+bA2 = Polynomials4ML.evaluate_batch(basis, bBB)
+u = randn(size(bA2))
+F(t) = dot(u, Polynomials4ML.evaluate_batch(basis, _BB(t)))
+dF(t) = begin
+    val, pb = Polynomials4ML._rrule_evaluate(basis, _BB(t))
+    ∂BB = pb(u)
+    return sum( dot(∂BB[i], bUU[i]) for i = 1:length(bUU) )
+end
+print_tf(@test fdtest(F, dF, 0.0; verbose=true))
 
-# @info("Testing _rrule_eval")
-# using LinearAlgebra: dot 
-
-
-# bBB = ( randn(nX, N1), randn(nX, N2), randn(nX, N3) )
-# bUU = ( randn(nX, N1), randn(nX, N2), randn(nX, N3) )
-# _BB(t) = ( bBB[1] + t * bUU[1], bBB[2] + t * bUU[2], bBB[3] + t * bUU[3] )
-# bA2 = evaluate(basis, bBB)
-# u = randn(size(bA2))
-# F(t) = dot(u, evaluate(basis, _BB(t)))
-# dF(t) = begin
-#     val, pb = Polynomials4ML._rrule_evaluate(basis, _BB(t))
-#     ∂BB = pb(u)
-#     @show size(∂BB[1])
-#     return sum( dot(∂BB[i], bUU[i]) for i = 1:length(bUU) )
-# end
-# @show dF(0.1)
-# print_tf(@test fdtest(F, dF, 0.0; verbose=true))
+println() 

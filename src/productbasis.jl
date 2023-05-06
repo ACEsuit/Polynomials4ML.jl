@@ -26,6 +26,14 @@ function evaluate(basis::ProductBasis, BB::Tuple)
    return A 
 end
 
+function evaluate_batch(basis::ProductBasis, BB::Tuple) 
+   VT = mapreduce(eltype, promote_type, BB)
+   nX = size(BB[1], 1)
+   A = zeros(VT, nX, length(basis))
+   evaluate_batch!(A, basis, BB::Tuple)
+   return A 
+end
+
 test_evaluate(basis::ProductBasis, BB::Tuple) = 
        [ prod(BB[j][basis.spec[i][j]] for j = 1:length(BB)) 
             for i = 1:length(basis) ]
@@ -115,43 +123,43 @@ end
 end
 
 
-# function _rrule_evaluate(basis::ProductBasis{NB}, BB::Tuple) where {NB}
-#     A = evaluate(basis, BB)
-#     return A, ∂A -> _pullback_evaluate(∂A, basis, BB)
-# end
+function _rrule_evaluate(basis::ProductBasis{NB}, BB::Tuple) where {NB}
+    A = evaluate_batch(basis, BB)
+    return A, ∂A -> _pullback_evaluate(∂A, basis, BB)
+end
 
 
-# function _pullback_evaluate(∂A, basis::ProductBasis{NB}, BB::Tuple) where {NB}
-#    nX = size(BB[1], 1)
-#    nϕ = length(basis.spec)
-#    TA = promote_type(eltype.(BB)...)
-#    ∂BB = ntuple(i -> zeros(TA, size(BB[i])..., nϕ), NB)
-#    _pullback_evaluate!(∂BB, ∂A, basis, BB)
-#    return ∂BB
-# end
+function _pullback_evaluate(∂A, basis::ProductBasis{NB}, BB::Tuple) where {NB}
+   nX = size(BB[1], 1)
+   nϕ = length(basis.spec)
+   TA = promote_type(eltype.(BB)...)
+   ∂BB = ntuple(i -> zeros(TA, size(BB[i])...), NB)
+   _pullback_evaluate!(∂BB, ∂A, basis, BB)
+   return ∂BB
+end
 
 
-# function _pullback_evaluate!(∂BB, ∂A, basis::ProductBasis{NB}, BB::Tuple) where {NB}
-#    nX = size(BB[1], 1)
+function _pullback_evaluate!(∂BB, ∂A, basis::ProductBasis{NB}, BB::Tuple) where {NB}
+   nX = size(BB[1], 1)
 
-#    @assert all(nX <= size(BB[i], 1) for i = 1:NB)
-#    @assert all(nX <= size(∂BB[i], 1) for i = 1:NB)
-#    @assert all(size(∂BB[i], 2) >= size(BB[i], 2) for i = 1:NB)
-#    @assert length(∂A) == length(basis)
-#    @assert length(BB) == NB 
-#    @assert length(∂BB) == NB
+   @assert all(nX <= size(BB[i], 1) for i = 1:NB)
+   @assert all(nX <= size(∂BB[i], 1) for i = 1:NB)
+   @assert all(size(∂BB[i], 2) >= size(BB[i], 2) for i = 1:NB)
+   @assert size(∂A) == (nX, length(basis))
+   @assert length(BB) == NB 
+   @assert length(∂BB) == NB
    
-#    @inbounds for (iA, ϕ) in enumerate(basis.spec) # for each spec
-#       ∂A_iA = ∂A[iA]
-#       @simd ivdep for j = 1:nX # for each input x
-#          for i = 1:NB # for each B basis
-#                b = ntuple(Val(NB)) do i 
-#                @inbounds BB[i][j, ϕ[i]]
-#             end
-#             g = _prod_grad(b, Val(NB))
-#             ∂BB[i][j, ϕ[i], iA] = ∂A_iA * g[i]
-#          end
-#       end 
-#    end
-#    return nothing 
-# end
+   @inbounds for (iA, ϕ) in enumerate(basis.spec) # for each spec
+      # ∂A_iA = ∂A[iA]
+      @simd ivdep for j = 1:nX 
+        b = ntuple(Val(NB)) do i 
+           @inbounds BB[i][j, ϕ[i]] 
+        end 
+        g = _prod_grad(b, Val(NB))
+        for i = 1:NB 
+           ∂BB[i][j, ϕ[i]] = muladd(∂A[j, iA], g[i], ∂BB[i][j, ϕ[i]])
+        end
+      end 
+   end
+   return nothing 
+end
