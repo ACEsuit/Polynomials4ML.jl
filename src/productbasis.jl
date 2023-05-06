@@ -19,6 +19,7 @@ Base.length(basis::ProductBasis) = length(basis.spec)
 
 # ----------------------- evaluation interfaces 
 
+
 function evaluate(basis::ProductBasis, BB::Tuple{Vararg{AbstractVector}}) 
    VT = mapreduce(eltype, promote_type, BB)
    A = zeros(VT, length(basis))
@@ -48,7 +49,6 @@ test_evaluate(basis::ProductBasis, BB::Tuple) =
    end)
 end
 
-
 function evaluate!(A, basis::ProductBasis{NB}, BB::Tuple{Vararg{AbstractVector}}) where {NB}
    @assert length(BB) == NB
    spec = basis.spec
@@ -65,7 +65,6 @@ end
       @inbounds BB[i][j, ϕ[i]]
    end)
 end
-
 
 function evaluate!(A, basis::ProductBasis{NB}, BB::Tuple{Vararg{AbstractMatrix}}) where {NB}
    nX = size(BB[1], 1)
@@ -124,14 +123,12 @@ end
 
 
 function _rrule_evaluate(basis::ProductBasis{NB}, BB::Tuple) where {NB}
-    A = evaluate(basis, BB)
-    return A, ∂A -> _pullback_evaluate(∂A, basis, BB)
+   A = evaluate(basis, BB)
+   return A, ∂A -> _pullback_evaluate(∂A, basis, BB)
 end
 
 
 function _pullback_evaluate(∂A, basis::ProductBasis{NB}, BB::Tuple) where {NB}
-   nX = size(BB[1], 1)
-   nϕ = length(basis.spec)
    TA = promote_type(eltype.(BB)...)
    ∂BB = ntuple(i -> zeros(TA, size(BB[i])...), NB)
    _pullback_evaluate!(∂BB, ∂A, basis, BB)

@@ -7,20 +7,6 @@ using Polynomials4ML
 using ACEbase.Testing: fdtest
 using Printf
 
-function grad_test(f, df, X)
-   F = f(X) 
-   ∇F = df(X)
-   nX, nF = size(F)
-   U = randn(nX)
-   V = randn(nF) ./ (1:nF).^2
-   f0 = U' * F * V
-   ∇f0 = [ U' * ∇F[i, :, :] * V for i = 1:nX ]
-   EE = Matrix(I, (nX, nX))
-   for h in 0.1.^(2:10)
-      gh = [ (U'*f(X + h * EE[:, i])*V - f0) / h for i = 1:nX ]
-      @printf(" %.1e | %.2e \n", h, norm(gh - ∇f0, Inf))
-   end
-end
 
 N1 = 10
 N2 = 20
@@ -47,6 +33,7 @@ A2 = evaluate(basis, BB)
 println_slim(@test A1 ≈ A2 )
 
 ##
+
 @info("Test batch evaluation")
 
 nX = 64 
@@ -63,6 +50,7 @@ println_slim(@test bA1 ≈ bA2)
 
 
 ## 
+
 @info("Testing _prod_grad")
 
 using StaticArrays, ForwardDiff
@@ -78,7 +66,10 @@ for N = 1:5
       print_tf(@test g1 ≈ SVector(g...))
    end
 end
-println() 
+println()
+
+##
+
 @info("Testing _rrule_evaluate")
 using LinearAlgebra: dot 
 
@@ -100,3 +91,5 @@ for n_test = 1:30
     print_tf(@test fdtest(F, dF, 0.0; verbose=false))
 end
 println()
+
+##

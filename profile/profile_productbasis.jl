@@ -9,7 +9,7 @@ spec = sort([ (rand(1:N1), rand(1:N2), rand(1:N3)) for i = 1:100 ])
 
 basis = Polynomials4ML.ProductBasis(spec)
 
-@info("Test batched evaluation")
+@info("Test inplace evaluation")
 nX = 64 
 bBB = ( randn(nX, N1), randn(nX, N2), randn(nX, N3) )
 
