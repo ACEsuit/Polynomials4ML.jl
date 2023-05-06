@@ -7,6 +7,7 @@ using Polynomials4ML
 using ACEbase.Testing: fdtest
 using Printf
 
+##
 
 N1 = 10
 N2 = 20
@@ -57,7 +58,7 @@ using StaticArrays, ForwardDiff
 
 prodgrad = Polynomials4ML._prod_grad
 
-for N = 2:5 
+for N = 1:5 
    for ntest = 1:10
       local v1, g 
       b = rand(SVector{N, Float64})
