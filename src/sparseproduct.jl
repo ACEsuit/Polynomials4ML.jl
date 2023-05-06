@@ -1,33 +1,33 @@
-struct ProductBasis{NB}
+struct SparseProduct{NB}
    spec::Vector{NTuple{NB, Int}}
    # ---- temporaries & caches 
 end
 
-function ProductBasis()
-   return ProductBasis(bases, NTuple{NB, Int}[])
+function SparseProduct()
+   return SparseProduct(bases, NTuple{NB, Int}[])
 end
 
 # each column defines a basis element
-function ProductBasis(spec::Matrix{<: Integer})
+function SparseProduct(spec::Matrix{<: Integer})
    @assert all(spec .> 0)
    spect = [ Tuple(spec[:, i]...) for i = 1:size(spec, 2) ]
-   return ProductBasis(spect)
+   return SparseProduct(spect)
 end
  
-Base.length(basis::ProductBasis) = length(basis.spec)
+Base.length(basis::SparseProduct) = length(basis.spec)
 
 
 # ----------------------- evaluation interfaces 
 
 
-function evaluate(basis::ProductBasis, BB::Tuple{Vararg{AbstractVector}}) 
+function evaluate(basis::SparseProduct, BB::Tuple{Vararg{AbstractVector}}) 
    VT = mapreduce(eltype, promote_type, BB)
    A = zeros(VT, length(basis))
    evaluate!(A, basis, BB::Tuple)
    return A 
 end
 
-function evaluate(basis::ProductBasis, BB::Tuple{Vararg{AbstractMatrix}}) 
+function evaluate(basis::SparseProduct, BB::Tuple{Vararg{AbstractMatrix}}) 
    VT = mapreduce(eltype, promote_type, BB)
    nX = size(BB[1], 1)
    A = zeros(VT, nX, length(basis))
@@ -35,7 +35,7 @@ function evaluate(basis::ProductBasis, BB::Tuple{Vararg{AbstractMatrix}})
    return A 
 end
 
-test_evaluate(basis::ProductBasis, BB::Tuple) = 
+test_evaluate(basis::SparseProduct, BB::Tuple) = 
        [ prod(BB[j][basis.spec[i][j]] for j = 1:length(BB)) 
             for i = 1:length(basis) ]
    
@@ -49,7 +49,7 @@ test_evaluate(basis::ProductBasis, BB::Tuple) =
    end)
 end
 
-function evaluate!(A, basis::ProductBasis{NB}, BB::Tuple{Vararg{AbstractVector}}) where {NB}
+function evaluate!(A, basis::SparseProduct{NB}, BB::Tuple{Vararg{AbstractVector}}) where {NB}
    @assert length(BB) == NB
    spec = basis.spec
    for (iA, ϕ) in enumerate(spec)
@@ -66,7 +66,7 @@ end
    end)
 end
 
-function evaluate!(A, basis::ProductBasis{NB}, BB::Tuple{Vararg{AbstractMatrix}}) where {NB}
+function evaluate!(A, basis::SparseProduct{NB}, BB::Tuple{Vararg{AbstractMatrix}}) where {NB}
    nX = size(BB[1], 1)
    @assert all(B->size(B, 1) == nX, BB)
    spec = basis.spec
@@ -122,13 +122,13 @@ end
 end
 
 
-function _rrule_evaluate(basis::ProductBasis{NB}, BB::Tuple) where {NB}
+function _rrule_evaluate(basis::SparseProduct{NB}, BB::Tuple) where {NB}
    A = evaluate(basis, BB)
    return A, ∂A -> _pullback_evaluate(∂A, basis, BB)
 end
 
 
-function _pullback_evaluate(∂A, basis::ProductBasis{NB}, BB::Tuple) where {NB}
+function _pullback_evaluate(∂A, basis::SparseProduct{NB}, BB::Tuple) where {NB}
    TA = promote_type(eltype.(BB)...)
    ∂BB = ntuple(i -> zeros(TA, size(BB[i])...), NB)
    _pullback_evaluate!(∂BB, ∂A, basis, BB)
@@ -136,7 +136,7 @@ function _pullback_evaluate(∂A, basis::ProductBasis{NB}, BB::Tuple) where {NB}
 end
 
 
-function _pullback_evaluate!(∂BB, ∂A, basis::ProductBasis{NB}, BB::Tuple) where {NB}
+function _pullback_evaluate!(∂BB, ∂A, basis::SparseProduct{NB}, BB::Tuple) where {NB}
    nX = size(BB[1], 1)
 
    @assert all(nX <= size(BB[i], 1) for i = 1:NB)

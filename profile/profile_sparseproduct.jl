@@ -7,7 +7,7 @@ N2 = 20
 N3 = 50 
 spec = sort([ (rand(1:N1), rand(1:N2), rand(1:N3)) for i = 1:100 ])
 
-basis = Polynomials4ML.ProductBasis(spec)
+basis = Polynomials4ML.SparseProduct(spec)
 
 @info("Test inplace evaluation")
 nX = 64 
