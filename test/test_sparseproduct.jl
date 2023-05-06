@@ -2,10 +2,8 @@ using Test
 using Polynomials4ML.Testing: println_slim, print_tf
 using Polynomials4ML: SparseProduct, evaluate, test_evaluate
 using LinearAlgebra: norm
-using BenchmarkTools
 using Polynomials4ML
 using ACEbase.Testing: fdtest
-using Printf
 
 ##
 
@@ -63,6 +61,7 @@ for N = 1:5
       local v1, g 
       b = rand(SVector{N, Float64})
       g = prodgrad(b.data, Val(N))
+      @show g
       g1 = ForwardDiff.gradient(prod, b)
       print_tf(@test g1 ≈ SVector(g...))
    end
@@ -74,7 +73,7 @@ println()
 @info("Testing _rrule_evaluate")
 using LinearAlgebra: dot 
 
-for n_test = 1:30
+for ntest = 1:30
     local bBB
     local bUU
     local bA2
