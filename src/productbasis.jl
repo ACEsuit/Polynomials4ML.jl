@@ -19,18 +19,18 @@ Base.length(basis::ProductBasis) = length(basis.spec)
 
 # ----------------------- evaluation interfaces 
 
-function evaluate(basis::ProductBasis, BB::Tuple) 
+function evaluate(basis::ProductBasis, BB::Tuple{Vararg{AbstractVector}}) 
    VT = mapreduce(eltype, promote_type, BB)
    A = zeros(VT, length(basis))
    evaluate!(A, basis, BB::Tuple)
    return A 
 end
 
-function evaluate_batch(basis::ProductBasis, BB::Tuple) 
+function evaluate(basis::ProductBasis, BB::Tuple{Vararg{AbstractMatrix}}) 
    VT = mapreduce(eltype, promote_type, BB)
    nX = size(BB[1], 1)
    A = zeros(VT, nX, length(basis))
-   evaluate_batch!(A, basis, BB::Tuple)
+   evaluate!(A, basis, BB::Tuple)
    return A 
 end
 
@@ -49,7 +49,7 @@ test_evaluate(basis::ProductBasis, BB::Tuple) =
 end
 
 
-function evaluate!(A::Vector, basis::ProductBasis{NB}, BB) where {NB}
+function evaluate!(A, basis::ProductBasis{NB}, BB::Tuple{Vararg{AbstractVector}}) where {NB}
    @assert length(BB) == NB
    spec = basis.spec
    for (iA, ϕ) in enumerate(spec)
@@ -67,7 +67,7 @@ end
 end
 
 
-function evaluate_batch!(A::Matrix, basis::ProductBasis{NB}, BB) where {NB}
+function evaluate!(A, basis::ProductBasis{NB}, BB::Tuple{Vararg{AbstractMatrix}}) where {NB}
    nX = size(BB[1], 1)
    @assert all(B->size(B, 1) == nX, BB)
    spec = basis.spec
@@ -124,7 +124,7 @@ end
 
 
 function _rrule_evaluate(basis::ProductBasis{NB}, BB::Tuple) where {NB}
-    A = evaluate_batch(basis, BB)
+    A = evaluate(basis, BB)
     return A, ∂A -> _pullback_evaluate(∂A, basis, BB)
 end
 
