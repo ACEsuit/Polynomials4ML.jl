@@ -258,7 +258,7 @@ $$
 \begin{aligned}
 Y_{\ell m}(\theta, \varphi) & = 
 \begin{cases}
-\bar{P}_{\ell}^{|m|}(\cos \theta)\sin(|m|\varphi) & m < 0\\
+-\bar{P}_{\ell}^{|m|}(\cos \theta)\sin(|m|\varphi) & m < 0\\
 \frac{1}{\sqrt{2}} \bar{P}_{\ell}^0(\cos \theta) & m = 0 \\
 \bar{P}_{\ell}^{m}(\cos \theta)\cos(m\varphi)  & m > 0
 \end{cases}
@@ -278,7 +278,9 @@ Orthonormalized real spherical harmonics that employ the Condon-Shortley phase u
 | -3               |           |           |           | $\frac{1}{4}\sqrt{\frac{35}{2\pi}}\cdot \frac{(3x^2-y^2)y}{r^3}$|
 
 ### Real Solid Harmonics
-In `rrlm.jl`, Polynomials4ML utilizes Schmidt semi-normalized real solid harmonics that employ the Condon-Shortley phase, defined as
+In `rrlm.jl`, Polynomials4ML utilizes Schmidt semi-normalized real solid harmonics that exclude the Condon-Shortley phase.
+
+- Include the Condon-Shortley phase factor:
 $$
 \begin{aligned}
 S_{\ell m}(r, \theta, \varphi) & = 
@@ -307,6 +309,18 @@ $$
 \end{aligned}
 $$
 
+- Exclude the Condon-Shortley phase factor:
+$$
+\begin{aligned}
+S_{\ell m}(r, \theta, \varphi)  & = 
+\begin{cases}
+-\sqrt{\frac{4\pi}{2l+1}}\cdot r^{\ell}\bar{P}_{\ell}^{|m|}(\cos \theta)\sin(|m|\varphi) & m < 0\\
+\sqrt{\frac{2\pi}{2l+1}}\bar{P}_{\ell}^0(\cos \theta) & m = 0 \\
+\sqrt{\frac{4\pi}{2l+1}}\cdot r^{\ell}\bar{P}_{\ell}^{m}(\cos \theta)\cos(m\varphi)  & m > 0
+\end{cases}
+\end{aligned}
+$$
+
 Schmidt semi-normalized real spherical harmonics that employ the Condon-Shortley phase up to degree $\ell = 3$ are
 
 | $m\backslash\ell$| 0         | 1         | 2         | 3         |
@@ -314,8 +328,8 @@ Schmidt semi-normalized real spherical harmonics that employ the Condon-Shortley
 | 3                |           |           |           | $\frac{1}{2}\sqrt{\frac{5}{2}}(x^2-3y^2)x$ |
 | 2                |           |           | $\frac{1}{2}\sqrt{3}(x^2-y^2)$ | $\frac{1}{2}\sqrt{15}(x^2-y^2)z$ |
 | 1                |           | $x$ | $\sqrt{3}xz$ | $\frac{1}{2}\sqrt{\frac{3}{2}}(5z^2-r^2)x$ |
-| 0                | $1$ | $y$ | $\frac{1}{2}(5z^2-3r^2)z$ |
-| -1               |           | $z$  | $\sqrt{3}yz$ | $\frac{1}{2}\sqrt{\frac{3}{2}}(5z^2-r^2)y$ |
+| 0                | $1$ | $z$ | $\frac{1}{2}(3z^2-r^2)$ | $\frac{1}{2}(5z^2-3r^2)z$
+| -1               |           | $y$  | $\sqrt{3}yz$ | $\frac{1}{2}\sqrt{\frac{3}{2}}(5z^2-r^2)y$ |
 | -2               |           |           | $\sqrt{3}xy$ |$\sqrt{15}xyz$ |
 | -3               |           |           |           | $\frac{1}{2}\sqrt{\frac{5}{2}}(3x^2-y^2)y$|
 

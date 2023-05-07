@@ -118,7 +118,7 @@ P4 = Polynomials4ML
 function fwdΔ(rYlm, x)
    Y = evaluate(rYlm, x)
    nY = length(Y)
-   _j(x) = ForwardDiff.jacobian(x -> evaluate(rSH, x), x)[:]
+   _j(x) = ForwardDiff.jacobian(x -> evaluate(rYlm, x), x)[:]
    _h(x) = reshape(ForwardDiff.jacobian(_j, x), (nY, 3, 3))
    H = _h(x)
    return [ tr(H[i, :, :]) for i = 1:nY ]

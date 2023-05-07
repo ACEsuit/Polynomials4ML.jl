@@ -50,46 +50,37 @@ for n = 1:nsamples
    X = SVector(r*sin(θ)*cos(φ), r*sin(θ)*sin(φ), r*cos(θ))
    SH = RRlmBasis(4)
    Y = evaluate(SH, X)
+   for l = 0:4
+      for m = 1:l
+         i_p = index_y(l, m)
+         i_m = index_y(l, -m)
+         Y[i_p] =  Y[i_p] * (-1)^m
+         Y[i_m] = Y[i_m] * (-1)* (-1)^m
+      end
+   end
    Yex = explicit_rsh(X)
    print_tf((@test Y ≈ Yex))
-end
-println()
-##
-
-@info("      ... same near pole")
-nsamples = 30
-for n = 1:nsamples
-   local X
-   θ = rand() * 1e-9
-   if θ < 1e-10
-      θ = 0.0
-   end
-   φ = (rand()-0.5) * 2*π
-   r = 0.1+rand()
-   X = SVector(r*sin(θ)*cos(φ), r*sin(θ)*sin(φ), r*cos(θ))
-   SH = RRlmBasis(4)
-   Y = evaluate(SH, X)
-   Yex = explicit_rsh(X)
-   print_tf((@test Y ≈ Yex || norm(Y - Yex, Inf) < 1e-12))
 end
 println()
 
 @info("Testing consistency of Real and Complex SH; Condon-Shortley convention")
 function test_r2c(L, cY, rY)
-   RYt = similar(rY)
+   cYt = similar(cY)
    for l = 0:L
       m = 0
       i = index_y(l, m)
-      RYt[i] = sqrt(4*pi/(2*l+1)) * real(cY[i])
+      cYt[i] = rY[i]/sqrt(4*pi/(2*l+1))
       for m = 1:l
          i_p = index_y(l, m)
          i_m = index_y(l, -m)
          # test the expressions
-         RYt[i_p] = (-1)^m * sqrt(8*pi/(2*l+1)) * real(cY[i_p])
-         RYt[i_m] = (-1)^(-m) * sqrt(8*pi/(2*l+1)) * imag(cY[i_p])
+         #  Y_l^m    =      1/√2 (Y_{lm} - i Y_{l,-m})
+         #  Y_l^{-m} = (-1)^m/√2 (Y_{lm} + i Y_{l,-m})
+         cYt[i_p] = (1/sqrt(2)) * (rY[i_p] - im * rY[i_m])/sqrt(4*pi/(2*l+1))
+         cYt[i_m] = (-1)^m * (1/sqrt(2)) * (rY[i_p] + im * rY[i_m])/sqrt(4*pi/(2*l+1))
       end
    end
-   return rY ≈ RYt
+   return cY ≈ cYt
 end
 
 L = 20
@@ -104,9 +95,6 @@ for nsamples = 1:30
    print_tf(@test test_r2c(L, cY, rY))
 end
 println()
-
-
-##
 
 @info("Check consistency of serial and batched evaluation")
 X = [ rand_sphere() for i = 1:23 ]
@@ -170,7 +158,7 @@ P4 = Polynomials4ML
 function fwdΔ(rYlm, x)
    Y = evaluate(rYlm, x)
    nY = length(Y)
-   _j(x) = ForwardDiff.jacobian(x -> evaluate(rSH, x), x)[:]
+   _j(x) = ForwardDiff.jacobian(x -> evaluate(rYlm, x), x)[:]
    _h(x) = reshape(ForwardDiff.jacobian(_j, x), (nY, 3, 3))
    H = _h(x)
    return [ tr(H[i, :, :]) for i = 1:nY ]

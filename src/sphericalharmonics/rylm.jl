@@ -364,7 +364,7 @@ function _lap!(ΔY, basis::RYlmBasis, Y::AbstractVector)
 end 
 
 function _lap(basis::RYlmBasis, Y::AbstractMatrix) 
-	ΔY = acquire!(basis.bpool, size(Y))
+	ΔY = acquire!(basis.ppool, size(Y))
 	_lap!(parent(ΔY), basis, Y)
 	return ΔY
 end
