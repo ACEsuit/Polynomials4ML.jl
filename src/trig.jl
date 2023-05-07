@@ -32,7 +32,7 @@ index(basis::CTrigBasis, m::Integer) =
 
 Base.length(basis::CTrigBasis) = 2 * basis.N + 1 
 
-_valtype(basis::CTrigBasis, x::Real) = complex(typeof(x))
+_valtype(basis::CTrigBasis, T::Type{<: Real}) = complex(T)
 
             
 # ----------------- main evaluation code 

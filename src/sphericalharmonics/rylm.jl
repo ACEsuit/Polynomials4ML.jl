@@ -13,10 +13,6 @@ The input variable is normally an `rr::SVector{3, T}`. This `rr` need not be nor
 struct RYlmBasis{T} <: AbstractPoly4MLBasis
 	alp::ALPolynomials{T}
    # ----------------------------
-	pool::ArrayCache{T, 1}
-   bpool::ArrayCache{T, 2}
-	pool_d::ArrayCache{SVector{3, T}, 1}
-   bpool_d::ArrayCache{SVector{3, T}, 2}
 	tmp::ArrayPool{FlexTempArray}
 end
 
@@ -24,66 +20,79 @@ RYlmBasis(maxL::Integer, T::Type=Float64) =
       RYlmBasis(ALPolynomials(maxL, T))
 
 RYlmBasis(alp::ALPolynomials{T}) where {T} = 
-      RYlmBasis(alp, 
-		          ArrayCache{T, 1}(), 
-                ArrayCache{T, 2}(), 
-                ArrayCache{SVector{3, T}, 1}(), 
-                ArrayCache{SVector{3, T}, 2}(), 
-					 ArrayPool(FlexTempArray),
-					 )
+      RYlmBasis(alp, ArrayPool(FlexTempArray))
 
-_valtype(sh::RYlmBasis{T}, x::AbstractVector{S}) where {T <: Real, S <: Real} = 
-         promote_type(T, S)
+_valtype(sh::RYlmBasis{T}, ::Type{<: StaticVector{3, S}}) where {T <: Real, S <: Real} = 
+		promote_type(T, S)
 
 Base.show(io::IO, basis::RYlmBasis) = 
       print(io, "RYlmBasis(L=$(maxL(basis)))")		
 
 # ---------------------- Interfaces
 
-
-function evaluate!(Y, basis::RYlmBasis, x::AbstractVector{<: Real})
+function evaluate!(Y, basis::RYlmBasis, X)
 	L = maxL(basis)
-	S = cart2spher(x) 
-	P = evaluate(basis.alp, S)
-	rYlm!(Y, maxL(basis), S, P)
-	release!(P)
-	return nothing 
+   S = cart2spher(basis, X)
+	_P = _acqu_P!(basis, S)
+	P = evaluate!(_P, basis.alp, S)
+	rYlm!(Y, maxL(basis), S, P, basis)
+	return Y
 end
 
 
-function evaluate!(Y, basis::RYlmBasis, 
-						 X::AbstractVector{<: AbstractVector{<: Real}})
+function evaluate_ed!(Y, dY, basis::RYlmBasis, X)
 	L = maxL(basis)
 	S = cart2spher(basis, X)
-	P = evaluate(basis.alp, S)
-	rYlm!(parent(Y), maxL(basis), S, parent(P), basis)
-	release!(P)
-	return nothing 
+	_P, _dP = _acqu_P!(basis, S), _acqu_dP!(basis, S)
+	P, dP = evaluate_ed!(_P, _dP, basis.alp, S)
+	rYlm_ed!(Y, dY, maxL(basis), S, P, dP, basis)
+	return Y, dY
 end
 
 
-function evaluate_ed!(Y, dY, basis::RYlmBasis, 
-						     x::AbstractVector{<: Real})
-	L = maxL(basis)
-	s = cart2spher(x)
-	P, dP = _evaluate_ed(basis.alp, s)
-	rYlm_ed!(parent(Y), parent(dY), maxL(basis), s, parent(P), parent(dP))
-	release!(P)
-	release!(dP)
-	return nothing 
-end
+# function evaluate!(Y, basis::RYlmBasis, x::AbstractVector{<: Real})
+# 	L = maxL(basis)
+# 	S = cart2spher(x) 
+# 	P = evaluate(basis.alp, S)
+# 	rYlm!(Y, maxL(basis), S, P)
+# 	release!(P)
+# 	return nothing 
+# end
 
 
-function evaluate_ed!(Y, dY, basis::RYlmBasis, 
-						     X::AbstractVector{<: AbstractVector{<: Real}})
-	L = maxL(basis)
-	S = cart2spher(basis, X)
-	P, dP = _evaluate_ed(basis.alp, S)
-	rYlm_ed!(parent(Y), parent(dY), maxL(basis), S, parent(P), parent(dP), basis)
-	release!(P)
-	release!(dP)
-	return nothing 
-end
+# function evaluate!(Y, basis::RYlmBasis, 
+# 						 X::AbstractVector{<: AbstractVector{<: Real}})
+# 	L = maxL(basis)
+# 	S = cart2spher(basis, X)
+# 	P = evaluate(basis.alp, S)
+# 	rYlm!(parent(Y), maxL(basis), S, parent(P), basis)
+# 	release!(P)
+# 	return nothing 
+# end
+
+
+# function evaluate_ed!(Y, dY, basis::RYlmBasis, 
+# 						     x::AbstractVector{<: Real})
+# 	L = maxL(basis)
+# 	s = cart2spher(x)
+# 	P, dP = _evaluate_ed(basis.alp, s)
+# 	rYlm_ed!(parent(Y), parent(dY), maxL(basis), s, parent(P), parent(dP))
+# 	release!(P)
+# 	release!(dP)
+# 	return nothing 
+# end
+
+
+# function evaluate_ed!(Y, dY, basis::RYlmBasis, 
+# 						     X::AbstractVector{<: AbstractVector{<: Real}})
+# 	L = maxL(basis)
+# 	S = cart2spher(basis, X)
+# 	P, dP = _evaluate_ed(basis.alp, S)
+# 	rYlm_ed!(parent(Y), parent(dY), maxL(basis), S, parent(P), parent(dP), basis)
+# 	release!(P)
+# 	release!(dP)
+# 	return nothing 
+# end
 
 
 # -------------------- actual kernels 
@@ -91,7 +100,7 @@ end
 """
 evaluate real spherical harmonics
 """
-function rYlm!(Y, L, S, P::AbstractVector)
+function rYlm!(Y, L, S, P::AbstractVector, basis::RYlmBasis)
 	@assert length(P) >= sizeP(L)
 	@assert length(Y) >= sizeY(L)
    @assert abs(S.cosθ) <= 1.0
@@ -124,7 +133,7 @@ end
 """
 evaluate gradients of real spherical harmonics
 """
-function rYlm_ed!(Y, dY, L, S, P, dP)
+function rYlm_ed!(Y, dY, L, S::SphericalCoords, P, dP, basis::RYlmBasis)
 	@assert length(P) >= sizeP(L)
 	@assert length(Y) >= sizeY(L)
    @assert abs(S.cosθ) <= 1.0
@@ -170,7 +179,7 @@ end
 
 
 function rYlm!(Y::Matrix, L, S::AbstractVector{SphericalCoords{T}}, 
-				   P::Matrix, basis::RYlmBasis) where {T} 
+				   P::AbstractMatrix, basis::RYlmBasis) where {T} 
    nX = length(S) 
 	@assert size(P, 1) >= nX
    @assert size(P, 2) >= sizeP(L)
@@ -245,7 +254,7 @@ function rYlm_ed!(Y::AbstractMatrix, dY::AbstractMatrix, L,
    cosmφ = acquire!(basis.tmp, :cosm, (nX,), T)
    sinθ = acquire!(basis.tmp, :sinθ, (nX,), T)
    cosθ = acquire!(basis.tmp, :cosθ, (nX,), T)
-	
+
    @inbounds begin 
       @simd ivdep for i = 1:nX 
          sinφ[i] = S[i].sinφ
@@ -311,11 +320,11 @@ function rYlm_ed!(Y::AbstractMatrix, dY::AbstractMatrix, L,
 end
 
 
-##  ---------------- Laplacian Implementation 
+##  ---------------- Laplacian Implementation -- prototype 
 
 function _lap(basis::RYlmBasis, Y::AbstractVector) 
-	ΔY = acquire!(basis.pool, length(Y))
-	_lap!(parent(ΔY), basis, Y)
+	ΔY = Vector{eltype(Y)}(undef, length(Y))
+	_lap!(ΔY, basis, Y)
 	return ΔY
 end
 
@@ -328,8 +337,8 @@ function _lap!(ΔY, basis::RYlmBasis, Y::AbstractVector)
 end 
 
 function _lap(basis::RYlmBasis, Y::AbstractMatrix) 
-	ΔY = acquire!(basis.bpool, size(Y))
-	_lap!(parent(ΔY), basis, Y)
+	ΔY = Matrix{eltype(Y)}(undef, size(Y))
+	_lap!(ΔY, basis, Y)
 	return ΔY
 end
 

@@ -44,17 +44,6 @@ _valtype(sh::CYlmBasis{T}, ::Type{<: StaticVector{3, S}}) where {T <: Real, S <:
 		
 # ---------------------- evaluation interface code 
 
-_acqu_alp!(sym::Symbol, basis, S::SphericalCoords) = 
-		acquire!(basis.tmp, sym, (length(basis.alp),), _valtype(basis.alp, S))
-
-_acqu_alp!(sym::Symbol, basis, S::AbstractVector{<: SphericalCoords}) = 
-		acquire!(basis.tmp, sym, (length(S), length(basis.alp)), _valtype(basis.alp, eltype(S)))
-
-_acqu_P!(  basis, S) = _acqu_alp!(:alpP,   basis, S)
-_acqu_dP!( basis, S) = _acqu_alp!(:alpdP,  basis, S)
-_acqu_ddP!(basis, S) = _acqu_alp!(:alpddP, basis, S)
-
-cart2spher(basis::CYlmBasis, x::AbstractVector{<: Real}) = cart2spher(x) 
 
 function evaluate!(Y, basis::CYlmBasis, X)
 	L = maxL(basis)

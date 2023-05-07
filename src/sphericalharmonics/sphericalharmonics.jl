@@ -127,6 +127,20 @@ function cart2spher(basis::XlmBasis, X::AbstractVector{<: AbstractVector})
 	return S 
 end
 
+cart2spher(basis::XlmBasis, x::AbstractVector{<: Real}) = cart2spher(x) 
+
+
+_acqu_alp!(sym::Symbol, basis::XlmBasis, S::SphericalCoords) = 
+		acquire!(basis.tmp, sym, (length(basis.alp),), _valtype(basis.alp, S))
+
+_acqu_alp!(sym::Symbol, basis::XlmBasis, S::AbstractVector{<: SphericalCoords}) = 
+		acquire!(basis.tmp, sym, (length(S), length(basis.alp)), _valtype(basis.alp, eltype(S)))
+
+_acqu_P!(  basis::XlmBasis, S) = _acqu_alp!(:alpP,   basis, S)
+_acqu_dP!( basis::XlmBasis, S) = _acqu_alp!(:alpdP,  basis, S)
+_acqu_ddP!(basis::XlmBasis, S) = _acqu_alp!(:alpddP, basis, S)
+
+
 # ---------------------------- Auxiliary functions 
 
 function rand_sphere() 

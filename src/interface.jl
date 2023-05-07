@@ -35,21 +35,29 @@ function _hesstype end
 function _laplacetype end 
 
 _valtype(basis::AbstractPoly4MLBasis, x::SINGLE) = 
-      _valtype(basis, typeof(x))
+      _valtype(basis, typeof(x)) 
+
+_gradtype(basis::AbstractPoly4MLBasis, x::SINGLE) = 
+      _gradtype(basis, typeof(x)) 
+
+_hesstype(basis::AbstractPoly4MLBasis, x::SINGLE) = 
+      _hesstype(basis, typeof(x)) 
+
       
-_gradtype(basis::AbstractPoly4MLBasis, x::Number) = 
-      _valtype(basis, x)
+_gradtype(basis::AbstractPoly4MLBasis, TX::Type{<:Number}) = 
+      _valtype(basis, TX)
 
 _gradtype(basis::AbstractPoly4MLBasis, Tx::Type{<: StaticArray}) = 
       StaticArrays.similar_type(Tx, 
                      promote_type(eltype(Tx), _valtype(basis, Tx)))
 
-_hesstype(basis::AbstractPoly4MLBasis, x::Number) = 
-      promote_type(_valtype(basis, x), typeof(x))
+_hesstype(basis::AbstractPoly4MLBasis, TX::Type{<:Number}) = 
+      _valtype(basis, TX)
 
-_hesstype(basis::AbstractPoly4MLBasis, x::SVector{N}) where {N} = 
-      SMatrix{N, N, promote_type(_valtype(basis, x), eltype(x))}
+_hesstype(basis::AbstractPoly4MLBasis, ::Type{SVector{N, T}}) where {N, T} = 
+      SMatrix{N, N, promote_type(_valtype(basis, SVector{N, T}), T)}
 
+      
 _laplacetype(basis::AbstractPoly4MLBasis, x::Number) = 
       _hesstype(basis, x)
 

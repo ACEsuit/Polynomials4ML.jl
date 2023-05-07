@@ -30,7 +30,7 @@ end
 RTrigBasis(N::Integer, meta = Dict{String, Any}()) = 
          RTrigBasis{T}(N, meta)
 
-_valtype(basis::RTrigBasis, x::Real) = typeof(x) 
+_valtype(basis::RTrigBasis, T::Type{<: Real}) = T
 
 
 function evaluate!(P::AbstractVector, basis::RTrigBasis, θ::Real)
