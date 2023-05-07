@@ -25,7 +25,7 @@ CYlmBasis(alp::ALPolynomials{T}) where {T} =
 Base.show(io::IO, basis::CYlmBasis) = 
       print(io, "CYlmBasis(L=$(maxL(basis)))")
 
-_valtype(sh::CYlmBasis{T}, x::AbstractVector{S}) where {T <: Real, S <: Real} = 
+_valtype(sh::CYlmBasis{T}, ::Type{<: StaticVector{3, S}}) where {T <: Real, S <: Real} = 
 			Complex{promote_type(T, S)}
 
 
@@ -44,55 +44,45 @@ _valtype(sh::CYlmBasis{T}, x::AbstractVector{S}) where {T <: Real, S <: Real} =
 		
 # ---------------------- evaluation interface code 
 
-function evaluate!(Y, basis::CYlmBasis, x::AbstractVector{<: Real})
-	L = maxL(basis)
-	S = cart2spher(x) 
-	P = evaluate(basis.alp, S)
-	cYlm!(Y, maxL(basis), S, P)
-	release!(P)
-	return Y
-end
+_acqu_alp!(sym::Symbol, basis, S::SphericalCoords) = 
+		acquire!(basis.tmp, sym, (length(basis.alp),), _valtype(basis.alp, S))
 
-function evaluate!(Y, basis::CYlmBasis, 
-						 X::AbstractVector{<: AbstractVector})
+_acqu_alp!(sym::Symbol, basis, S::AbstractVector{<: SphericalCoords}) = 
+		acquire!(basis.tmp, sym, (length(basis.alp),), _valtype(basis.alp, eltype(S)))
+
+_acqu_P!(  basis, S) = _acqu_alp!(:alpP,   basis, S)
+_acqu_dP!( basis, S) = _acqu_alp!(:alpdP,  basis, S)
+_acqu_ddP!(basis, S) = _acqu_alp!(:alpddP, basis, S)
+
+cart2spher(basis::CYlmBasis, x::AbstractVector{<: Real}) = cart2spher(x) 
+
+function evaluate!(Y, basis::CYlmBasis, X)
 	L = maxL(basis)
    S = cart2spher(basis, X)
-	P = evaluate(basis.alp, S)
+	_P = _acqu_P!(basis, S)
+	P = evaluate!(_P, basis.alp, S)
 	cYlm!(Y, maxL(basis), S, P, basis)
-	release!(P)
 	return Y
 end
 
 
-function evaluate_ed!(Y, dY, SH::CYlmBasis, R::AbstractVector{<: Real})
-	L = maxL(SH)
-	S = cart2spher(R)
-	P, dP = _evaluate_ed(SH.alp, S)
-	cYlm_ed!(Y, dY, maxL(SH), S, P, dP)
-	release!(P)
-	release!(dP)
+function evaluate_ed!(Y, dY, basis::CYlmBasis, X)
+	L = maxL(basis)
+	S = cart2spher(basis, X)
+	_P, _dP = _acqu_P!(basis, S), _acqu_dP!(basis, S)
+	P, dP = evaluate_ed!(_P, _dP, basis.alp, S)
+	cYlm_ed!(Y, dY, maxL(basis), S, P, dP, basis)
 	return Y, dY
 end
 
-
-function evaluate_ed!(Y, dY, SH::CYlmBasis, R::AbstractVector{<: AbstractVector})
-	L = maxL(SH)
-   S = cart2spher(SH, R)
-	P, dP = _evaluate_ed(SH.alp, S)
-	cYlm_ed!(Y, dY, maxL(SH), S, P, dP, SH)
-	release!(P)
-	release!(dP)
-	return Y, dY
-end
 
 # ---------------------- serial evaluation code 
-
 
 
 """
 evaluate complex spherical harmonics
 """
-function cYlm!(Y, L, S::SphericalCoords, P::AbstractVector)
+function cYlm!(Y, L, S::SphericalCoords, P::AbstractVector, basis::CYlmBasis)
 	@assert length(P) >= sizeP(L)
 	@assert length(Y) >= sizeY(L)
    @assert abs(S.cosθ) <= 1.0
@@ -125,7 +115,7 @@ end
 """
 evaluate gradients of complex spherical harmonics
 """
-function cYlm_ed!(Y, dY, L, S::SphericalCoords, P, dP)
+function cYlm_ed!(Y, dY, L, S::SphericalCoords, P, dP, basis::CYlmBasis)
 	@assert length(P) >= sizeP(L)
 	@assert length(Y) >= sizeY(L)
 	@assert length(dY) >= sizeY(L)

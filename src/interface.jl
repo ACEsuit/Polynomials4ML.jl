@@ -1,4 +1,5 @@
 using StaticArrays: StaticArray, SVector, StaticVector, similar_type
+using ObjectPools: FlexTempArray, acquire!
 
 abstract type AbstractPoly4MLBasis end
 
@@ -33,11 +34,11 @@ function _gradtype end
 function _hesstype end 
 function _laplacetype end 
 
-_valtype(basis::AbstractPoly4MLBasis, x::Number) = 
+_valtype(basis::AbstractPoly4MLBasis, x::SINGLE) = 
       _valtype(basis, typeof(x))
-
+      
 _gradtype(basis::AbstractPoly4MLBasis, x::Number) = 
-      promote_type(_valtype(basis, x), typeof(x))
+      _valtype(basis, x)
 
 _gradtype(basis::AbstractPoly4MLBasis, x::StaticArray) = 
       StaticArrays.similar_type(typeof(x), 
@@ -56,6 +57,18 @@ _laplacetype(basis::AbstractPoly4MLBasis, x::StaticVector) =
       eltype(_hesstype(basis, x))
 
 
+_valtype(basis::AbstractPoly4MLBasis, X::BATCH) = 
+      _valtype(basis, eltype(X))
+
+_gradtype(basis::AbstractPoly4MLBasis, X::BATCH) = 
+      _gradtype(basis, eltype(X))
+
+_hesstype(basis::AbstractPoly4MLBasis, X::BATCH) = 
+      _hesstype(basis, eltype(X))
+
+_laplacetype(basis::AbstractPoly4MLBasis, X::BATCH) = 
+      _laplacetype(basis, eltype(X))
+
 # --------------------------------------- 
 # allocation interface interface 
 
@@ -68,10 +81,10 @@ _alloc(basis::AbstractPoly4MLBasis, X) =
       Array{ _valtype(basis, X) }(undef, _out_size(basis, X))
 
 _alloc_d(basis::AbstractPoly4MLBasis, X) = 
-      Array{ _gradtype(basis, X[1]) }(undef, _out_size(basis, X))
+      Array{ _gradtype(basis, X) }(undef, _out_size(basis, X))
 
 _alloc_dd(basis::AbstractPoly4MLBasis, X) = 
-      Array{ _hesstype(basis, X[1]) }(undef, _out_size(basis, X))
+      Array{ _hesstype(basis, X) }(undef, _out_size(basis, X))
 
 _alloc_ed(basis::AbstractPoly4MLBasis, x) = 
       _alloc(basis, x), _alloc_d(basis, x)

@@ -7,10 +7,12 @@ used for the spherical and solid harmonics. Constructor:
 ALPolynomials(maxL::Integer, T::Type=Float64)
 ```
 This is not part of the public API and not guaranteed to be semver-stable.
+Only the resulting harmonics that use the ALPs are guaranteed to be backward 
+compatible. 
 
-Important Note: `evaluate_ed!`` is not implemented for ALPs, instead a function 
-`_evaluate_ed!` which produces rescaled derivatives for better numerical 
-stability near the poles. See comments in code for details. 
+Important Note: `evaluate_ed!`` does NOT return derivatives, but rather 
+produces rescaled derivatives for better numerical stability near the poles. 
+See comments in code for details on how to use the ALP derivatives correctly. 
 """
 struct ALPolynomials{T} <: AbstractPoly4MLBasis
 	L::Int
@@ -74,10 +76,10 @@ end
 
 # -------------------- evaluation interface
 
-_valtype(alp::ALPolynomials{T}, x::SphericalCoords{S}) where {T, S} = 
+_valtype(alp::ALPolynomials{T}, ::Type{SphericalCoords{S}}) where {T, S} = 
 			promote_type(T, S) 
 
-_gradtype(alp::ALPolynomials{T}, x::SphericalCoords{S}) where {T, S} = 
+_gradtype(alp::ALPolynomials{T}, ::Type{SphericalCoords{S}}) where {T, S} = 
 			promote_type(T, S) 
 			
 # function evaluate(alp::ALPolynomials, S::SphericalCoords) 
@@ -98,21 +100,21 @@ _gradtype(alp::ALPolynomials{T}, x::SphericalCoords{S}) where {T, S} =
 #       a numerically stable way. Hence the _ and hence we need the interface
 #       functions.
 
-function _evaluate_ed(alp::ALPolynomials, S::SphericalCoords) 
-	VT = _valtype(alp, S)
-	P = Vector{VT}(undef, length(alp))
-	dP = Vector{VT}(undef, length(alp))
-	_evaluate_ed!(parent(P), parent(dP), alp, S)
-	return P, dP 
-end
+# function _evaluate_ed(alp::ALPolynomials, S::SphericalCoords) 
+# 	VT = _valtype(alp, S)
+# 	P = Vector{VT}(undef, length(alp))
+# 	dP = Vector{VT}(undef, length(alp))
+# 	_evaluate_ed!(parent(P), parent(dP), alp, S)
+# 	return P, dP 
+# end
 
-function _evaluate_ed(alp::ALPolynomials, S::AbstractVector{<: SphericalCoords}) 
-	VT = _valtype(alp, S[1])
-	P = Matrix{VT}(undef, (length(S), length(alp)))
-	dP = Matrix{VT}(undef, (length(S), length(alp)))
-	_evaluate_ed!(parent(P), parent(dP), alp, S)
-	return P, dP 
-end
+# function _evaluate_ed(alp::ALPolynomials, S::AbstractVector{<: SphericalCoords}) 
+# 	VT = _valtype(alp, S[1])
+# 	P = Matrix{VT}(undef, (length(S), length(alp)))
+# 	dP = Matrix{VT}(undef, (length(S), length(alp)))
+# 	_evaluate_ed!(parent(P), parent(dP), alp, S)
+# 	return P, dP 
+# end
 
 
 # -------------------- serial evaluation codes
@@ -152,11 +154,10 @@ end
 
 
 
-# this doesn't use the standard name because it doesn't 
-# technically perform the derivative w.r.t. S, but w.r.t. θ
+# this doesn't implement the derivative w.r.t. S, but w.r.t. θ
 # further, P doesn't store P but (P if m == 0) or (P * sinθ if m > 0)
 # this is done for numerical stability 
-function _evaluate_ed!(P, dP, alp::ALPolynomials, S::SphericalCoords)
+function evaluate_ed!(P, dP, alp::ALPolynomials, S::SphericalCoords)
 	L = alp.L 
 	A = alp.A 
 	B = alp.B 
@@ -283,8 +284,8 @@ end
 
 
 
-function _evaluate_ed!(P, dP, alp::ALPolynomials, 
-					        S::AbstractVector{SphericalCoords{T}} ) where {T} 
+function evaluate_ed!(P, dP, alp::ALPolynomials, 
+					       S::AbstractVector{SphericalCoords{T}} ) where {T} 
 	L = alp.L 
 	A = alp.A 
 	B = alp.B 
