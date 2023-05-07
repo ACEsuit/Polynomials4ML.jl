@@ -12,11 +12,10 @@ using QuadGK
 
 for ntest = 1:3
    @info("Test a randomly generated polynomial basis - $ntest")
-   N = rand(10:15)
+   N = rand(5:15)
    basis = OrthPolyBasis1D3T(randn(N), randn(N), randn(N))
    test_derivatives(basis, () -> rand())
 end
-
 
 ##
 
@@ -48,26 +47,43 @@ end
 
 ##
 
-@warn("turn off Chebyshev test - coeffs seem poorly normalized?!?")
 using LinearAlgebra: norm
-cheb = chebyshev_basis(N, normalize=true)
-@show abs(cheb.A[1] - sqrt(1/π))
-@show abs(cheb.A[2] - sqrt(2/π))
-@show abs(cheb.C[3] + sqrt(2))
-@show norm(cheb.A[3:end] .- 2, Inf)
-@show norm(cheb.B, Inf)
-@show norm(cheb.C[4:end] .+ 1)
 
-# @info("Check correctness of Chebyshev Basis")
+# @warn("turn off Chebyshev test - coeffs seem poorly normalized?!?")
 # cheb = chebyshev_basis(N, normalize=true)
+# @show abs(cheb.A[1] - sqrt(1/π))
+# @show abs(cheb.A[2] - sqrt(2/π))
+# @show abs(cheb.C[3] + sqrt(2))
+# @show norm(cheb.A[3:end] .- 2, Inf)
+# @show norm(cheb.B, Inf)
+# @show norm(cheb.C[4:end] .+ 1)
+
+# TODO: add standard chebyshev and add it to the test suite
+# @info("Check correctness of Chebyshev Basis (normalize=false)")
+# cheb = chebyshev_basis(N, normalize=false)
 # @info("     recursion coefficients")
 # println_slim(@test all([ 
-#          cheb.A[1] ≈ sqrt(1/π), 
+#          cheb.A[1] ≈ 1, 
 #          all(cheb.B[:] .== 0), 
-#          cheb.A[2] ≈ sqrt(2/π), 
+#          cheb.A[2] ≈ 1, 
 #          all(cheb.A[3:end] .≈ 2), 
 #          cheb.C[3] ≈ - sqrt(2), 
-#          all(cheb.C[4:end] .≈ -1), ]))         
+#          all(cheb.C[4:end] .≈ -1), ]))
+# @info("     derivatives")
+
+
+##
+
+@info("Test Chebyshev Basis (normalize=true)")
+cheb = chebyshev_basis(N, normalize=true)
+@info("     recursion coefficients")
+println_slim(@test all([ 
+         abs(cheb.A[1] - sqrt(1/π)) < 1e-7,
+         abs(cheb.A[2] - sqrt(2/π)) < 1e-7,
+         abs(cheb.C[3] + sqrt(2)) < 1e-7,
+         norm(cheb.A[3:end] .- 2, Inf) < 1e-7,
+         norm(cheb.B, Inf) < 1e-7,
+         norm(cheb.C[4:end] .+ 1) < 1e-7, ]))
 @info("     derivatives")
 test_derivatives(cheb, () -> 2*rand()-1)
 

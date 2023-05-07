@@ -4,9 +4,9 @@ export MonoBasis
 
 
 """
-Standard Monomials. This should very rarely be used.
+Standard Monomials basis. This should very rarely be used. Possibly useful in combination with a transformation of the inputs, e.g. exponential.
 """
-struct MonoBasis <: PolyBasis4ML
+struct MonoBasis <: AbstractPoly4MLBasis
    N::Int
    # ----------------- metadata 
    meta::Dict{String, Any}
@@ -25,6 +25,8 @@ natural_indices(basis::MonoBasis) = 0:basis.N
 index(basis::MonoBasis, m::Integer) = m+1
 
 Base.length(basis::MonoBasis) = basis.N+1
+
+_valtype(basis::MonoBasis, x::Number) = typeof(x)
 
 _alloc(basis::MonoBasis, x::T2) where {T2 <: Number} = 
             zeros(T2, length(basis))

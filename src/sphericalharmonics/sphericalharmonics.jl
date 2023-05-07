@@ -98,6 +98,45 @@ natural_indices(basis::XlmBasis) =
 
 degree(basis::XlmBasis, b::NamedTuple) = b.l 
 
+
+"""
+`sizeY(maxL):`
+Return the size of the set of spherical harmonics ``Y_{l,m}(θ,φ)`` of
+degree less than or equal to the given maximum degree `maxL`
+"""
+sizeY(maxL) = (maxL + 1) * (maxL + 1)
+
+"""
+`lm2idx(l,m):`
+Return the index into a flat array of real spherical harmonics `Y_lm`
+for the given indices `(l,m)`. `Y_lm` are stored in l-major order i.e.
+```
+	[Y(0,0), Y(1,-1), Y(1,0), Y(1,1), Y(2,-2), ...]
+```
+"""
+lm2idx(l::Integer, m::Integer) = m + l + (l*l) + 1
+
+index_y(l::Integer, m::Integer)  = lm2idx(l, m)
+
+"""
+Inverse of `lm2idx`: given an index into a vector of Ylm values, return the 
+`l, m` indices.
+"""
+function idx2lm(i::Integer) 
+	l = floor(Int, sqrt(i-1) + 1e-10)
+	m = i - (l + (l*l) + 1)
+	return l, m 
+end 
+
+"""
+Partial inverse of `lm2idx`: given an index into a vector of Ylm values, return the 
+`l` index. 
+"""
+idx2l(i::Integer) = floor(Int, sqrt(i-1) + 1e-10)
+
+
+
+
 # ---------------------------- Auxiliary functions 
 
 function rand_sphere() 

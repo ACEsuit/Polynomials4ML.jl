@@ -1,6 +1,15 @@
 export RTrigBasis
 
-struct RTrigBasis <: PolyBasis4ML
+"""
+`RTrigBasis(N)`: 
+
+Real trigonometric polynomials up to degree `N` (inclusive). The basis is ordered as 
+```
+[1, cos(θ), sin(θ), cos(2θ), sin(2θ), ..., cos(Nθ), sin(Nθ) ]
+```
+where `θ` is input variable. 
+"""
+struct RTrigBasis <: AbstractPoly4MLBasis
    N::Int
    # ----------------- metadata 
    meta::Dict{String, Any}
@@ -21,10 +30,7 @@ end
 RTrigBasis(N::Integer, meta = Dict{String, Any}()) = 
          RTrigBasis{T}(N, meta)
 
-
-_alloc(basis::RTrigBasis, x::Real) = zeros(typeof(x), length(basis))
-
-_alloc(basis::RTrigBasis, x::AbstractVector{<: Real}) = zeros(eltype(x), length(x), length(basis))
+_valtype(basis::RTrigBasis, x::Real) = typeof(x) 
 
 
 function evaluate!(P::AbstractVector, basis::RTrigBasis, θ::Real)

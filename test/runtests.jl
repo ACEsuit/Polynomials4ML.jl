@@ -7,7 +7,10 @@ using Test
     @testset "TrigonometricPolynomials" begin include("test_trig.jl"); end
     @testset "Real Trig Polys" begin include("test_rtrig.jl"); end
     @testset "Complex SphericalHarmonics" begin include("test_cylm.jl"); end
-    @testset "Real SphericalHarmonics" begin include("test_rylm.jl"); end
+    @testset "Real Real Spherical Harmonics" begin include("test_rylm.jl"); end
     # @testset "Solid Harmonics" begin include("test_rlm.jl"); end
     @testset "Rnl" begin include("test_rnl.jl"); end
+
+    @testset "Sparse Product" begin include("test_sparseproduct.jl"); end 
+    @testset "Lux" begin include("test_lux.jl"); end 
 end

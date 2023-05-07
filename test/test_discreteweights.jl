@@ -1,7 +1,7 @@
 
 using Polynomials4ML, LinearAlgebra, Test 
 using Polynomials4ML.Testing: print_tf 
-
+using Polynomials4ML: DiscreteWeights
 
 function rand_basis(nX, N)
    xx = 2 * (rand(nX) .- 0.5) 

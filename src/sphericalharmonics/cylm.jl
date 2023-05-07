@@ -1,10 +1,16 @@
 
 
+"""
+`CYlmBasis(maxL, T=Float64): `
 
+Complex spherical harmonics; see tests to see how they are normalized, and  `idx2lm` on how they are ordered. The ordering is not guarenteed to be semver-stable.
+
+The input variable is normally an `rr::SVector{3, T}`. This `rr` need not be normalized (i.e. on the unit sphere). The derivatives account for this, i.e. they are valid even when `norm(rr) != 1`.
+
+* `maxL` : maximum degree of the spherical harmonics
+* `T` : type used to store the coefficients for the associated legendre functions
 """
-complex spherical harmonics
-"""
-struct CYlmBasis{T}
+struct CYlmBasis{T} <: AbstractPoly4MLBasis
 	alp::ALPolynomials{T}
    # ----------------------------
 	pool::ArrayCache{Complex{T}, 1}
@@ -37,16 +43,16 @@ Base.show(io::IO, basis::CYlmBasis) =
 _valtype(sh::CYlmBasis{T}, x::AbstractVector{S}) where {T <: Real, S <: Real} = 
 			Complex{promote_type(T, S)}
 
-_gradtype(sh::CYlmBasis{T}, x::AbstractVector{S})  where {T <: Real, S <: Real} = 
-			SVector{3, Complex{promote_type(T, S)}}
-
-import Base.==
-==(B1::CYlmBasis, B2::CYlmBasis) =
-		(B1.alp == B2.alp) && (typeof(B1) == typeof(B2))
+# _gradtype(sh::CYlmBasis{T}, x::AbstractVector{S})  where {T <: Real, S <: Real} = 
+# 			SVector{3, Complex{promote_type(T, S)}}
 
 
 
 # ---------------------- FIO
+
+import Base.==
+==(B1::CYlmBasis, B2::CYlmBasis) =
+		(B1.alp == B2.alp) && (typeof(B1) == typeof(B2))
 
 # write_dict(SH::CYlmBasis{T}) where {T} =
 # 		Dict("__id__" => "ACE_CYlmBasis",
@@ -58,45 +64,14 @@ import Base.==
 
 
 
-# ---------------------- Indexing
-
-"""
-`sizeY(maxL):`
-Return the size of the set of spherical harmonics ``Y_{l,m}(θ,φ)`` of
-degree less than or equal to the given maximum degree `maxL`
-"""
-sizeY(maxL) = (maxL + 1) * (maxL + 1)
-
-"""
-`index_y(l,m):`
-Return the index into a flat array of real spherical harmonics `Y_lm`
-for the given indices `(l,m)`. `Y_lm` are stored in l-major order i.e.
-```
-	[Y(0,0), Y(1,-1), Y(1,0), Y(1,1), Y(2,-2), ...]
-```
-"""
-index_y(l::Integer, m::Integer) = m + l + (l*l) + 1
-
-"""
-Inverse of `index_y`: given an index into a vector of Ylm values, return the 
-`l, m` indices.
-"""
-function idx2lm(i::Integer) 
-	l = floor(Int, sqrt(i-1) + 1e-10)
-	m = i - (l + (l*l) + 1)
-	return l, m 
-end 
-
-idx2l(i::Integer) = floor(Int, sqrt(i-1) + 1e-10)
-
 
 # ---------------------- evaluation interface code 
 
-function evaluate(basis::CYlmBasis, x::AbstractVector{<: Real})
-	Y = acquire!(basis.pool, length(basis), _valtype(basis, x))
-	evaluate!(parent(Y), basis, x)
-	return Y 
-end
+# function evaluate(basis::CYlmBasis, x::AbstractVector{<: Real})
+# 	Y = acquire!(basis.pool, length(basis), _valtype(basis, x))
+# 	evaluate!(parent(Y), basis, x)
+# 	return Y 
+# end
 
 function evaluate!(Y, basis::CYlmBasis, x::AbstractVector{<: Real})
 	L = maxL(basis)
@@ -107,11 +82,11 @@ function evaluate!(Y, basis::CYlmBasis, x::AbstractVector{<: Real})
 	return Y
 end
 
-function evaluate(basis::CYlmBasis, X::AbstractVector{<: AbstractVector})
-	Y = acquire!(basis.ppool, (length(X), length(basis)))
-	evaluate!(parent(Y), basis, X)
-	return Y 
-end
+# function evaluate(basis::CYlmBasis, X::AbstractVector{<: AbstractVector})
+# 	Y = acquire!(basis.ppool, (length(X), length(basis)))
+# 	evaluate!(parent(Y), basis, X)
+# 	return Y 
+# end
 
 function evaluate!(Y, basis::CYlmBasis, 
 						 X::AbstractVector{<: AbstractVector})
@@ -125,20 +100,20 @@ function evaluate!(Y, basis::CYlmBasis,
 end
 
 
-function evaluate_d(SH::CYlmBasis, 
-						 R::Union{AbstractVector{<: Real}, 
-						 			 AbstractVector{<: AbstractVector}} )
-	B, dB = evaluate_ed(SH, R) 
-	release!(B)
-	return dB 
-end 
+# function evaluate_d(SH::CYlmBasis, 
+# 						 R::Union{AbstractVector{<: Real}, 
+# 						 			 AbstractVector{<: AbstractVector}} )
+# 	B, dB = evaluate_ed(SH, R) 
+# 	release!(B)
+# 	return dB 
+# end 
 
-function evaluate_ed(SH::CYlmBasis, R::AbstractVector{<: Real})
-	Y = acquire!(SH.pool, length(SH), _valtype(SH, R))
-	dY = acquire!(SH.pool_d, length(SH), _gradtype(SH, R))
-	evaluate_ed!(parent(Y), parent(dY), SH, R)
-	return Y, dY
-end
+# function evaluate_ed(SH::CYlmBasis, R::AbstractVector{<: Real})
+# 	Y = acquire!(SH.pool, length(SH), _valtype(SH, R))
+# 	dY = acquire!(SH.pool_d, length(SH), _gradtype(SH, R))
+# 	evaluate_ed!(parent(Y), parent(dY), SH, R)
+# 	return Y, dY
+# end
 
 function evaluate_ed!(Y, dY, SH::CYlmBasis, R::AbstractVector{<: Real})
 	L = maxL(SH)
@@ -151,13 +126,13 @@ function evaluate_ed!(Y, dY, SH::CYlmBasis, R::AbstractVector{<: Real})
 end
 
 
-function evaluate_ed(SH::CYlmBasis, R::AbstractVector{<: AbstractVector})
-	nR = length(R); nY = length(SH)
-	Y = acquire!(SH.ppool, (nR, nY), _valtype(SH, R[1]))
-	dY = acquire!(SH.ppool_d, (nR, nY), _gradtype(SH, R[1]))
-	evaluate_ed!(parent(Y), parent(dY), SH, R)
-	return Y, dY
-end
+# function evaluate_ed(SH::CYlmBasis, R::AbstractVector{<: AbstractVector})
+# 	nR = length(R); nY = length(SH)
+# 	Y = acquire!(SH.ppool, (nR, nY), _valtype(SH, R[1]))
+# 	dY = acquire!(SH.ppool_d, (nR, nY), _gradtype(SH, R[1]))
+# 	evaluate_ed!(parent(Y), parent(dY), SH, R)
+# 	return Y, dY
+# end
 
 function evaluate_ed!(Y, dY, SH::CYlmBasis, R::AbstractVector{<: AbstractVector})
 	L = maxL(SH)

@@ -1,6 +1,16 @@
 export RYlmBasis 
 
-struct RYlmBasis{T}
+"""
+`RYlmBasis(maxL, T=Float64): `
+
+Real spherical harmonics; see tests to see how they are normalized, and  `idx2lm` on how they are ordered. The ordering is not guarenteed to be semver-stable.
+
+The input variable is normally an `rr::SVector{3, T}`. This `rr` need not be normalized (i.e. on the unit sphere). The derivatives account for this, i.e. they are valid even when `norm(rr) != 1`.
+
+* `maxL` : maximum degree of the spherical harmonics
+* `T` : type used to store the coefficients for the associated legendre functions
+"""
+struct RYlmBasis{T} <: AbstractPoly4MLBasis
 	alp::ALPolynomials{T}
    # ----------------------------
 	pool::ArrayCache{T, 1}
@@ -42,11 +52,11 @@ Base.show(io::IO, basis::RYlmBasis) =
 
 # ---------------------- Interfaces
 
-function evaluate(basis::RYlmBasis, x::AbstractVector{<: Real})
-	Y = acquire!(basis.pool, length(basis), _valtype(basis, x))
-	evaluate!(parent(Y), basis, x)
-	return Y 
-end
+# function evaluate(basis::RYlmBasis, x::AbstractVector{<: Real})
+# 	Y = acquire!(basis.pool, length(basis), _valtype(basis, x))
+# 	evaluate!(parent(Y), basis, x)
+# 	return Y 
+# end
 
 function evaluate!(Y, basis::RYlmBasis, x::AbstractVector{<: Real})
 	L = maxL(basis)
@@ -57,11 +67,11 @@ function evaluate!(Y, basis::RYlmBasis, x::AbstractVector{<: Real})
 	return nothing 
 end
 
-function evaluate(basis::RYlmBasis, X::AbstractVector{<: AbstractVector})
-	Y = acquire!(basis.bpool, (length(X), length(basis)))
-	evaluate!(parent(Y), basis, X)
-	return Y 
-end
+# function evaluate(basis::RYlmBasis, X::AbstractVector{<: AbstractVector})
+# 	Y = acquire!(basis.bpool, (length(X), length(basis)))
+# 	evaluate!(parent(Y), basis, X)
+# 	return Y 
+# end
 
 function evaluate!(Y, basis::RYlmBasis, 
 						 X::AbstractVector{<: AbstractVector{<: Real}})
@@ -75,12 +85,12 @@ function evaluate!(Y, basis::RYlmBasis,
 end
 
 
-function evaluate_ed(basis::RYlmBasis, x::AbstractVector{<: Real})
-	Y = acquire!(basis.pool, length(basis))
-	dY = acquire!(basis.pool_d, length(basis))
-	evaluate_ed!(parent(Y), parent(dY), basis, x)
-	return Y, dY 
-end
+# function evaluate_ed(basis::RYlmBasis, x::AbstractVector{<: Real})
+# 	Y = acquire!(basis.pool, length(basis))
+# 	dY = acquire!(basis.pool_d, length(basis))
+# 	evaluate_ed!(parent(Y), parent(dY), basis, x)
+# 	return Y, dY 
+# end
 
 function evaluate_ed!(Y, dY, basis::RYlmBasis, 
 						     x::AbstractVector{<: Real})
@@ -94,12 +104,12 @@ function evaluate_ed!(Y, dY, basis::RYlmBasis,
 end
 
 
-function evaluate_ed(basis::RYlmBasis, X::AbstractVector{<: AbstractVector{<: Real}})
-	Y = acquire!(basis.bpool, (length(X), length(basis)))
-	dY = acquire!(basis.bpool_d, (length(X), length(basis)))
-	evaluate_ed!(parent(Y), parent(dY), basis, X)
-	return Y, dY 
-end
+# function evaluate_ed(basis::RYlmBasis, X::AbstractVector{<: AbstractVector{<: Real}})
+# 	Y = acquire!(basis.bpool, (length(X), length(basis)))
+# 	dY = acquire!(basis.bpool_d, (length(X), length(basis)))
+# 	evaluate_ed!(parent(Y), parent(dY), basis, X)
+# 	return Y, dY 
+# end
 
 function evaluate_ed!(Y, dY, basis::RYlmBasis, 
 						     X::AbstractVector{<: AbstractVector{<: Real}})

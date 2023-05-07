@@ -1,4 +1,4 @@
-export RTrigPolys, CTrigBasis
+export CTrigBasis
 
 
 """
@@ -8,10 +8,9 @@ constructed in the order
 [1, exp(im*θ), exp(-im*θ), exp(2im*θ), exp(-2im*θ), ..., 
                                 exp(N*im*θ), exp(-N*im*θ) ]
 ```
-where `θ` is input variable. These polynomials are orthonormal w.r.t. the 
-normalized L2-inner product on the torus. 
+where `θ` is input variable. 
 """
-struct CTrigBasis{T} <: PolyBasis4ML
+struct CTrigBasis{T} <: AbstractPoly4MLBasis
    N::Int
    # ----------------- metadata 
    meta::Dict{String, Any}
@@ -25,7 +24,6 @@ CTrigBasis(N::Integer, T = Float64, meta = Dict{String, Any}()) =
 # ----------------- interface functions 
 
 
-
 natural_indices(basis::CTrigBasis) = -basis.N:basis.N 
 
 index(basis::CTrigBasis, m::Integer) = 
@@ -34,12 +32,7 @@ index(basis::CTrigBasis, m::Integer) =
 
 Base.length(basis::CTrigBasis) = 2 * basis.N + 1 
 
-_alloc(basis::CTrigBasis{T1}, x::T2) where {T1, T2 <: Number} = 
-            zeros(promote_type(Complex{T1}, T2), length(basis))
-
-_alloc(basis::CTrigBasis{T1}, X::AbstractVector{T2}) where {T1, T2 <: Number} = 
-            zeros(promote_type(Complex{T1}, T2), length(X), length(basis))
-
+_valtype(basis::CTrigBasis, x::Real) = complex(typeof(x))
 
             
 # ----------------- main evaluation code 
@@ -154,6 +147,7 @@ function evaluate_ed!(P, dP, basis::CTrigBasis, X::AbstractVector)
    @inbounds begin 
       for i = 1:nX 
          P[i, 1] = 1 
+         dP[i, 1] = 0
          s, c = sincos(X[i])
          P[i, 2] = Complex(c, s)
          dP[i, 2] = Complex(-s, c)
@@ -187,6 +181,8 @@ function evaluate_ed2!(P, dP, ddP, basis::CTrigBasis, X::AbstractVector)
    @inbounds begin 
       for i = 1:nX 
          P[i, 1] = 1 
+         dP[i, 1] = 0 
+         ddP[i, 1] = 0
          s, c = sincos(X[i])
          P[i, 2] = Complex(c, s)
          dP[i, 2] = Complex(-s, c)

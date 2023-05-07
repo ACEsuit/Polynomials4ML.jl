@@ -2,8 +2,7 @@ using LoopVectorization
 
 
 @doc raw"""
-`OrthPolyBasis1D3T:` defined a basis of orthonormal polynomials on an interval 
-[a, b] in terms of the coefficients in the 3-term recursion, 
+`OrthPolyBasis1D3T:` defines a basis of polynomials in terms of a 3-term recursion, 
 ```math
 \begin{aligned}
    P_1(x) &= A_1  \\
@@ -11,10 +10,13 @@ using LoopVectorization
    P_{n} &= (A_n x + B_n) P_{n-1}(x) + C_n P_{n-2}(x)
 \end{aligned}
 ```
-Orthogonality is achieved with respect to a user-specified distribution, which
-can be either continuous or discrete but must have a density function.
+Typically (but not necessarily) such bases are obtained by orthogonalizing the monomials with respect to a user-specified distribution, which
+can be either continuous or discrete but must have a density function. See also 
+* `legendre_basis`
+* `chebyshev_basis`
+* `jacobi_basis`
 """
-struct OrthPolyBasis1D3T{T} <: PolyBasis4ML
+struct OrthPolyBasis1D3T{T} <: AbstractPoly4MLBasis
    # ----------------- the recursion coefficients
    A::Vector{T}
    B::Vector{T}
@@ -34,13 +36,9 @@ index(basis::OrthPolyBasis1D3T, m::Integer) = m + 1
 
 Base.length(basis::OrthPolyBasis1D3T) = length(basis.A)
 
-# ----------------- interface functions 
 
-_alloc(basis::OrthPolyBasis1D3T{T1}, x::T2) where {T1, T2 <: Number} = 
-            zeros(promote_type(T1, T2), length(basis))
-
-_alloc(basis::OrthPolyBasis1D3T{T1}, X::AbstractVector{T2}) where {T1, T2 <: Number} = 
-            zeros(promote_type(T1, T2), length(X), length(basis))
+_valtype(basis::OrthPolyBasis1D3T{T1}, TX::Type{T2}) where {T1, T2} = 
+            promote_type(T1, T2)         
 
 # ----------------- main evaluation code 
 
@@ -106,8 +104,6 @@ function evaluate_ed2!(P, dP, ddP, basis::OrthPolyBasis1D3T, x)
 end
 
 
-using Base.Threads
-
 # P should be a matrix now and we will write basis(X[i]) into P[i, :]; 
 # this is the format the optimizes memory access. 
 function evaluate!(P, basis::OrthPolyBasis1D3T, X::AbstractVector) 
@@ -118,18 +114,20 @@ function evaluate!(P, basis::OrthPolyBasis1D3T, X::AbstractVector)
    @assert size(P, 1) >= nX
    # ---------------------------------
 
-   @inbounds for i = 1:nX 
-      P[i, 1] = basis.A[1]
-   end
-   if N > 1
-      @inbounds for i = 1:nX 
-         P[i, 2] = basis.A[2] * X[i] + basis.B[2]
+   @inbounds begin
+      for i = 1:nX 
+         P[i, 1] = basis.A[1]
       end
-      for n = 3:N    # TODO -> try @threads here 
-         an = basis.A[n]; bn = basis.B[n]; cn = basis.C[n]
-         @inbounds @simd ivdep for i = 1:nX 
-            p = muladd(X[i], an, bn)
-            P[i, n] = muladd(p, P[i, n-1], cn * P[i, n-2])
+      if N > 1
+         for i = 1:nX 
+            P[i, 2] = basis.A[2] * X[i] + basis.B[2]
+         end
+         for n = 3:N    # TODO -> try @threads here 
+            an = basis.A[n]; bn = basis.B[n]; cn = basis.C[n]
+            @simd ivdep for i = 1:nX 
+               p = muladd(X[i], an, bn)
+               P[i, n] = muladd(p, P[i, n-1], cn * P[i, n-2])
+            end
          end
       end
    end

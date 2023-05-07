@@ -1,11 +1,10 @@
 """
-`ALPolynomials` : an auxiliary datastructure for
-evaluating the associated lagrange functions
-used for the spherical harmonics
-Constructor:
+`ALPolynomials` : an auxiliary datastructure for evaluating the associated Legendre functions
+used for the spherical harmonics Constructor:
 ```julia
 ALPolynomials(maxL::Integer, T::Type=Float64)
 ```
+This is not part of the public API and not semver-stable.
 """
 struct ALPolynomials{T} 
 	L::Int

@@ -61,12 +61,32 @@ function orthpolybasis(N::Integer, W::JacobiWeights{T}) where {T}
    return basis 
 end
 
+"""
+`chebyshev_basis(N::Integer)`: 
 
-chebyshev_basis(N::Integer; normalize=true) = 
+Constructs an `OrthPolyBasis1D3T` object representing a possibly rescaled version of the basis of Chebyshev polynomials of the first kind. `N` is the length of the basis, not the degree. 
+
+Careful: the normalisation may be non-standard. 
+"""
+chebyshev_basis(N::Integer; normalize=false) = 
       orthpolybasis(N, chebyshev_weights(normalize))
 
+"""
+`legendre_basis(N::Integer)`: 
+
+Constructs an `OrthPolyBasis1D3T` object representing a possibly rescaled version of the basis of Legendre polynomials (L2 orthonormal on [-1, 1]). `N` is the length of the basis, not the degree. 
+
+Careful: the normalisation may be non-standard. 
+"""
 legendre_basis(N::Integer; normalize=true) = 
       orthpolybasis(N, legendre_weights(normalize))
 
+"""
+`jacobi_basis(N::Integer, α::Real, β::Real)`: 
+
+Constructs an `OrthPolyBasis1D3T` object representing a possibly rescaled version of the basis of Jacobi polynomials `Jαβ`. `N` is the length of the basis, not the degree. 
+
+Careful: the normalisation may be non-standard. 
+"""
 jacobi_basis(N::Integer, α::Real, β::Real; normalize=true) =
        orthpolybasis(N, JacobiWeights(α, β, normalize))

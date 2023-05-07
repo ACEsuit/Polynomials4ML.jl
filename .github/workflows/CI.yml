@@ -18,7 +18,6 @@ jobs:
       fail-fast: false
       matrix:
         version:
-          - '1.7'
           - '1.8'
           - 'nightly'
         os:
@@ -32,25 +31,27 @@ jobs:
           version: ${{ matrix.version }}
           arch: ${{ matrix.arch }}
       - uses: julia-actions/cache@v1
+      - run: julia -e 'using Pkg; pkg"registry add https://github.com/ACEsuit/ACEregistry.git"'
       - uses: julia-actions/julia-buildpkg@v1
       - uses: julia-actions/julia-runtest@v1
-  # docs:
-  #   name: Documentation
-  #   runs-on: ubuntu-latest
-  #   permissions:
-  #     contents: write
-  #   steps:
-  #     - uses: actions/checkout@v2
-  #     - uses: julia-actions/setup-julia@v1
-  #       with:
-  #         version: '1'
-  #     - uses: julia-actions/julia-buildpkg@v1
-  #     - uses: julia-actions/julia-docdeploy@v1
-  #       env:
-  #         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-  #     - run: |
-  #         julia --project=docs -e '
-  #           using Documenter: DocMeta, doctest
-  #           using OrthogonalPolynomials
-  #           DocMeta.setdocmeta!(OrthogonalPolynomials, :DocTestSetup, :(using OrthogonalPolynomials); recursive=true)
-  #           doctest(OrthogonalPolynomials)'
+  docs:
+    name: Documentation
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v2
+      - uses: julia-actions/setup-julia@v1
+        with:
+          version: '1'
+      - run: julia --project=docs -e 'using Pkg; pkg"registry add https://github.com/ACEsuit/ACEregistry.git"'
+      - uses: julia-actions/julia-buildpkg@v1
+      - uses: julia-actions/julia-docdeploy@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - run: |
+          julia --project=docs -e '
+            using Documenter: DocMeta, doctest
+            using Polynomials4ML
+            DocMeta.setdocmeta!(Polynomials4ML, :DocTestSetup, :(using Polynomials4ML); recursive=true)
+            doctest(Polynomials4ML)'
