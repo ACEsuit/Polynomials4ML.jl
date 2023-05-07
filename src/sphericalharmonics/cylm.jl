@@ -1,4 +1,4 @@
-
+using ObjectPools: ArrayPool, FlexTempArray
 
 """
 `CYlmBasis(maxL, T=Float64): `
@@ -13,29 +13,14 @@ The input variable is normally an `rr::SVector{3, T}`. This `rr` need not be nor
 struct CYlmBasis{T} <: AbstractPoly4MLBasis
 	alp::ALPolynomials{T}
    # ----------------------------
-	pool::ArrayCache{Complex{T}, 1}
-   ppool::ArrayCache{Complex{T}, 2}
-	pool_d::ArrayCache{SVector{3, Complex{T}}, 1}
-   ppool_d::ArrayCache{SVector{3, Complex{T}}, 2}
-	tmp_s::TempArray{SphericalCoords{T}, 1}
-	tmp_t::TempArray{Complex{T}, 1}
-	tmp_sin::TempArray{T, 1}
-	tmp_cos::TempArray{T, 1}
+	tmp::ArrayPool{FlexTempArray}
 end
 
 CYlmBasis(maxL::Integer, T::Type=Float64) = 
       CYlmBasis(ALPolynomials(maxL, T))
 
 CYlmBasis(alp::ALPolynomials{T}) where {T} = 
-      CYlmBasis(alp, 
-		         ArrayCache{Complex{T}, 1}(), 
-               ArrayCache{Complex{T}, 2}(), 
-               ArrayCache{SVector{3, Complex{T}}, 1}(), 
-               ArrayCache{SVector{3, Complex{T}}, 2}(), 
-					TempArray{SphericalCoords{T}, 1}(),
-					TempArray{Complex{T}, 1}(), 
-					TempArray{T, 1}(), 
-					TempArray{T, 1}() )
+      CYlmBasis(alp, ArrayPool(FlexTempArray) )
 
 Base.show(io::IO, basis::CYlmBasis) = 
       print(io, "CYlmBasis(L=$(maxL(basis)))")
@@ -47,9 +32,6 @@ maxL(sh::CYlmBasis) = sh.alp.L
 
 _valtype(sh::CYlmBasis{T}, x::AbstractVector{S}) where {T <: Real, S <: Real} = 
 			Complex{promote_type(T, S)}
-
-# _gradtype(sh::CYlmBasis{T}, x::AbstractVector{S})  where {T <: Real, S <: Real} = 
-# 			SVector{3, Complex{promote_type(T, S)}}
 
 Base.length(basis::CYlmBasis) = sizeY(maxL(basis))
 
@@ -69,15 +51,18 @@ import Base.==
 # 		CYlmBasis(D["maxL"], read_dict(D["T"]))
 
 
+# ---------------------- some helpers 
 
-
+function cart2spher(basis::CYlmBasis, X::AbstractVector{<: AbstractVector})
+	ST = SphericalCoords{eltype(eltype(X))}
+	S = acquire!(basis.tmp, :S, (length(X),), ST)
+	for i = 1:length(X) 
+		S[i] = cart2spher(X[i])
+	end
+	return S 
+end
+		
 # ---------------------- evaluation interface code 
-
-# function evaluate(basis::CYlmBasis, x::AbstractVector{<: Real})
-# 	Y = acquire!(basis.pool, length(basis), _valtype(basis, x))
-# 	evaluate!(parent(Y), basis, x)
-# 	return Y 
-# end
 
 function evaluate!(Y, basis::CYlmBasis, x::AbstractVector{<: Real})
 	L = maxL(basis)
@@ -88,38 +73,16 @@ function evaluate!(Y, basis::CYlmBasis, x::AbstractVector{<: Real})
 	return Y
 end
 
-# function evaluate(basis::CYlmBasis, X::AbstractVector{<: AbstractVector})
-# 	Y = acquire!(basis.ppool, (length(X), length(basis)))
-# 	evaluate!(parent(Y), basis, X)
-# 	return Y 
-# end
-
 function evaluate!(Y, basis::CYlmBasis, 
 						 X::AbstractVector{<: AbstractVector})
 	L = maxL(basis)
-	S = acquire!(basis.tmp_s, length(X))
-	map!(cart2spher, S, X)
+   S = cart2spher(basis, X)
 	P = evaluate(basis.alp, S)
 	cYlm!(Y, maxL(basis), S, P, basis)
 	release!(P)
 	return Y
 end
 
-
-# function evaluate_d(SH::CYlmBasis, 
-# 						 R::Union{AbstractVector{<: Real}, 
-# 						 			 AbstractVector{<: AbstractVector}} )
-# 	B, dB = evaluate_ed(SH, R) 
-# 	release!(B)
-# 	return dB 
-# end 
-
-# function evaluate_ed(SH::CYlmBasis, R::AbstractVector{<: Real})
-# 	Y = acquire!(SH.pool, length(SH), _valtype(SH, R))
-# 	dY = acquire!(SH.pool_d, length(SH), _gradtype(SH, R))
-# 	evaluate_ed!(parent(Y), parent(dY), SH, R)
-# 	return Y, dY
-# end
 
 function evaluate_ed!(Y, dY, SH::CYlmBasis, R::AbstractVector{<: Real})
 	L = maxL(SH)
@@ -132,18 +95,9 @@ function evaluate_ed!(Y, dY, SH::CYlmBasis, R::AbstractVector{<: Real})
 end
 
 
-# function evaluate_ed(SH::CYlmBasis, R::AbstractVector{<: AbstractVector})
-# 	nR = length(R); nY = length(SH)
-# 	Y = acquire!(SH.ppool, (nR, nY), _valtype(SH, R[1]))
-# 	dY = acquire!(SH.ppool_d, (nR, nY), _gradtype(SH, R[1]))
-# 	evaluate_ed!(parent(Y), parent(dY), SH, R)
-# 	return Y, dY
-# end
-
 function evaluate_ed!(Y, dY, SH::CYlmBasis, R::AbstractVector{<: AbstractVector})
 	L = maxL(SH)
-	S = acquire!(SH.tmp_s, length(R))
-	map!(cart2spher, S, R)
+   S = cart2spher(basis, X)
 	P, dP = _evaluate_ed(SH.alp, S)
 	cYlm_ed!(Y, dY, maxL(SH), S, P, dP, SH)
 	release!(P)
@@ -234,14 +188,18 @@ end
 """
 evaluate complex spherical harmonics
 """
-function cYlm!(Y, L, S::AbstractVector{<: SphericalCoords}, P::AbstractMatrix, basis)
+function cYlm!(Y, L, S::AbstractVector{SphericalCoords{T}}, P::AbstractMatrix, basis) where {T} 
 	nS = length(S) 
-	@assert length(P) >= sizeP(L)
+	@assert size(P, 1) >= nS 
+	@assert size(P, 2) >= sizeP(L)
 	@assert size(Y, 2) >= sizeY(L)
+	@show size(Y, 1)
+	@show nS
 	@assert size(Y, 1) >= nS 
-	t = acquire!(basis.tmp_t, nS)
-	co = acquire!(basis.tmp_cos, nS)
-	si = acquire!(basis.tmp_sin, nS)
+
+	t = acquire!(basis.tmp, :T, (nS,), Complex{T})
+	co = acquire!(basis.tmp, :cos, (nS,), T)
+	si = acquire!(basis.tmp, :sin, (nS,), T)
 
 	@inbounds begin 
 		for i = 1:nS

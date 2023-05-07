@@ -222,3 +222,12 @@ println_slim(@test Yb ≈ Ys ≈ Ys2 ≈ Yb1)
 println_slim(@test dYb1 ≈ dYs2)
 
 ##
+
+@info("check for the weird resizing bug")
+
+bYlm = CYlmBasis(5)
+X1 = randn(SVector{3, Float64}, 100)
+Y1 = evaluate(bYlm, X1)
+X2 = X1[1:10]
+Y2 = evaluate(bYlm, X2)
+
