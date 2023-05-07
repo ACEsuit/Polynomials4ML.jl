@@ -30,12 +30,14 @@ jacobi = jacobi_basis(N, 0.5, 0.75)
 trig = CTrigBasis(N)
 
 # orthogonal polynomials with discrete weights 
-W = DiscreteWeights(2*rand(100) .- 1, 1 .+ rand(100), :normalize)
-dbasis = orthpolybasis(N, W)
+X = 2*rand(100) .- 1
+W = 1 .+ rand(100)
+dbasis = orthpolybasis(N, X, W, :normalize)
 ``` 
 
 Evaluate a basis; take `basis` one of the above
 ```julia 
+basis = cheb 
 # assume that [0, 1] is part of the domain of the basis
 x = rand()
 
@@ -51,3 +53,4 @@ P, dP = evaluate_ed(basis, x)
 ddP = evaluate_dd(basis, x)
 P, dP, ddP = evaluate_ed2(basis, x)
 ```
+For more efficient non-allocating in-place evaluation, see the documenation. 
