@@ -9,19 +9,7 @@ export CYlmBasis, RYlmBasis
 #     Coordinates
 # --------------------------------------------------------
 
-"""
-`struct SphericalCoords` : a simple datatype storing spherical coordinates
-of a point (x,y,z) in the format `(r, cosφ, sinφ, cosθ, sinθ)`.
-Use `spher2cart` and `cart2spher` to convert between cartesian and spherical
-coordinates.
-"""
-struct SphericalCoords{T}
-	r::T
-	cosφ::T
-	sinφ::T
-	cosθ::T
-	sinθ::T
-end
+# SphericalCoords are defined in `interface.jl`
 
 spher2cart(S::SphericalCoords) = S.r * SVector(S.cosφ*S.sinθ, S.sinφ*S.sinθ, S.cosθ)
 
