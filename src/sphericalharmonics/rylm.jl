@@ -14,9 +14,9 @@ struct RYlmBasis{T} <: AbstractPoly4MLBasis
 	alp::ALPolynomials{T}
    # ----------------------------
 	pool::ArrayCache{T, 1}
-   bpool::ArrayCache{T, 2}
+   ppool::ArrayCache{T, 2}
 	pool_d::ArrayCache{SVector{3, T}, 1}
-   bpool_d::ArrayCache{SVector{3, T}, 2}
+   ppool_d::ArrayCache{SVector{3, T}, 2}
 	tmp_s::TempArray{SphericalCoords{T}, 1}
 	tmp_sin::TempArray{T, 1}
 	tmp_cos::TempArray{T, 1}

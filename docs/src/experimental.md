@@ -7,7 +7,7 @@ The interfaces specified below are experimental and not part of the public API y
 
 We implement "manual" pullbacks w.r.t. the `X` variable only! These  take the form
 ```julia
-∂X = pb_evaluate(basis, X, ∂B, args..)
+∂X = pb_evaluate(basis, X, ∂B, args...)
 pb_evaluate!(∂X, basis, X, ∂B, args...)
 ```
 and analogously for the `evaluate_***` variants. The `args...` can differ between different basis sets e.g. may rely on intermediate results in the evaluation of the basis. 
