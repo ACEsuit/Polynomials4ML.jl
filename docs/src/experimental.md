@@ -1,16 +1,8 @@
 
 # Experimental API 
 
-The interfaces specified below are experimental and not part of the public API yet. There is no guarantee that these are provided for all of the exported basis sets, and there is no guarantee of semver-compatible backward compatibility at this point.
+The interfaces specified below are experimental and not part of the public API yet. Some of it is not even implemented yet and are just being sketched out in separate branches. There is no guarantee that these are provided for all of the exported basis sets, and there is no guarantee of semver-compatible backward compatibility at this point.
 
-## Backward Differentiation w.r.t. Inputs `X`
-
-We implement "manual" pullbacks w.r.t. the `X` variable only! These  take the form
-```julia
-∂X = pb_evaluate(basis, X, ∂B, args..)
-pb_evaluate!(∂X, basis, X, ∂B, args...)
-```
-and analogously for the `evaluate_***` variants. The `args...` can differ between different basis sets e.g. may rely on intermediate results in the evaluation of the basis. 
 
 ## Laplacian 
 
@@ -24,6 +16,15 @@ laplacian!(ΔY, basis, X)
 eval_grad_laplace!(Y, dY, ΔY, basis, X)
 Y, dY, ΔY = eval_grad_laplace(basis, X)
 ```
+
+## Backward Differentiation w.r.t. Inputs `X`
+
+[WORK IN PROGRESS] We implement "manual" pullbacks w.r.t. the `X` variable only! These  take the form
+```julia
+∂X = pb_evaluate(basis, ∂B, X, args..)
+pb_evaluate!(∂X, basis, ∂B, X, args...)
+```
+and analogously for the `evaluate_***` variants. The `args...` can differ between different basis sets e.g. may rely on intermediate results in the evaluation of the basis. 
 
 
 ## Lux  

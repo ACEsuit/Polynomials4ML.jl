@@ -56,11 +56,11 @@ Base.show(io::IO, basis::RYlmBasis) =
 
 # ---------------------- Interfaces
 
-function evaluate(basis::RYlmBasis, x::AbstractVector{<: Real})
-	Y = acquire!(basis.pool, length(basis), _valtype(basis, x))
-	evaluate!(parent(Y), basis, x)
-	return Y 
-end
+# function evaluate(basis::RYlmBasis, x::AbstractVector{<: Real})
+# 	Y = acquire!(basis.pool, length(basis), _valtype(basis, x))
+# 	evaluate!(parent(Y), basis, x)
+# 	return Y 
+# end
 
 function evaluate!(Y, basis::RYlmBasis, x::AbstractVector{<: Real})
 	L = maxL(basis)
@@ -71,11 +71,11 @@ function evaluate!(Y, basis::RYlmBasis, x::AbstractVector{<: Real})
 	return nothing 
 end
 
-function evaluate(basis::RYlmBasis, X::AbstractVector{<: AbstractVector})
-	Y = acquire!(basis.bpool, (length(X), length(basis)))
-	evaluate!(parent(Y), basis, X)
-	return Y 
-end
+# function evaluate(basis::RYlmBasis, X::AbstractVector{<: AbstractVector})
+# 	Y = acquire!(basis.bpool, (length(X), length(basis)))
+# 	evaluate!(parent(Y), basis, X)
+# 	return Y 
+# end
 
 function evaluate!(Y, basis::RYlmBasis, 
 						 X::AbstractVector{<: AbstractVector{<: Real}})
@@ -89,12 +89,12 @@ function evaluate!(Y, basis::RYlmBasis,
 end
 
 
-function evaluate_ed(basis::RYlmBasis, x::AbstractVector{<: Real})
-	Y = acquire!(basis.pool, length(basis))
-	dY = acquire!(basis.pool_d, length(basis))
-	evaluate_ed!(parent(Y), parent(dY), basis, x)
-	return Y, dY 
-end
+# function evaluate_ed(basis::RYlmBasis, x::AbstractVector{<: Real})
+# 	Y = acquire!(basis.pool, length(basis))
+# 	dY = acquire!(basis.pool_d, length(basis))
+# 	evaluate_ed!(parent(Y), parent(dY), basis, x)
+# 	return Y, dY 
+# end
 
 function evaluate_ed!(Y, dY, basis::RYlmBasis, 
 						     x::AbstractVector{<: Real})
@@ -108,12 +108,12 @@ function evaluate_ed!(Y, dY, basis::RYlmBasis,
 end
 
 
-function evaluate_ed(basis::RYlmBasis, X::AbstractVector{<: AbstractVector{<: Real}})
-	Y = acquire!(basis.bpool, (length(X), length(basis)))
-	dY = acquire!(basis.bpool_d, (length(X), length(basis)))
-	evaluate_ed!(parent(Y), parent(dY), basis, X)
-	return Y, dY 
-end
+# function evaluate_ed(basis::RYlmBasis, X::AbstractVector{<: AbstractVector{<: Real}})
+# 	Y = acquire!(basis.bpool, (length(X), length(basis)))
+# 	dY = acquire!(basis.bpool_d, (length(X), length(basis)))
+# 	evaluate_ed!(parent(Y), parent(dY), basis, X)
+# 	return Y, dY 
+# end
 
 function evaluate_ed!(Y, dY, basis::RYlmBasis, 
 						     X::AbstractVector{<: AbstractVector{<: Real}})

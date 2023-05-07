@@ -3,14 +3,15 @@
 
 This page documents the public API, i.e. the list of bases and functions that are considered relatively stable and for which we aim to strictly impose semver backward compatibility. The basis sets that are considered stable are the following (please see inline documentation for initialization): 
 
-* [`OrthPolyBasis1D3T`](@ref)
-   - [`jacobi_basis` ](@ref)
-   - [`legendre_basis`](@ref)
-   - [`chebyshev_basis` ](@ref)
-* [`CTrigBasis`](@ref)
-* [`RTrigBasis` ](@ref)
-* [`CYlmBasis`](@ref)
-* [`RYlmBasis` ](@ref)
+* Several classes of orthogonal polynomials [`OrthPolyBasis1D3T`](@ref)
+   - General Jacobi [`jacobi_basis` ](@ref)
+   - Legendre [`legendre_basis`](@ref)
+   - Chebyshev [`chebyshev_basis` ](@ref)
+   - Discrete distribution [`orthpolybasis`](@ref) 
+* Complex trigonometric polynomials [`CTrigBasis`](@ref)
+* Real trigonometric polynomials [`RTrigBasis` ](@ref)
+* Complex spherical harmonics [`CYlmBasis`](@ref)
+* Real spherical harmonics [`RYlmBasis` ](@ref)
 
 ## In-place Evaluation  
 

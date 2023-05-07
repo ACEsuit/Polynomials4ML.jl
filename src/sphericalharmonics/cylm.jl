@@ -48,17 +48,17 @@ maxL(sh::CYlmBasis) = sh.alp.L
 _valtype(sh::CYlmBasis{T}, x::AbstractVector{S}) where {T <: Real, S <: Real} = 
 			Complex{promote_type(T, S)}
 
-_gradtype(sh::CYlmBasis{T}, x::AbstractVector{S})  where {T <: Real, S <: Real} = 
-			SVector{3, Complex{promote_type(T, S)}}
-
-import Base.==
-==(B1::CYlmBasis, B2::CYlmBasis) =
-		(B1.alp == B2.alp) && (typeof(B1) == typeof(B2))
+# _gradtype(sh::CYlmBasis{T}, x::AbstractVector{S})  where {T <: Real, S <: Real} = 
+# 			SVector{3, Complex{promote_type(T, S)}}
 
 Base.length(basis::CYlmBasis) = sizeY(maxL(basis))
 
 
 # ---------------------- FIO
+
+import Base.==
+==(B1::CYlmBasis, B2::CYlmBasis) =
+		(B1.alp == B2.alp) && (typeof(B1) == typeof(B2))
 
 # write_dict(SH::CYlmBasis{T}) where {T} =
 # 		Dict("__id__" => "ACE_CYlmBasis",
@@ -73,11 +73,11 @@ Base.length(basis::CYlmBasis) = sizeY(maxL(basis))
 
 # ---------------------- evaluation interface code 
 
-function evaluate(basis::CYlmBasis, x::AbstractVector{<: Real})
-	Y = acquire!(basis.pool, length(basis), _valtype(basis, x))
-	evaluate!(parent(Y), basis, x)
-	return Y 
-end
+# function evaluate(basis::CYlmBasis, x::AbstractVector{<: Real})
+# 	Y = acquire!(basis.pool, length(basis), _valtype(basis, x))
+# 	evaluate!(parent(Y), basis, x)
+# 	return Y 
+# end
 
 function evaluate!(Y, basis::CYlmBasis, x::AbstractVector{<: Real})
 	L = maxL(basis)
@@ -88,11 +88,11 @@ function evaluate!(Y, basis::CYlmBasis, x::AbstractVector{<: Real})
 	return Y
 end
 
-function evaluate(basis::CYlmBasis, X::AbstractVector{<: AbstractVector})
-	Y = acquire!(basis.ppool, (length(X), length(basis)))
-	evaluate!(parent(Y), basis, X)
-	return Y 
-end
+# function evaluate(basis::CYlmBasis, X::AbstractVector{<: AbstractVector})
+# 	Y = acquire!(basis.ppool, (length(X), length(basis)))
+# 	evaluate!(parent(Y), basis, X)
+# 	return Y 
+# end
 
 function evaluate!(Y, basis::CYlmBasis, 
 						 X::AbstractVector{<: AbstractVector})
@@ -106,20 +106,20 @@ function evaluate!(Y, basis::CYlmBasis,
 end
 
 
-function evaluate_d(SH::CYlmBasis, 
-						 R::Union{AbstractVector{<: Real}, 
-						 			 AbstractVector{<: AbstractVector}} )
-	B, dB = evaluate_ed(SH, R) 
-	release!(B)
-	return dB 
-end 
+# function evaluate_d(SH::CYlmBasis, 
+# 						 R::Union{AbstractVector{<: Real}, 
+# 						 			 AbstractVector{<: AbstractVector}} )
+# 	B, dB = evaluate_ed(SH, R) 
+# 	release!(B)
+# 	return dB 
+# end 
 
-function evaluate_ed(SH::CYlmBasis, R::AbstractVector{<: Real})
-	Y = acquire!(SH.pool, length(SH), _valtype(SH, R))
-	dY = acquire!(SH.pool_d, length(SH), _gradtype(SH, R))
-	evaluate_ed!(parent(Y), parent(dY), SH, R)
-	return Y, dY
-end
+# function evaluate_ed(SH::CYlmBasis, R::AbstractVector{<: Real})
+# 	Y = acquire!(SH.pool, length(SH), _valtype(SH, R))
+# 	dY = acquire!(SH.pool_d, length(SH), _gradtype(SH, R))
+# 	evaluate_ed!(parent(Y), parent(dY), SH, R)
+# 	return Y, dY
+# end
 
 function evaluate_ed!(Y, dY, SH::CYlmBasis, R::AbstractVector{<: Real})
 	L = maxL(SH)
@@ -132,13 +132,13 @@ function evaluate_ed!(Y, dY, SH::CYlmBasis, R::AbstractVector{<: Real})
 end
 
 
-function evaluate_ed(SH::CYlmBasis, R::AbstractVector{<: AbstractVector})
-	nR = length(R); nY = length(SH)
-	Y = acquire!(SH.ppool, (nR, nY), _valtype(SH, R[1]))
-	dY = acquire!(SH.ppool_d, (nR, nY), _gradtype(SH, R[1]))
-	evaluate_ed!(parent(Y), parent(dY), SH, R)
-	return Y, dY
-end
+# function evaluate_ed(SH::CYlmBasis, R::AbstractVector{<: AbstractVector})
+# 	nR = length(R); nY = length(SH)
+# 	Y = acquire!(SH.ppool, (nR, nY), _valtype(SH, R[1]))
+# 	dY = acquire!(SH.ppool_d, (nR, nY), _gradtype(SH, R[1]))
+# 	evaluate_ed!(parent(Y), parent(dY), SH, R)
+# 	return Y, dY
+# end
 
 function evaluate_ed!(Y, dY, SH::CYlmBasis, R::AbstractVector{<: AbstractVector})
 	L = maxL(SH)
