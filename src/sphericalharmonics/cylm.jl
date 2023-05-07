@@ -25,22 +25,12 @@ CYlmBasis(alp::ALPolynomials{T}) where {T} =
 Base.show(io::IO, basis::CYlmBasis) = 
       print(io, "CYlmBasis(L=$(maxL(basis)))")
 
-"""
-max L degree for which the alp coefficients have been precomputed
-"""
-maxL(sh::CYlmBasis) = sh.alp.L
-
 _valtype(sh::CYlmBasis{T}, x::AbstractVector{S}) where {T <: Real, S <: Real} = 
 			Complex{promote_type(T, S)}
-
-Base.length(basis::CYlmBasis) = sizeY(maxL(basis))
 
 
 # ---------------------- FIO
 
-import Base.==
-==(B1::CYlmBasis, B2::CYlmBasis) =
-		(B1.alp == B2.alp) && (typeof(B1) == typeof(B2))
 
 # write_dict(SH::CYlmBasis{T}) where {T} =
 # 		Dict("__id__" => "ACE_CYlmBasis",
@@ -51,16 +41,6 @@ import Base.==
 # 		CYlmBasis(D["maxL"], read_dict(D["T"]))
 
 
-# ---------------------- some helpers 
-
-function cart2spher(basis::CYlmBasis, X::AbstractVector{<: AbstractVector})
-	ST = SphericalCoords{eltype(eltype(X))}
-	S = acquire!(basis.tmp, :S, (length(X),), ST)
-	for i = 1:length(X) 
-		S[i] = cart2spher(X[i])
-	end
-	return S 
-end
 		
 # ---------------------- evaluation interface code 
 
@@ -97,7 +77,7 @@ end
 
 function evaluate_ed!(Y, dY, SH::CYlmBasis, R::AbstractVector{<: AbstractVector})
 	L = maxL(SH)
-   S = cart2spher(basis, X)
+   S = cart2spher(SH, R)
 	P, dP = _evaluate_ed(SH.alp, S)
 	cYlm_ed!(Y, dY, maxL(SH), S, P, dP, SH)
 	release!(P)
@@ -193,8 +173,6 @@ function cYlm!(Y, L, S::AbstractVector{SphericalCoords{T}}, P::AbstractMatrix, b
 	@assert size(P, 1) >= nS 
 	@assert size(P, 2) >= sizeP(L)
 	@assert size(Y, 2) >= sizeY(L)
-	@show size(Y, 1)
-	@show nS
 	@assert size(Y, 1) >= nS 
 
 	t = acquire!(basis.tmp, :T, (nS,), Complex{T})
@@ -246,9 +224,9 @@ end
 """
 evaluate gradients of complex spherical harmonics
 """
-function cYlm_ed!(Y, dY, L, S::AbstractVector{<: SphericalCoords}, 
+function cYlm_ed!(Y, dY, L, S::AbstractVector{SphericalCoords{T}}, 
 					      P::AbstractMatrix, dP::AbstractMatrix, 
-							basis::CYlmBasis)
+							basis::CYlmBasis) where {T} 
    nS = length(S)
 	@assert size(P, 2) >= sizeP(L)
 	@assert size(P, 1) >= nS
@@ -258,9 +236,10 @@ function cYlm_ed!(Y, dY, L, S::AbstractVector{<: SphericalCoords},
 	@assert size(Y, 1) >= nS
 	@assert size(dY, 2) >= sizeY(L)
 	@assert size(dY, 1) >= nS
-	ep = acquire!(basis.tmp_t, nS)
-	co = acquire!(basis.tmp_cos, nS)
-	si = acquire!(basis.tmp_sin, nS)
+
+	ep = acquire!(basis.tmp, :T, (nS,), Complex{T})
+	co = acquire!(basis.tmp, :cos, (nS,), T)
+	si = acquire!(basis.tmp, :sin, (nS,), T)
 
 	# m = 0 case
 	# ep = 1 / sqrt(2)

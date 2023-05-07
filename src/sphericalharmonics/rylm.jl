@@ -17,13 +17,7 @@ struct RYlmBasis{T} <: AbstractPoly4MLBasis
    bpool::ArrayCache{T, 2}
 	pool_d::ArrayCache{SVector{3, T}, 1}
    bpool_d::ArrayCache{SVector{3, T}, 2}
-	tmp_s::TempArray{SphericalCoords{T}, 1}
-	tmp_sin::TempArray{T, 1}
-	tmp_cos::TempArray{T, 1}
-	tmp_sinθ::TempArray{T, 1}
-	tmp_cosθ::TempArray{T, 1}
-	tmp_sinm::TempArray{T, 1}
-	tmp_cosm::TempArray{T, 1}
+	tmp::ArrayPool{FlexTempArray}
 end
 
 RYlmBasis(maxL::Integer, T::Type=Float64) = 
@@ -35,32 +29,17 @@ RYlmBasis(alp::ALPolynomials{T}) where {T} =
                 ArrayCache{T, 2}(), 
                 ArrayCache{SVector{3, T}, 1}(), 
                 ArrayCache{SVector{3, T}, 2}(), 
-					 TempArray{SphericalCoords{T}, 1}(),
-					 TempArray{T, 1}(), 
-					 TempArray{T, 1}(), 
-					 TempArray{T, 1}(), 
-					 TempArray{T, 1}(), 
-					 TempArray{T, 1}(), 
-					 TempArray{T, 1}() )
-
-
-maxL(sh::RYlmBasis) = sh.alp.L
+					 ArrayPool(FlexTempArray),
+					 )
 
 _valtype(sh::RYlmBasis{T}, x::AbstractVector{S}) where {T <: Real, S <: Real} = 
          promote_type(T, S)
-
-Base.length(basis::RYlmBasis) = sizeY(maxL(basis))
 
 Base.show(io::IO, basis::RYlmBasis) = 
       print(io, "RYlmBasis(L=$(maxL(basis)))")		
 
 # ---------------------- Interfaces
 
-# function evaluate(basis::RYlmBasis, x::AbstractVector{<: Real})
-# 	Y = acquire!(basis.pool, length(basis), _valtype(basis, x))
-# 	evaluate!(parent(Y), basis, x)
-# 	return Y 
-# end
 
 function evaluate!(Y, basis::RYlmBasis, x::AbstractVector{<: Real})
 	L = maxL(basis)
@@ -71,30 +50,17 @@ function evaluate!(Y, basis::RYlmBasis, x::AbstractVector{<: Real})
 	return nothing 
 end
 
-# function evaluate(basis::RYlmBasis, X::AbstractVector{<: AbstractVector})
-# 	Y = acquire!(basis.bpool, (length(X), length(basis)))
-# 	evaluate!(parent(Y), basis, X)
-# 	return Y 
-# end
 
 function evaluate!(Y, basis::RYlmBasis, 
 						 X::AbstractVector{<: AbstractVector{<: Real}})
 	L = maxL(basis)
-	S = acquire!(basis.tmp_s, length(X))
-	map!(cart2spher, S, X)
+	S = cart2spher(basis, X)
 	P = evaluate(basis.alp, S)
 	rYlm!(parent(Y), maxL(basis), S, parent(P), basis)
 	release!(P)
 	return nothing 
 end
 
-
-# function evaluate_ed(basis::RYlmBasis, x::AbstractVector{<: Real})
-# 	Y = acquire!(basis.pool, length(basis))
-# 	dY = acquire!(basis.pool_d, length(basis))
-# 	evaluate_ed!(parent(Y), parent(dY), basis, x)
-# 	return Y, dY 
-# end
 
 function evaluate_ed!(Y, dY, basis::RYlmBasis, 
 						     x::AbstractVector{<: Real})
@@ -108,18 +74,10 @@ function evaluate_ed!(Y, dY, basis::RYlmBasis,
 end
 
 
-# function evaluate_ed(basis::RYlmBasis, X::AbstractVector{<: AbstractVector{<: Real}})
-# 	Y = acquire!(basis.bpool, (length(X), length(basis)))
-# 	dY = acquire!(basis.bpool_d, (length(X), length(basis)))
-# 	evaluate_ed!(parent(Y), parent(dY), basis, X)
-# 	return Y, dY 
-# end
-
 function evaluate_ed!(Y, dY, basis::RYlmBasis, 
 						     X::AbstractVector{<: AbstractVector{<: Real}})
 	L = maxL(basis)
-	S = acquire!(basis.tmp_s, length(X))
-	map!(cart2spher, S, X)
+	S = cart2spher(basis, X)
 	P, dP = _evaluate_ed(basis.alp, S)
 	rYlm_ed!(parent(Y), parent(dY), maxL(basis), S, parent(P), parent(dP), basis)
 	release!(P)
@@ -211,17 +169,18 @@ end
 # ---------------------- Batched evaluation
 
 
-function rYlm!(Y::Matrix, L, S::AbstractVector, P::Matrix, basis::RYlmBasis)
+function rYlm!(Y::Matrix, L, S::AbstractVector{SphericalCoords{T}}, 
+				   P::Matrix, basis::RYlmBasis) where {T} 
    nX = length(S) 
 	@assert size(P, 1) >= nX
    @assert size(P, 2) >= sizeP(L)
    @assert size(Y, 1) >= nX
 	@assert size(Y, 2) >= sizeY(L)
 
-   sinφ = acquire!(basis.tmp_sin, nX)
-   cosφ = acquire!(basis.tmp_cos, nX)
-   sinmφ = acquire!(basis.tmp_sinm, nX)
-   cosmφ = acquire!(basis.tmp_cosm, nX)
+   sinφ = acquire!(basis.tmp, :sin, (nX,), T)
+   cosφ = acquire!(basis.tmp, :cos, (nX,), T)
+   sinmφ = acquire!(basis.tmp, :sinm, (nX,), T)
+   cosmφ = acquire!(basis.tmp, :cosm, (nX,), T)
 
    @inbounds begin 
       for i = 1:nX 
@@ -268,7 +227,8 @@ end
 
 
 
-function rYlm_ed!(Y::AbstractMatrix, dY::AbstractMatrix, L, S::AbstractVector, P, dP, basis)
+function rYlm_ed!(Y::AbstractMatrix, dY::AbstractMatrix, L, 
+					  S::AbstractVector{SphericalCoords{T}}, P, dP, basis) where {T} 
    nX = length(S) 
 	@assert size(P, 1) >= nX
    @assert size(P, 2) >= sizeP(L)
@@ -279,13 +239,13 @@ function rYlm_ed!(Y::AbstractMatrix, dY::AbstractMatrix, L, S::AbstractVector, P
    @assert size(dY, 1) >= nX
 	@assert size(dY, 2) >= sizeY(L)
 
-   sinφ = acquire!(basis.tmp_sin, nX)
-   cosφ = acquire!(basis.tmp_cos, nX)
-   sinθ = acquire!(basis.tmp_sinθ, nX)
-   cosθ = acquire!(basis.tmp_cosθ, nX)
-   sinmφ = acquire!(basis.tmp_sinm, nX)
-   cosmφ = acquire!(basis.tmp_cosm, nX)
-
+   sinφ = acquire!(basis.tmp, :sin, (nX,), T)
+   cosφ = acquire!(basis.tmp, :cos, (nX,), T)
+   sinmφ = acquire!(basis.tmp, :sinm, (nX,), T)
+   cosmφ = acquire!(basis.tmp, :cosm, (nX,), T)
+   sinθ = acquire!(basis.tmp, :sinθ, (nX,), T)
+   cosθ = acquire!(basis.tmp, :cosθ, (nX,), T)
+	
    @inbounds begin 
       @simd ivdep for i = 1:nX 
          sinφ[i] = S[i].sinφ
