@@ -57,7 +57,7 @@ _hesstype(basis::AbstractPoly4MLBasis, TX::Type{<:Number}) =
 _hesstype(basis::AbstractPoly4MLBasis, ::Type{SVector{N, T}}) where {N, T} = 
       SMatrix{N, N, promote_type(_valtype(basis, SVector{N, T}), T)}
 
-      
+
 _laplacetype(basis::AbstractPoly4MLBasis, x::Number) = 
       _hesstype(basis, x)
 
@@ -133,13 +133,13 @@ evaluate_dd(basis::AbstractPoly4MLBasis, x) = evaluate_ed2(basis, x)[3]
 # can extract the right output array from it and then return it. 
 
 _alloc(flex::FlexTempArray, basis::AbstractPoly4MLBasis, X) = 
-      aquire!(flex, _out_size(basis, X), _valtype(basis, X))
+      acquire!(flex, _out_size(basis, X), _valtype(basis, X))
 
 _alloc_d(flex_d::FlexTempArray, basis::AbstractPoly4MLBasis, X) = 
-      aquire!(flex_d, _out_size(basis, X), _gradtype(basis, X))
+      acquire!(flex_d, _out_size(basis, X), _gradtype(basis, X))
 
 _alloc_dd(flex_dd::FlexTempArray, basis::AbstractPoly4MLBasis, X) = 
-      aquire!(flex_dd, _out_size(basis, X), _hesstype(basis, X))
+      acquire!(flex_dd, _out_size(basis, X), _hesstype(basis, X))
 
 _alloc_ed(flex::FlexTempArray, flex_d::FlexTempArray, basis::AbstractPoly4MLBasis, x) = 
       _alloc(flex, basis, x), _alloc_d(flex_d, basis, x)      

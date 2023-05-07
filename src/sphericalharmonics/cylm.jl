@@ -45,7 +45,7 @@ _valtype(sh::CYlmBasis{T}, ::Type{<: StaticVector{3, S}}) where {T <: Real, S <:
 # ---------------------- evaluation interface code 
 
 
-function evaluate!(Y, basis::CYlmBasis, X)
+function evaluate!(Y::AbstractArray, basis::CYlmBasis, X)
 	L = maxL(basis)
    S = cart2spher(basis, X)
 	_P = _acqu_P!(basis, S)
@@ -55,7 +55,7 @@ function evaluate!(Y, basis::CYlmBasis, X)
 end
 
 
-function evaluate_ed!(Y, dY, basis::CYlmBasis, X)
+function evaluate_ed!(Y::AbstractArray, dY::AbstractArray, basis::CYlmBasis, X)
 	L = maxL(basis)
 	S = cart2spher(basis, X)
 	_P, _dP = _acqu_P!(basis, S), _acqu_dP!(basis, S)

@@ -37,7 +37,7 @@ _valtype(basis::CTrigBasis, T::Type{<: Real}) = complex(T)
             
 # ----------------- main evaluation code 
 
-function evaluate!(P, basis::CTrigBasis, x) 
+function evaluate!(P::AbstractArray, basis::CTrigBasis, x) 
    N = basis.N 
    @assert length(P) >= length(basis) # 2N+1
    @inbounds P[1] = 1 
@@ -55,7 +55,7 @@ function evaluate!(P, basis::CTrigBasis, x)
    return P 
 end
 
-function evaluate_ed!(P, dP, basis::CTrigBasis, x) 
+function evaluate_ed!(P::AbstractArray, dP::AbstractArray, basis::CTrigBasis, x) 
    N = basis.N 
    @assert length(P) >= length(basis) # 2N+1
    @assert length(dP) >= length(basis) 
@@ -79,7 +79,7 @@ function evaluate_ed!(P, dP, basis::CTrigBasis, x)
    return P, dP 
 end
 
-function evaluate_ed2!(P, dP, ddP, basis::CTrigBasis, x) 
+function evaluate_ed2!(P::AbstractArray, dP::AbstractArray, ddP::AbstractArray, basis::CTrigBasis, x) 
    N = basis.N 
    @assert length(P) >= length(basis) # 2N+1
    @assert length(dP) >= length(basis) 
@@ -111,7 +111,7 @@ end
 
 
 
-function evaluate!(P, basis::CTrigBasis, X::AbstractVector)
+function evaluate!(P::AbstractArray, basis::CTrigBasis, X::AbstractVector)
    N = basis.N 
    nX = length(X) 
    @assert size(P, 1) >= length(X) 
@@ -136,7 +136,7 @@ end
 
 
 
-function evaluate_ed!(P, dP, basis::CTrigBasis, X::AbstractVector)
+function evaluate_ed!(P::AbstractArray, dP::AbstractArray, basis::CTrigBasis, X::AbstractVector)
    N = basis.N 
    nX = length(X) 
    @assert size(P, 1) >= length(X) 
@@ -168,7 +168,7 @@ end
 
 
 
-function evaluate_ed2!(P, dP, ddP, basis::CTrigBasis, X::AbstractVector)
+function evaluate_ed2!(P::AbstractArray, dP::AbstractArray, ddP::AbstractArray, basis::CTrigBasis, X::AbstractVector)
    N = basis.N 
    nX = length(X) 
    @assert size(P, 1) >= length(X) 
