@@ -32,10 +32,6 @@ RTrigBasis(N::Integer, meta = Dict{String, Any}()) =
 
 _valtype(basis::RTrigBasis, x::Real) = typeof(x) 
 
-_alloc(basis::RTrigBasis, x::Real) = zeros(typeof(x), length(basis))
-
-_alloc(basis::RTrigBasis, x::AbstractVector{<: Real}) = zeros(eltype(x), length(x), length(basis))
-
 
 function evaluate!(P::AbstractVector, basis::RTrigBasis, θ::Real)
    N = basis.N 

@@ -37,19 +37,8 @@ index(basis::OrthPolyBasis1D3T, m::Integer) = m + 1
 Base.length(basis::OrthPolyBasis1D3T) = length(basis.A)
 
 
-# ----------------- interface functions 
-
-_valtype(basis::OrthPolyBasis1D3T{T1}, x::T2) where {T1, T2} = 
-            promote_type(T1, T2)
-
 _valtype(basis::OrthPolyBasis1D3T{T1}, TX::Type{T2}) where {T1, T2} = 
             promote_type(T1, T2)         
-
-_alloc(basis::OrthPolyBasis1D3T, x::Number) = 
-            zeros(_valtype(basis, typeof(x)), length(basis))
-
-_alloc(basis::OrthPolyBasis1D3T, X::AbstractVector{T2}) where {T2 <: Number} = 
-            zeros(_valtype(basis, T2), length(X), length(basis))
 
 # ----------------- main evaluation code 
 
@@ -115,8 +104,6 @@ function evaluate_ed2!(P, dP, ddP, basis::OrthPolyBasis1D3T, x)
 end
 
 
-using Base.Threads
-
 # P should be a matrix now and we will write basis(X[i]) into P[i, :]; 
 # this is the format the optimizes memory access. 
 function evaluate!(P, basis::OrthPolyBasis1D3T, X::AbstractVector) 
@@ -127,18 +114,20 @@ function evaluate!(P, basis::OrthPolyBasis1D3T, X::AbstractVector)
    @assert size(P, 1) >= nX
    # ---------------------------------
 
-   @inbounds for i = 1:nX 
-      P[i, 1] = basis.A[1]
-   end
-   if N > 1
-      @inbounds for i = 1:nX 
-         P[i, 2] = basis.A[2] * X[i] + basis.B[2]
+   @inbounds begin
+      for i = 1:nX 
+         P[i, 1] = basis.A[1]
       end
-      for n = 3:N    # TODO -> try @threads here 
-         an = basis.A[n]; bn = basis.B[n]; cn = basis.C[n]
-         @inbounds @simd ivdep for i = 1:nX 
-            p = muladd(X[i], an, bn)
-            P[i, n] = muladd(p, P[i, n-1], cn * P[i, n-2])
+      if N > 1
+         for i = 1:nX 
+            P[i, 2] = basis.A[2] * X[i] + basis.B[2]
+         end
+         for n = 3:N    # TODO -> try @threads here 
+            an = basis.A[n]; bn = basis.B[n]; cn = basis.C[n]
+            @simd ivdep for i = 1:nX 
+               p = muladd(X[i], an, bn)
+               P[i, n] = muladd(p, P[i, n-1], cn * P[i, n-2])
+            end
          end
       end
    end
