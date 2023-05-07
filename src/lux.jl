@@ -43,8 +43,6 @@ initialparameters(rng::AbstractRNG, l::PolyLuxLayer) = _init_luxparams(rng, l.ba
 
 initialstates(rng::AbstractRNG, l::PolyLuxLayer) = _init_luxstate(rng, l.basis)
 
-const SINGLE = Union{Number, StaticVector}
-
 (l::PolyLuxLayer)(args...) = evaluate(l, args...)
 
 function evaluate(l::PolyLuxLayer, x::SINGLE, ps, st)
