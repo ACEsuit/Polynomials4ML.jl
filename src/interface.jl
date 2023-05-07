@@ -40,9 +40,9 @@ _valtype(basis::AbstractPoly4MLBasis, x::SINGLE) =
 _gradtype(basis::AbstractPoly4MLBasis, x::Number) = 
       _valtype(basis, x)
 
-_gradtype(basis::AbstractPoly4MLBasis, x::StaticArray) = 
-      StaticArrays.similar_type(typeof(x), 
-                                promote_type(eltype(x), _valtype(basis, x)))
+_gradtype(basis::AbstractPoly4MLBasis, Tx::Type{<: StaticArray}) = 
+      StaticArrays.similar_type(Tx, 
+                     promote_type(eltype(Tx), _valtype(basis, Tx)))
 
 _hesstype(basis::AbstractPoly4MLBasis, x::Number) = 
       promote_type(_valtype(basis, x), typeof(x))

@@ -66,65 +66,64 @@ println()
 
 ##
 
-@warn(" Removed ALP derivative test, since the internals changed. ")
-# using Polynomials4ML: SphericalCoords, ALPolynomials
-# verbose=false
-# @info("Test: check derivatives of associated legendre polynomials")
-# for nsamples = 1:30
-#    θ = rand() * π
-#    φ = (rand()-0.5) * 2*π
-#    S = SphericalCoords(φ, θ)
-#    L = 5
-#    alp = ALPolynomials(L)
-#    P = evaluate(alp, S)
-#    P1, dP = Polynomials4ML.evaluate_ed(alp, S)
-#    # -------------
-#    P_eq_P1 = true
-#    for l = 0:L, m = 0:l
-#       i = Polynomials4ML.index_p(l, m)
-#       if ((m == 0) && !(P[i] ≈ P1[i])) || ((m > 0) && !(P[i] ≈ P1[i] * S.sinθ))
-#          P_eq_P1 = false; break;
-#       end
-#    end
-#    print_tf(@test P_eq_P1)
-#    # -------------
-#    errs = []
-#    verbose && @printf("     h    | error \n")
-#    for p = 2:10
-#       h = 0.1^p
-#       Sh = SphericalCoords(φ, θ + h)
-#       dPh = (evaluate(alp, Sh) - P) / h
-#       push!(errs, norm(dP - dPh, Inf))
-#       verbose && @printf(" %.2e | %.2e \n", h, errs[end])
-#    end
-#    success = (/(extrema(errs)...) < 1e-3) || (minimum(errs) < 1e-10)
-#    print_tf(@test success)
-# end
-# println()
+using Polynomials4ML: SphericalCoords, ALPolynomials
+verbose=false
+@info("Test: check derivatives of associated legendre polynomials")
+for nsamples = 1:30
+   θ = rand() * π
+   φ = (rand()-0.5) * 2*π
+   S = SphericalCoords(φ, θ)
+   L = 5
+   alp = ALPolynomials(L)
+   P = evaluate(alp, S)
+   P1, dP = Polynomials4ML.evaluate_ed(alp, S)
+   # -------------
+   P_eq_P1 = true
+   for l = 0:L, m = 0:l
+      i = Polynomials4ML.index_p(l, m)
+      if ((m == 0) && !(P[i] ≈ P1[i])) || ((m > 0) && !(P[i] ≈ P1[i] * S.sinθ))
+         P_eq_P1 = false; break;
+      end
+   end
+   print_tf(@test P_eq_P1)
+   # -------------
+   errs = []
+   verbose && @printf("     h    | error \n")
+   for p = 2:10
+      h = 0.1^p
+      Sh = SphericalCoords(φ, θ + h)
+      dPh = (evaluate(alp, Sh) - P) / h
+      push!(errs, norm(dP - dPh, Inf))
+      verbose && @printf(" %.2e | %.2e \n", h, errs[end])
+   end
+   success = (/(extrema(errs)...) < 1e-3) || (minimum(errs) < 1e-10)
+   print_tf(@test success)
+end
+println()
 
 ##
 
-# @info("      ... same near pole")
-# for nsamples = 1:30
-#    θ = rand() * 1e-8
-#    S = SphericalCoords(0.0, θ)
-#    L = 5
-#    alp = ALPolynomials(L)
-#    P = evaluate(alp, S)
-#    _, dP = Polynomials4ML._evaluate_ed(alp, S)
-#    errs = []
-#    verbose && @printf("     h    | error \n")
-#    for p = 2:10
-#       h = 0.1^p
-#       Sh = SphericalCoords(0.0, θ + h)
-#       dPh = (evaluate(alp, Sh) - P) / h
-#       push!(errs, norm(dP - dPh, Inf))
-#       verbose && @printf(" %.2e | %.2e \n", h, errs[end])
-#    end
-#    success = (/(extrema(errs)...) < 1e-3) || (minimum(errs) < 1e-10)
-#    print_tf(@test success)
-# end
-# println()
+@info("      ... same near pole")
+for nsamples = 1:30
+   θ = rand() * 1e-8
+   S = SphericalCoords(0.0, θ)
+   L = 5
+   alp = ALPolynomials(L)
+   P = evaluate(alp, S)
+   _, dP = evaluate_ed(alp, S)
+   errs = []
+   verbose && @printf("     h    | error \n")
+   for p = 2:10
+      h = 0.1^p
+      Sh = SphericalCoords(0.0, θ + h)
+      dPh = (evaluate(alp, Sh) - P) / h
+      push!(errs, norm(dP - dPh, Inf))
+      verbose && @printf(" %.2e | %.2e \n", h, errs[end])
+   end
+   success = (/(extrema(errs)...) < 1e-3) || (minimum(errs) < 1e-10)
+   print_tf(@test success)
+end
+println()
 
 ##
 
@@ -186,22 +185,21 @@ println()
 
 ##
 
-# @info("Check consistency of standard and batched ALP evaluation ")
+@info("Check consistency of standard and batched ALP evaluation ")
 using Polynomials4ML: rand_sphere
 basis = CYlmBasis(5)
 R = [ rand_sphere() for _ = 1:32 ] 
 
 S = cart2spher.(R)
-# P1, dP1 = evaluate_ed(basis.alp, S)
-# P2 = copy(P1) 
-# dP2 = copy(dP1)
+P1, dP1 = evaluate_ed(basis.alp, S)
+P2 = copy(P1) 
+dP2 = copy(dP1)
+for i = 1:length(R)
+   P2[i, :], dP2[i, :] = evaluate_ed(basis.alp, S[i])
+end
 
-# for i = 1:length(R)
-#    P2[i, :], dP2[i, :] = evaluate_ed(basis.alp, S[i])
-# end
-
-# println_slim(@test P2 ≈ P1)
-# println_slim(@test dP2 ≈ dP2)
+println_slim(@test P2 ≈ P1)
+println_slim(@test dP2 ≈ dP2)
 
 ## 
 

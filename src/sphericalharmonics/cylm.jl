@@ -48,7 +48,7 @@ _acqu_alp!(sym::Symbol, basis, S::SphericalCoords) =
 		acquire!(basis.tmp, sym, (length(basis.alp),), _valtype(basis.alp, S))
 
 _acqu_alp!(sym::Symbol, basis, S::AbstractVector{<: SphericalCoords}) = 
-		acquire!(basis.tmp, sym, (length(basis.alp),), _valtype(basis.alp, eltype(S)))
+		acquire!(basis.tmp, sym, (length(S), length(basis.alp)), _valtype(basis.alp, eltype(S)))
 
 _acqu_P!(  basis, S) = _acqu_alp!(:alpP,   basis, S)
 _acqu_dP!( basis, S) = _acqu_alp!(:alpdP,  basis, S)
