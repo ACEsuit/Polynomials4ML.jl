@@ -34,7 +34,7 @@ function evaluate!(Y::AbstractArray, basis::RYlmBasis, X)
    S = cart2spher(basis, X)
 	_P = _acqu_P!(basis, S)
 	P = evaluate!(_P, basis.alp, S)
-	rYlm!(Y, maxL(basis), S, P, basis)
+	rYlm!(Y, maxL(basis), S, parent(P), basis)
 	return Y
 end
 
@@ -44,7 +44,7 @@ function evaluate_ed!(Y::AbstractArray, dY::AbstractArray, basis::RYlmBasis, X)
 	S = cart2spher(basis, X)
 	_P, _dP = _acqu_P!(basis, S), _acqu_dP!(basis, S)
 	P, dP = evaluate_ed!(_P, _dP, basis.alp, S)
-	rYlm_ed!(Y, dY, maxL(basis), S, P, dP, basis)
+	rYlm_ed!(Y, dY, maxL(basis), S, parent(P), parent(dP), basis)
 	return Y, dY
 end
 
@@ -177,7 +177,7 @@ end
 # ---------------------- Batched evaluation
 
 
-function rYlm!(Y::Matrix, L, S::AbstractVector{SphericalCoords{T}}, 
+function rYlm!(Y::AbstractMatrix, L, S::AbstractVector{SphericalCoords{T}}, 
 				   P::AbstractMatrix, basis::RYlmBasis) where {T} 
    nX = length(S) 
 	@assert size(P, 1) >= nX

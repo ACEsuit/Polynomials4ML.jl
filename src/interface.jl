@@ -105,25 +105,37 @@ _laplacetype(basis::AbstractPoly4MLBasis, X::BATCH) =
 # --------------------------------------- 
 # allocation interface interface 
 
-# TODO: here we should work with eltype(BATCH) instead of X[1]
-
-_out_size(basis::AbstractPoly4MLBasis, x::SINGLE) = length(basis)
+_out_size(basis::AbstractPoly4MLBasis, x::SINGLE) = (length(basis),)
 _out_size(basis::AbstractPoly4MLBasis, X::BATCH) = (length(X), length(basis))
+_outsym(x::SINGLE) = :out 
+_outsym(X::BATCH) = :outb
 
 _alloc(basis::AbstractPoly4MLBasis, X) = 
-      Array{ _valtype(basis, X) }(undef, _out_size(basis, X))
+      acquire!(basis.pool, _outsym(X), _out_size(basis, X), _valtype(basis, X) )
 
 _alloc_d(basis::AbstractPoly4MLBasis, X) = 
-      Array{ _gradtype(basis, X) }(undef, _out_size(basis, X))
+      acquire!(basis.pool, _outsym(X), _out_size(basis, X), _gradtype(basis, X) )
 
 _alloc_dd(basis::AbstractPoly4MLBasis, X) = 
-      Array{ _hesstype(basis, X) }(undef, _out_size(basis, X))
+      acquire!(basis.pool, _outsym(X), _out_size(basis, X), _gradtype(basis, X) )
 
 _alloc_ed(basis::AbstractPoly4MLBasis, x) = 
       _alloc(basis, x), _alloc_d(basis, x)
 
 _alloc_ed2(basis::AbstractPoly4MLBasis, x) = 
-   _alloc(basis, x), _alloc_d(basis, x), _alloc_dd(basis, x)
+      _alloc(basis, x), _alloc_d(basis, x), _alloc_dd(basis, x)
+
+
+# OLD ARRAY BASED INTERFACE 
+
+# _alloc(basis::AbstractPoly4MLBasis, X) = 
+#       Array{ _valtype(basis, X) }(undef, _out_size(basis, X))
+
+# _alloc_d(basis::AbstractPoly4MLBasis, X) = 
+#       Array{ _gradtype(basis, X) }(undef, _out_size(basis, X))
+
+# _alloc_dd(basis::AbstractPoly4MLBasis, X) = 
+#       Array{ _hesstype(basis, X) }(undef, _out_size(basis, X))
 
 # --------------------------------------- 
 # evaluation interface 
@@ -132,23 +144,23 @@ _alloc_ed2(basis::AbstractPoly4MLBasis, x) =
             
 function evaluate(basis::AbstractPoly4MLBasis, x) 
    B = _alloc(basis, x)
-   evaluate!(B, basis, x)
+   evaluate!(parent(B), basis, x)
    return B 
 end
 
 function evaluate_ed(basis::AbstractPoly4MLBasis, x) 
    B, dB = _alloc_ed(basis, x)
-   evaluate_ed!(B, dB, basis, x)
+   evaluate_ed!(parent(B), parent(dB), basis, x)
    return B, dB
 end 
 
-evaluate_d(basis::AbstractPoly4MLBasis, x) = evaluate_ed(basis, x)[2] 
-
 function evaluate_ed2(basis::AbstractPoly4MLBasis, x)
    B, dB, ddB = _alloc_ed2(basis, x)
-   evaluate_ed2!(B, dB, ddB, basis, x)
+   evaluate_ed2!(parent(B), parent(dB), parent(ddB), basis, x)
    return B, dB, ddB
 end
+
+evaluate_d(basis::AbstractPoly4MLBasis, x) = evaluate_ed(basis, x)[2] 
 
 evaluate_dd(basis::AbstractPoly4MLBasis, x) = evaluate_ed2(basis, x)[3] 
 

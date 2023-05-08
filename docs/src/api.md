@@ -45,6 +45,7 @@ P = evaluate(basis, X)
 P, dP = evaluate_ed(basis, X)
 P, dP, ddP = evaluate_ed2(basis, X)
 ```
+The output types of `P, dP, ddP` are guarnateed to be `AbstractArray`s but may otherwise change between package versions. The exact type should not be relied upon when using this package. 
 
 The meaning of the different symbols is exactly the same as described above. The only difference is that the output containers `P`, `dP`, `ddP` are now allocated. 
 Their type should be stable (if not, please file a bug report), but unspecified in the sense that the output type is not semver-stable for the time being. 

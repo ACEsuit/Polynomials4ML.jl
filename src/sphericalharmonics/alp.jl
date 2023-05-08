@@ -17,12 +17,12 @@ struct ALPolynomials{T} <: AbstractPoly4MLBasis
 	L::Int
 	A::Vector{T}
 	B::Vector{T}
-	tmp::TSafe{ArrayPool{FlexArray}}
+	@reqfields
 end
 
 
 ALPolynomials(L::Integer, A::Vector{T}, B::Vector{T}) where {T}  = 
-		ALPolynomials(L, A, B, TSafe(ArrayPool(FlexArray)), )
+		ALPolynomials(L, A, B, _make_reqfields()...)
 
 Base.length(alp::ALPolynomials) = sizeP(alp.L)
 
