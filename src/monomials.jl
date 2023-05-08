@@ -8,12 +8,13 @@ Standard Monomials basis. This should very rarely be used. Possibly useful in co
 """
 struct MonoBasis <: AbstractPoly4MLBasis
    N::Int
+   pool::POOL
    # ----------------- metadata 
    meta::Dict{String, Any}
 end
 
 MonoBasis(N::Integer, meta = Dict{String, Any}()) = 
-         MonoBasis(N, meta)
+         MonoBasis(N, _makepool(), meta)
 
 
 # ----------------- interface functions 

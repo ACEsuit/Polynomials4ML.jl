@@ -1,4 +1,3 @@
-using ObjectPools: ArrayPool, FlexTempArray
 
 """
 `ALPolynomials` : an auxiliary datastructure for evaluating the associated Legendre functions
@@ -18,12 +17,12 @@ struct ALPolynomials{T} <: AbstractPoly4MLBasis
 	L::Int
 	A::Vector{T}
 	B::Vector{T}
-	tmp::ArrayPool{FlexTempArray}
+	tmp::TSafe{ArrayPool{FlexArray}}
 end
 
 
 ALPolynomials(L::Integer, A::Vector{T}, B::Vector{T}) where {T}  = 
-		ALPolynomials(L, A, B, ArrayPool(FlexTempArray), )
+		ALPolynomials(L, A, B, TSafe(ArrayPool(FlexArray)), )
 
 Base.length(alp::ALPolynomials) = sizeP(alp.L)
 

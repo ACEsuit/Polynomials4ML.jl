@@ -12,15 +12,14 @@ The input variable is normally an `rr::SVector{3, T}`. This `rr` need not be nor
 """
 struct RYlmBasis{T} <: AbstractPoly4MLBasis
 	alp::ALPolynomials{T}
-   # ----------------------------
-	tmp::ArrayPool{FlexTempArray}
+	@reqfields
 end
 
 RYlmBasis(maxL::Integer, T::Type=Float64) = 
       RYlmBasis(ALPolynomials(maxL, T))
 
 RYlmBasis(alp::ALPolynomials{T}) where {T} = 
-      RYlmBasis(alp, ArrayPool(FlexTempArray))
+      RYlmBasis(alp, _make_reqfields()...)
 
 _valtype(sh::RYlmBasis{T}, ::Type{<: StaticVector{3, S}}) where {T <: Real, S <: Real} = 
 		promote_type(T, S)

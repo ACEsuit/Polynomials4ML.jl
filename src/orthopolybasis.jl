@@ -21,12 +21,12 @@ struct OrthPolyBasis1D3T{T} <: AbstractPoly4MLBasis
    A::Vector{T}
    B::Vector{T}
    C::Vector{T}
-   # ----------------- used only for construction ...
-   #                   but useful to have since it defines the notion of orth.
-   meta::Dict{String, Any}
+   # ----------------- required fields 
+   @reqfields()   
 end
 
-OrthPolyBasis1D3T(A, B, C) = OrthPolyBasis1D3T(A, B, C, Dict{String, Any}())
+OrthPolyBasis1D3T(A, B, C) = 
+      OrthPolyBasis1D3T(A, B, C, _make_reqfields()...)
 
 export OrthPolyBasis1D3T
 

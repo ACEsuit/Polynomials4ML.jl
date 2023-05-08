@@ -72,8 +72,9 @@ function orthpolybasis(N::Integer, W::DiscreteWeights{TW}; TX = Float64) where {
       Jprev, Jpprev = _J / a, Jprev
    end
    
-   return OrthPolyBasis1D3T(A, B, C, 
-                            Dict{String, Any}("weights" => W))
+   basis = OrthPolyBasis1D3T(A, B, C) 
+   basis.meta["weights"] = W
+   return basis
 end
 
 

@@ -10,19 +10,12 @@ constructed in the order
 ```
 where `θ` is input variable. 
 """
-struct CTrigBasis{T} <: AbstractPoly4MLBasis
+struct CTrigBasis <: AbstractPoly4MLBasis
    N::Int
-   # ----------------- metadata 
-   meta::Dict{String, Any}
+   @reqfields
 end
 
-CTrigBasis(N::Integer, T = Float64, meta = Dict{String, Any}()) = 
-         CTrigBasis{T}(N, meta)
-
-
-
-# ----------------- interface functions 
-
+CTrigBasis(N::Integer) = CTrigBasis(N, _make_reqfields()...)
 
 natural_indices(basis::CTrigBasis) = -basis.N:basis.N 
 

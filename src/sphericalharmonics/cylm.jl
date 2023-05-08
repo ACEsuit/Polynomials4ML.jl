@@ -1,4 +1,4 @@
-using ObjectPools: ArrayPool, FlexTempArray
+using ObjectPools: ArrayPool, FlexArray
 
 """
 `CYlmBasis(maxL, T=Float64): `
@@ -12,15 +12,14 @@ The input variable is normally an `rr::SVector{3, T}`. This `rr` need not be nor
 """
 struct CYlmBasis{T} <: AbstractPoly4MLBasis
 	alp::ALPolynomials{T}
-   # ----------------------------
-	tmp::ArrayPool{FlexTempArray}
+   @reqfields
 end
 
 CYlmBasis(maxL::Integer, T::Type=Float64) = 
       CYlmBasis(ALPolynomials(maxL, T))
 
 CYlmBasis(alp::ALPolynomials{T}) where {T} = 
-      CYlmBasis(alp, ArrayPool(FlexTempArray) )
+      CYlmBasis(alp, _make_reqfields()...)
 
 Base.show(io::IO, basis::CYlmBasis) = 
       print(io, "CYlmBasis(L=$(maxL(basis)))")

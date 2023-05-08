@@ -1,6 +1,11 @@
 module Polynomials4ML
 
-using ObjectPools: ArrayCache, TempArray, acquire!, release!
+# -------------- Import ObjectPools stuff ---------------
+using ObjectPools: acquire!, release!, 
+                   FlexArray, FlexArrayCache, TSafe, ArrayPool
+
+
+# -------------- import ACEbase stuff 
 
 import ACEbase
 import ACEbase: evaluate, evaluate_d, evaluate_ed, evaluate_dd, evaluate_ed2, 
@@ -14,6 +19,7 @@ function degree end
 
 
 # some stuff to allow bases to overload some lux functionality ... 
+# how much of this should go into ACEbase? 
 function _valtype end 
 function lux end 
 function _init_luxparams end 

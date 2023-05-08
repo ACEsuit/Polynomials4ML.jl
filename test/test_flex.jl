@@ -16,9 +16,11 @@ tests = [
 for (basis, rnd) in tests   
    for ntest = 1:5 
       x = rnd()
+      B0 = zeros(Polynomials4ML._valtype(basis, x), length(basis))
+      evaluate!(B0, basis, x)
       B1 = evaluate(basis, x)
-      B2 = evaluate!(FlexTempArray(), basis, x)
-      print_tf(@test B1 == B2)
+      B2 = evaluate!(FlexArray(), basis, x)
+      print_tf(@test B0 == B1 == B2)
    end
 end
-println() 
+println()
