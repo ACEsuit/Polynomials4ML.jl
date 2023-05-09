@@ -35,8 +35,8 @@ function orthpolybasis(N::Integer, W::JacobiWeights{T}) where {T}
       B[n+1] = T( big(α^2 - β^2) * c2 / c1 )               
       C[n+1] = T( big(-2*(n+α-1)*(n+β-1)*(2n+α+β)) / c1 )  
    end
-   meta = Dict{String, Any}("weights" => W)
-   basis = OrthPolyBasis1D3T(A, B, C, meta)
+   basis = OrthPolyBasis1D3T(A, B, C)
+   basis.meta["weights"] = W
    if W.normalize
       integrand = x -> evaluate(basis, x).^2 * ((1-x)^α * (1+x)^β)
       g = sqrt.(quadgk(integrand, -1.0+1e-15, 1.0-1e-15; atol=1e-10)[1])

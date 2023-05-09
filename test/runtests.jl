@@ -9,6 +9,8 @@ using Test
     @testset "SphericalHarmonics" begin include("test_cylm.jl"); end
     @testset "Real Spherical Harmonics" begin include("test_rylm.jl"); end
 
+    @testset "Flex Array Interface" begin include("test_flex.jl"); end 
+
     @testset "Sparse Product" begin include("test_sparseproduct.jl"); end 
     @testset "Lux" begin include("test_lux.jl"); end 
 end

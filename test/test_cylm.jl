@@ -76,7 +76,7 @@ for nsamples = 1:30
    L = 5
    alp = ALPolynomials(L)
    P = evaluate(alp, S)
-   P1, dP = Polynomials4ML._evaluate_ed(alp, S)
+   P1, dP = Polynomials4ML.evaluate_ed(alp, S)
    # -------------
    P_eq_P1 = true
    for l = 0:L, m = 0:l
@@ -110,7 +110,7 @@ for nsamples = 1:30
    L = 5
    alp = ALPolynomials(L)
    P = evaluate(alp, S)
-   _, dP = Polynomials4ML._evaluate_ed(alp, S)
+   _, dP = evaluate_ed(alp, S)
    errs = []
    verbose && @printf("     h    | error \n")
    for p = 2:10
@@ -191,12 +191,11 @@ basis = CYlmBasis(5)
 R = [ rand_sphere() for _ = 1:32 ] 
 
 S = cart2spher.(R)
-P1, dP1 = Polynomials4ML._evaluate_ed(basis.alp, S)
+P1, dP1 = evaluate_ed(basis.alp, S)
 P2 = copy(P1) 
 dP2 = copy(dP1)
-
 for i = 1:length(R)
-   P2[i, :], dP2[i, :] = Polynomials4ML._evaluate_ed(basis.alp, S[i])
+   P2[i, :], dP2[i, :] = evaluate_ed(basis.alp, S[i])
 end
 
 println_slim(@test P2 ≈ P1)
@@ -222,3 +221,12 @@ println_slim(@test Yb ≈ Ys ≈ Ys2 ≈ Yb1)
 println_slim(@test dYb1 ≈ dYs2)
 
 ##
+
+@info("check for the weird resizing bug")
+
+bYlm = CYlmBasis(5)
+X1 = randn(SVector{3, Float64}, 100)
+Y1 = evaluate(bYlm, X1)
+X2 = X1[1:10]
+Y2 = evaluate(bYlm, X2)
+

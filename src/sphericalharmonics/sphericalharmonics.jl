@@ -9,19 +9,7 @@ export CYlmBasis, RYlmBasis
 #     Coordinates
 # --------------------------------------------------------
 
-"""
-`struct SphericalCoords` : a simple datatype storing spherical coordinates
-of a point (x,y,z) in the format `(r, cosφ, sinφ, cosθ, sinθ)`.
-Use `spher2cart` and `cart2spher` to convert between cartesian and spherical
-coordinates.
-"""
-struct SphericalCoords{T}
-	r::T
-	cosφ::T
-	sinφ::T
-	cosθ::T
-	sinθ::T
-end
+# SphericalCoords are defined in `interface.jl`
 
 spher2cart(S::SphericalCoords) = S.r * SVector(S.cosφ*S.sinθ, S.sinφ*S.sinθ, S.cosθ)
 
@@ -38,6 +26,8 @@ end
 SphericalCoords(φ, θ) = SphericalCoords(1.0, cos(φ), sin(φ), cos(θ), sin(θ))
 SphericalCoords(r, φ, θ) = SphericalCoords(r, cos(φ), sin(φ), cos(θ), sin(θ))
 
+
+
 """
 convert a gradient with respect to spherical coordinates to a gradient
 with respect to cartesian coordinates
@@ -49,6 +39,8 @@ function dspher_to_dcart(S, f_φ_div_sinθ, f_θ)
 			 			                                 - (   S.sinθ * f_θ) ) / r
 end
 
+# this looks like a leftover function from an experiment to try 
+# make a hot inner loop faster by avoiding the SphericalCoords type. 
 dspher_to_dcart(r, sinφ, cosφ, sinθ, cosθ, f_φ_div_sinθ, f_θ) = 
    	SVector( - (sinφ * f_φ_div_sinθ) + (cosφ * cosθ * f_θ),
 			            (cosφ * f_φ_div_sinθ) + (sinφ * cosθ * f_θ),
@@ -64,19 +56,30 @@ include("cylm.jl")
 include("rylm.jl")
 
 
-const YlmBasis = Union{RYlmBasis, CYlmBasis}
+const XlmBasis = Union{RYlmBasis, CYlmBasis}
 
 
 # --------------------------------------------------------
 # Indexing 
 
-export lm2idx, idx2lm, idx2l
+export lm2idx, idx2lm, idx2l, maxL 
 
 
-natural_indices(basis::YlmBasis) = 
+natural_indices(basis::XlmBasis) = 
 		[ NamedTuple{(:l, :m)}(idx2lm(i)) for i = 1:length(basis) ]
 
-degree(basis::YlmBasis, b::NamedTuple) = b.l 
+degree(basis::XlmBasis, b::NamedTuple) = b.l 
+
+"""
+max L degree for which the alp coefficients have been precomputed
+"""
+maxL(basis::XlmBasis) = basis.alp.L
+
+Base.length(basis::XlmBasis) = sizeY(maxL(basis))
+
+import Base.==
+==(B1::XlmBasis, B2::XlmBasis) =
+		(B1.alp == B2.alp) && (typeof(B1) == typeof(B2))
 
 
 """
@@ -115,6 +118,27 @@ Partial inverse of `lm2idx`: given an index into a vector of Ylm values, return 
 idx2l(i::Integer) = floor(Int, sqrt(i-1) + 1e-10)
 
 
+function cart2spher(basis::XlmBasis, X::AbstractVector{<: AbstractVector})
+	ST = SphericalCoords{eltype(eltype(X))}
+	S = acquire!(basis.tmp, :S, (length(X),), ST)
+	for i = 1:length(X) 
+		S[i] = cart2spher(X[i])
+	end
+	return S 
+end
+
+cart2spher(basis::XlmBasis, x::AbstractVector{<: Real}) = cart2spher(x) 
+
+
+_acqu_alp!(sym::Symbol, basis::XlmBasis, S::SphericalCoords) = 
+		acquire!(basis.tmp, sym, (length(basis.alp),), _valtype(basis.alp, S))
+
+_acqu_alp!(sym::Symbol, basis::XlmBasis, S::AbstractVector{<: SphericalCoords}) = 
+		acquire!(basis.tmp, sym, (length(S), length(basis.alp)), _valtype(basis.alp, eltype(S)))
+
+_acqu_P!(  basis::XlmBasis, S) = _acqu_alp!(:alpP,   basis, S)
+_acqu_dP!( basis::XlmBasis, S) = _acqu_alp!(:alpdP,  basis, S)
+_acqu_ddP!(basis::XlmBasis, S) = _acqu_alp!(:alpddP, basis, S)
 
 
 # ---------------------------- Auxiliary functions 

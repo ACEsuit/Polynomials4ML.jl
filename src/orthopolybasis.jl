@@ -21,12 +21,12 @@ struct OrthPolyBasis1D3T{T} <: AbstractPoly4MLBasis
    A::Vector{T}
    B::Vector{T}
    C::Vector{T}
-   # ----------------- used only for construction ...
-   #                   but useful to have since it defines the notion of orth.
-   meta::Dict{String, Any}
+   # ----------------- required fields 
+   @reqfields()   
 end
 
-OrthPolyBasis1D3T(A, B, C) = OrthPolyBasis1D3T(A, B, C, Dict{String, Any}())
+OrthPolyBasis1D3T(A, B, C) = 
+      OrthPolyBasis1D3T(A, B, C, _make_reqfields()...)
 
 export OrthPolyBasis1D3T
 
@@ -46,7 +46,7 @@ _valtype(basis::OrthPolyBasis1D3T{T1}, TX::Type{T2}) where {T1, T2} =
 # x can be any object for which a polynomial could be defined, but normally 
 #     a number. x cannot be an abstractvector since this would dispatch to a 
 #     different method. 
-function evaluate!(P, basis::OrthPolyBasis1D3T, x) 
+function evaluate!(P::AbstractArray, basis::OrthPolyBasis1D3T, x) 
    N = length(basis.A)
    @assert length(P) >= N 
    @inbounds P[1] = basis.A[1]
@@ -61,7 +61,7 @@ function evaluate!(P, basis::OrthPolyBasis1D3T, x)
 end
 
 
-function evaluate_ed!(P, dP, basis::OrthPolyBasis1D3T, x)
+function evaluate_ed!(P::AbstractArray, dP::AbstractArray, basis::OrthPolyBasis1D3T, x)
    N = length(basis.A)
    @assert length(P) >= N 
    @inbounds begin 
@@ -81,7 +81,7 @@ function evaluate_ed!(P, dP, basis::OrthPolyBasis1D3T, x)
 end
 
 
-function evaluate_ed2!(P, dP, ddP, basis::OrthPolyBasis1D3T, x)
+function evaluate_ed2!(P::AbstractArray, dP::AbstractArray, ddP::AbstractArray, basis::OrthPolyBasis1D3T, x)
    N = length(basis.A)
    @assert length(P) >= N 
    @inbounds begin 
@@ -106,7 +106,7 @@ end
 
 # P should be a matrix now and we will write basis(X[i]) into P[i, :]; 
 # this is the format the optimizes memory access. 
-function evaluate!(P, basis::OrthPolyBasis1D3T, X::AbstractVector) 
+function evaluate!(P::AbstractArray, basis::OrthPolyBasis1D3T, X::AbstractVector) 
    N = length(basis.A)
    nX = length(X) 
    # ------- do the bounds checks here 
@@ -136,7 +136,7 @@ end
 
 
 
-function evaluate_ed!(P, dP, basis::OrthPolyBasis1D3T, X::AbstractVector)
+function evaluate_ed!(P::AbstractArray, dP::AbstractArray, basis::OrthPolyBasis1D3T, X::AbstractVector)
    N = length(basis.A)
    nX = length(X) 
    # ------- do the bounds checks here 
@@ -173,7 +173,7 @@ function evaluate_ed!(P, dP, basis::OrthPolyBasis1D3T, X::AbstractVector)
 end
 
 
-function evaluate_ed2!(P, dP, ddP, basis::OrthPolyBasis1D3T, X::AbstractVector)
+function evaluate_ed2!(P::AbstractArray, dP::AbstractArray, ddP::AbstractArray, basis::OrthPolyBasis1D3T, X::AbstractVector)
    N = length(basis.A)
    nX = length(X) 
    # ------- do the bounds checks here 
@@ -225,7 +225,7 @@ end
 #                 = ∑_ij ∂P_ij * ∂_xa ( P_ij )
 #                 = ∑_ij ∂P_ij * dP_ij δ_ia
 #
-function rrule_evaluate!(P, basis::OrthPolyBasis1D3T, X::AbstractVector)
+function rrule_evaluate!(P::AbstractArray, basis::OrthPolyBasis1D3T, X::AbstractVector)
    nX = length(X) 
    dP = similar(P)
    evaluate_ed!(P, dP, basis, X)
