@@ -9,108 +9,42 @@ solid harmonics:
 
 γₗᵐ(r, θ, φ) = rˡYₗᵐ(θ, φ)
 """
-struct CRlmBasis{T}
+struct CRlmBasis{T} <: AbstractPoly4MLBasis
     alp::ALPolynomials{T}
-   # ----------------------------
-	pool::ArrayCache{Complex{T}, 1}
-   ppool::ArrayCache{Complex{T}, 2}
-	pool_d::ArrayCache{SVector{3, Complex{T}}, 1}
-   ppool_d::ArrayCache{SVector{3, Complex{T}}, 2}
-	tmp_s::TempArray{SphericalCoords{T}, 1}
-	tmp_t::TempArray{Complex{T}, 1}
-	tmp_sin::TempArray{T, 1}
-	tmp_cos::TempArray{T, 1}
-	tmp_r::TempArray{T, 1}
-	tmp_rL::TempArray{T, 2}
+	 @reqfields
 end
 
 CRlmBasis(maxL::Integer, T::Type=Float64) = 
       CRlmBasis(ALPolynomials(maxL, T))
 
 CRlmBasis(alp::ALPolynomials{T}) where {T} = 
-        CRlmBasis(alp, 
-		         ArrayCache{Complex{T}, 1}(), 
-               ArrayCache{Complex{T}, 2}(), 
-               ArrayCache{SVector{3, Complex{T}}, 1}(), 
-               ArrayCache{SVector{3, Complex{T}}, 2}(), 
-					TempArray{SphericalCoords{T}, 1}(),
-					TempArray{Complex{T}, 1}(), 
-					TempArray{T, 1}(), 
-					TempArray{T, 1}(),
-					TempArray{T, 1}(),
-					TempArray{T, 2}() )
+        CRlmBasis(alp, _make_reqfields()...) 
 
 Base.show(io::IO, basis::CRlmBasis) = 
       print(io, "CRlmBasis(L=$(maxL(basis)))")
 
-_valtype(sh::CRlmBasis{T}, x::AbstractVector{S}) where {T <: Real, S <: Real} = 
-			Complex{promote_type(T, S)}
+_valtype(sh::CRlmBasis{T}, ::Type{<: StaticVector{3, S}}) where {T <: Real, S <: Real} = 
+		Complex{promote_type(T, S)}
 
-_gradtype(sh::CRlmBasis{T}, x::AbstractVector{S})  where {T <: Real, S <: Real} = 
-			SVector{3, Complex{promote_type(T, S)}}
-
-import Base.==
-==(B1::CRlmBasis, B2::CRlmBasis) =
-		(B1.alp == B2.alp) && (typeof(B1) == typeof(B2))
 
 # ---------------------- evaluation interface code 
-function evaluate!(Y, basis::CRlmBasis, X::AbstractVector{<: Real})
-	S = cart2spher(X) 
-	P = evaluate(basis.alp, S)
+
+function evaluate!(Y::AbstractArray, basis::CRlmBasis, X)
+	L = maxL(basis)
+   S = cart2spher(basis, X)
+	_P = _acqu_P!(basis, S)
+	P = evaluate!(_P, basis.alp, S)
 	cRlm!(Y, maxL(basis), S, P, basis)
-	release!(P)
 	return Y
 end
 
-function evaluate!(Y, basis::CRlmBasis, 
-						 X::AbstractVector{<: AbstractVector})
-	S = acquire!(basis.tmp_s, length(X))
-	map!(X->cart2spher(X), S, X) 
-	P = evaluate(basis.alp, S)
-	cRlm!(Y, maxL(basis), S, P, basis)
-	release!(P)
-	return Y
-end
 
-function evaluate_d(basis::CRlmBasis, 
-						 X::Union{AbstractVector{<: Real}, 
-						 			 AbstractVector{<: AbstractVector}} )
-	B, dB = evaluate_ed(basis, X) 
-	release!(B)
-	return dB 
-end 
-
-function evaluate_ed(basis::CRlmBasis, X::AbstractVector{<: Real})
-	Y = acquire!(basis.pool, length(basis), _valtype(basis, X))
-	dY = acquire!(basis.pool_d, length(basis), _gradtype(basis, X))
-	evaluate_ed!(parent(Y), parent(dY), basis, X)
-	return Y, dY
-end
-
-function evaluate_ed(basis::CRlmBasis, X::AbstractVector{<: AbstractVector})
-	nX = length(X); nY = length(basis)
-	Y = acquire!(basis.ppool, (nX, nY), _valtype(basis, X[1]))
-	dY = acquire!(basis.ppool_d, (nX, nY), _gradtype(basis, X[1]))
-	evaluate_ed!(parent(Y), parent(dY), basis, X)
-	return Y, dY
-end
-
-function evaluate_ed!(Y, dY, basis::CRlmBasis, X::AbstractVector{<: Real})
-	S = cart2spher(X) 
-	P, dP = _evaluate_ed(basis.alp, S)
+function evaluate_ed!(Y::AbstractArray, dY::AbstractArray, basis::CRlmBasis, X)
+	L = maxL(basis)
+	S = cart2spher(basis, X)
+	_P, _dP = _acqu_P!(basis, S), _acqu_dP!(basis, S)
+	P, dP = evaluate_ed!(_P, _dP, basis.alp, S)
 	cRlm_ed!(Y, dY, maxL(basis), S, P, dP, basis)
-	release!(P)
-	release!(dP)
-	return Y, dY
-end
-
-function evaluate_ed!(Y, dY, basis::CRlmBasis, X::AbstractVector{<: AbstractVector})
-	S = acquire!(basis.tmp_s, length(X))
-	map!(X->cart2spher(X), S, X) 
-	P, dP = _evaluate_ed(basis.alp, S)
-	cRlm_ed!(Y, dY, maxL(basis), S, P, dP, basis)
-	release!(P)
-	release!(dP)
 	return Y, dY
 end
 
@@ -119,12 +53,12 @@ end
 """
 evaluate complex spherical harmonics
 """
-function cRlm!(Y, L, S::SphericalCoords, P::AbstractVector, basis::CRlmBasis)
+function cRlm!(Y, L, S::SphericalCoords{T}, P::AbstractVector, basis::CRlmBasis) where {T}
 	@assert length(P) >= sizeP(L) # evaluate(basis.alp, S)
 	@assert length(Y) >= sizeY(L)
     @assert abs(S.cosθ) <= 1.0
 	ep = 1 / sqrt(2) + im * 0 
-    rL = acquire!(basis.tmp_rL, (1, L+2))
+    rL = acquire!(basis.tmp, :rL, (L+2,), T)
 	rL[1] = 1.0
 
 	for l = 0:L
@@ -154,14 +88,14 @@ end
 """
 evaluate gradients of complex spherical harmonics
 """
-function cRlm_ed!(Y, dY, L, S::SphericalCoords, P, dP, basis::CRlmBasis)
+function cRlm_ed!(Y, dY, L, S::SphericalCoords{T}, P, dP, basis::CRlmBasis) where {T} 
 	@assert length(P) >= sizeP(L)
 	@assert length(Y) >= sizeY(L)
 	@assert length(dY) >= sizeY(L)
 
 	# m = 0 case
 	ep = 1 / sqrt(2)
-	rL = acquire!(basis.tmp_rL, (1, L+2))
+	rL = acquire!(basis.tmp, :rL, (L+2,), T)
 	rL[1] = 1.0
 
 	for l = 0:L
@@ -200,16 +134,16 @@ end
 """
 evaluate complex spherical harmonics
 """
-function cRlm!(Y, L, S::AbstractVector{<: SphericalCoords}, P::AbstractMatrix, basis::CRlmBasis)
+function cRlm!(Y, L, S::AbstractVector{SphericalCoords{T}}, P::AbstractMatrix, basis::CRlmBasis) where {T} 
 	nS = length(S) 
 	@assert length(P) >= sizeP(L)
 	@assert size(Y, 2) >= sizeY(L)
 	@assert size(Y, 1) >= nS 
-	t = acquire!(basis.tmp_t, nS)
-	co = acquire!(basis.tmp_cos, nS)
-	si = acquire!(basis.tmp_sin, nS)
-	r = acquire!(basis.tmp_r, nS)
-    rL = acquire!(basis.tmp_rL, (nS, L+2))
+	t = acquire!(basis.tmp, :t, (nS,), Complex{T})
+	co = acquire!(basis.tmp, :cos, (nS,), T)
+	si = acquire!(basis.tmp, :sin, (nS,), T)
+	r = acquire!(basis.tmp, :r, (nS,), T)
+   rL = acquire!(basis.tmp, :rL, (nS, L+2), T)
 	@inbounds begin 
 		for i = 1:nS
 			t[i] = 1 / sqrt(2) + im * 0
@@ -257,9 +191,9 @@ end
 """
 evaluate gradients of complex spherical harmonics
 """
-function cRlm_ed!(Y, dY, L, S::AbstractVector{<: SphericalCoords}, 
+function cRlm_ed!(Y, dY, L, S::AbstractVector{SphericalCoords{T}}, 
 					      P::AbstractMatrix, dP::AbstractMatrix, 
-							basis::CRlmBasis)
+							basis::CRlmBasis) where {T} 
     nS = length(S)
 	@assert size(P, 2) >= sizeP(L)
 	@assert size(P, 1) >= nS
@@ -269,9 +203,10 @@ function cRlm_ed!(Y, dY, L, S::AbstractVector{<: SphericalCoords},
 	@assert size(Y, 1) >= nS
 	@assert size(dY, 2) >= sizeY(L)
 	@assert size(dY, 1) >= nS
-	ep = acquire!(basis.tmp_t, nS)
-	r = acquire!(basis.tmp_r, nS)
-	rL = acquire!(basis.tmp_rL, (nS, L+2))
+	
+	ep = acquire!(basis.tmp, :t, (nS,), Complex{T})
+	r = acquire!(basis.tmp, :r, (nS,), T)
+	rL = acquire!(basis.tmp, :rL, (nS, L+2), T)
 
 	@inbounds begin 
 		for i = 1:nS

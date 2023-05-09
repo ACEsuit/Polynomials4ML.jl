@@ -11,107 +11,42 @@ Sₗ⁰ = √(4π/2l+1) rˡP̄ₗ⁰/√2
 Sₗᵐ = (-1)ᵐ√(8π/2l+1) rˡ Re(P̄ₗᵐ(cosθ)/√2 exp(imφ))
 Sₗ⁻ᵐ = (-1)ᵐ√(8π/2l+1) rˡIm(P̄ₗᵐ(cosθ)/√2 exp(imφ))
 """
-struct RRlmBasis{T}
+struct RRlmBasis{T} <: AbstractPoly4MLBasis
     alp::ALPolynomials{T}
-   # ----------------------------
-	pool::ArrayCache{T, 1}
-   ppool::ArrayCache{T, 2}
-	pool_d::ArrayCache{SVector{3, T}, 1}
-   ppool_d::ArrayCache{SVector{3, T}, 2}
-	tmp_s::TempArray{SphericalCoords{T}, 1}
-	tmp_sin::TempArray{T, 1}
-	tmp_cos::TempArray{T, 1}
-	tmp_sinθ::TempArray{T, 1}
-	tmp_cosθ::TempArray{T, 1}
-	tmp_sinm::TempArray{T, 1}
-	tmp_cosm::TempArray{T, 1}
-	tmp_r::TempArray{T, 1}
-	tmp_rL::TempArray{T, 2}
-	tmp_aL::TempArray{T, 1}
+	 @reqfields
 end
 
 RRlmBasis(maxL::Integer, T::Type=Float64) = 
       RRlmBasis(ALPolynomials(maxL, T))
 
 RRlmBasis(alp::ALPolynomials{T}) where {T} = 
-      RRlmBasis(alp, 
-		          ArrayCache{T, 1}(), 
-                ArrayCache{T, 2}(), 
-                ArrayCache{SVector{3, T}, 1}(), 
-                ArrayCache{SVector{3, T}, 2}(), 
-					 TempArray{SphericalCoords{T}, 1}(),
-					 TempArray{T, 1}(), 
-					 TempArray{T, 1}(), 
-					 TempArray{T, 1}(), 
-					 TempArray{T, 1}(), 
-					 TempArray{T, 1}(), 
-					 TempArray{T, 1}(), 
-					 TempArray{T, 1}(),
-					 TempArray{T, 2}(),
-					 TempArray{T, 1}())
+      RRlmBasis(alp, _make_reqfields()...)
 
-_valtype(sh::RRlmBasis{T}, x::AbstractVector{S}) where {T <: Real, S <: Real} = 
-         promote_type(T, S)
-
-_gradtype(sh::RRlmBasis{T}, x::AbstractVector{S})  where {T <: Real, S <: Real} = 
-		 SVector{3, Real}	
+_valtype(sh::RRlmBasis{T}, ::Type{<: StaticVector{3, S}}) where {T <: Real, S <: Real} = 
+		promote_type(T, S)
 
 Base.show(io::IO, basis::RRlmBasis) = 
       print(io, "RRlmBasis(L=$(maxL(basis)))")
 
-# ---------------------- evaluation interface code 
-function evaluate!(Y, basis::RRlmBasis, X::AbstractVector{<: Real})
+# ---------------------- evaluation interface code
+
+function evaluate!(Y::AbstractArray, basis::RRlmBasis, X)
 	L = maxL(basis)
-	S = cart2spher(X)
-	P = evaluate(basis.alp, S)
-	rRlm!(Y, maxL(basis), S, P, basis)
-	release!(P)
-	return nothing 
+   S = cart2spher(basis, X)
+	_P = _acqu_P!(basis, S)
+	P = evaluate!(_P, basis.alp, S)
+	rRlm!(Y, maxL(basis), S, parent(P), basis)
+	return Y
 end
 
-function evaluate!(Y, basis::RRlmBasis, 
-						 X::AbstractVector{<: AbstractVector{<: Real}})
-	S = acquire!(basis.tmp_s, length(X))
-	map!(cart2spher, S, X) 
-	P = evaluate(basis.alp, S)
-	rRlm!(parent(Y), maxL(basis), S, parent(P), basis)
-	release!(P)
-	return nothing 
-end
 
-function evaluate_ed(basis::RRlmBasis, X::AbstractVector{<: Real})
-	Y = acquire!(basis.pool, length(basis))
-	dY = acquire!(basis.pool_d, length(basis))
-	evaluate_ed!(parent(Y), parent(dY), basis, X)
-	return Y, dY 
-end
-
-function evaluate_ed(basis::RRlmBasis, X::AbstractVector{<: AbstractVector{<: Real}})
-	Y = acquire!(basis.ppool, (length(X), length(basis)))
-	dY = acquire!(basis.ppool_d, (length(X), length(basis)))
-	evaluate_ed!(parent(Y), parent(dY), basis, X)
-	return Y, dY 
-end
-
-function evaluate_ed!(Y, dY, basis::RRlmBasis, 
-						     X::AbstractVector{<: Real})
-	S = cart2spher(X)
-	P, dP = _evaluate_ed(basis.alp, S)
-	rRlm_ed!(parent(Y), parent(dY), maxL(basis), S, parent(P), parent(dP), basis)
-	release!(P)
-	release!(dP)
-	return nothing 
-end
-
-function evaluate_ed!(Y, dY, basis::RRlmBasis, 
-						     X::AbstractVector{<: AbstractVector{<: Real}})
-	S = acquire!(basis.tmp_s, length(X))
-	map!(cart2spher, S, X) 
-	P, dP = _evaluate_ed(basis.alp, S)
-	rRlm_ed!(parent(Y), parent(dY), maxL(basis), S, parent(P), parent(dP), basis)
-	release!(P)
-	release!(dP)
-	return nothing 
+function evaluate_ed!(Y::AbstractArray, dY::AbstractArray, basis::RRlmBasis, X)
+	L = maxL(basis)
+	S = cart2spher(basis, X)
+	_P, _dP = _acqu_P!(basis, S), _acqu_dP!(basis, S)
+	P, dP = evaluate_ed!(_P, _dP, basis.alp, S)
+	rRlm_ed!(Y, dY, maxL(basis), S, parent(P), parent(dP), basis)
+	return Y, dY
 end
 
 # -------------------- actual kernels 

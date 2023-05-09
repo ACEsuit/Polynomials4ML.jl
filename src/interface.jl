@@ -83,11 +83,11 @@ _hesstype(basis::AbstractPoly4MLBasis, ::Type{SVector{N, T}}) where {N, T} =
       SMatrix{N, N, promote_type(_valtype(basis, SVector{N, T}), T)}
 
 
-_laplacetype(basis::AbstractPoly4MLBasis, x::Number) = 
-      _hesstype(basis, x)
+_laplacetype(basis::AbstractPoly4MLBasis, TX::Type{<: Number}) = 
+      eltype(_hesstype(basis, TX))
 
-_laplacetype(basis::AbstractPoly4MLBasis, x::StaticVector) = 
-      eltype(_hesstype(basis, x))
+_laplacetype(basis::AbstractPoly4MLBasis, TX::Type{SVector{N, T}}) where {N, T} = 
+      eltype(_hesstype(basis, T))
 
 
 _valtype(basis::AbstractPoly4MLBasis, X::BATCH) = 

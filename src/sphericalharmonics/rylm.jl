@@ -21,14 +21,8 @@ RYlmBasis(maxL::Integer, T::Type=Float64) =
 RYlmBasis(alp::ALPolynomials{T}) where {T} = 
       RYlmBasis(alp, _make_reqfields()...)
 
-<<<<<<< HEAD
-
-_valtype(sh::RYlmBasis{T}, x::AbstractVector{S}) where {T <: Real, S <: Real} = 
-         promote_type(T, S)
-=======
 _valtype(sh::RYlmBasis{T}, ::Type{<: StaticVector{3, S}}) where {T <: Real, S <: Real} = 
 		promote_type(T, S)
->>>>>>> main
 
 Base.show(io::IO, basis::RYlmBasis) = 
       print(io, "RYlmBasis(L=$(maxL(basis)))")		
@@ -53,51 +47,6 @@ function evaluate_ed!(Y::AbstractArray, dY::AbstractArray, basis::RYlmBasis, X)
 	rYlm_ed!(Y, dY, maxL(basis), S, parent(P), parent(dP), basis)
 	return Y, dY
 end
-
-
-# function evaluate!(Y, basis::RYlmBasis, x::AbstractVector{<: Real})
-# 	L = maxL(basis)
-# 	S = cart2spher(x) 
-# 	P = evaluate(basis.alp, S)
-# 	rYlm!(Y, maxL(basis), S, P)
-# 	release!(P)
-# 	return nothing 
-# end
-
-
-# function evaluate!(Y, basis::RYlmBasis, 
-# 						 X::AbstractVector{<: AbstractVector{<: Real}})
-# 	L = maxL(basis)
-# 	S = cart2spher(basis, X)
-# 	P = evaluate(basis.alp, S)
-# 	rYlm!(parent(Y), maxL(basis), S, parent(P), basis)
-# 	release!(P)
-# 	return nothing 
-# end
-
-
-# function evaluate_ed!(Y, dY, basis::RYlmBasis, 
-# 						     x::AbstractVector{<: Real})
-# 	L = maxL(basis)
-# 	s = cart2spher(x)
-# 	P, dP = _evaluate_ed(basis.alp, s)
-# 	rYlm_ed!(parent(Y), parent(dY), maxL(basis), s, parent(P), parent(dP))
-# 	release!(P)
-# 	release!(dP)
-# 	return nothing 
-# end
-
-
-# function evaluate_ed!(Y, dY, basis::RYlmBasis, 
-# 						     X::AbstractVector{<: AbstractVector{<: Real}})
-# 	L = maxL(basis)
-# 	S = cart2spher(basis, X)
-# 	P, dP = _evaluate_ed(basis.alp, S)
-# 	rYlm_ed!(parent(Y), parent(dY), maxL(basis), S, parent(P), parent(dP), basis)
-# 	release!(P)
-# 	release!(dP)
-# 	return nothing 
-# end
 
 
 # -------------------- actual kernels 
@@ -342,13 +291,8 @@ function _lap!(ΔY, basis::RYlmBasis, Y::AbstractVector)
 end 
 
 function _lap(basis::RYlmBasis, Y::AbstractMatrix) 
-<<<<<<< HEAD
-	ΔY = acquire!(basis.ppool, size(Y))
+	ΔY = acquire!(basis.pool, :ΔY, size(Y), eltype(Y))
 	_lap!(parent(ΔY), basis, Y)
-=======
-	ΔY = Matrix{eltype(Y)}(undef, size(Y))
-	_lap!(ΔY, basis, Y)
->>>>>>> main
 	return ΔY
 end
 

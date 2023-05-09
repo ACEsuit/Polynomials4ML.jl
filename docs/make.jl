@@ -5,7 +5,7 @@ DocMeta.setdocmeta!(Polynomials4ML, :DocTestSetup, :(using Polynomials4ML); recu
 
 makedocs(;
     modules=[Polynomials4ML],
-    authors="Christoph Ortner <christohortner@gmail.com> and contributors",
+    authors="Christoph Ortner <christophortner0@gmail.com> and contributors",
     repo="https://github.com/ACEsuit/Polynomials4ML.jl/blob/{commit}{path}#{line}",
     sitename="Polynomials4ML.jl",
     format=Documenter.HTML(;

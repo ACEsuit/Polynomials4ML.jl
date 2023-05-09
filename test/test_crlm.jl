@@ -154,12 +154,12 @@ basis = CRlmBasis(5)
 R = [ rand_sphere() for _ = 1:32 ] 
 
 S = cart2spher.(R)
-P1, dP1 = Polynomials4ML._evaluate_ed(basis.alp, S)
+P1, dP1 = Polynomials4ML.evaluate_ed(basis.alp, S)
 P2 = copy(P1) 
 dP2 = copy(dP1)
 
 for i = 1:length(R)
-   P2[i, :], dP2[i, :] = Polynomials4ML._evaluate_ed(basis.alp, S[i])
+   P2[i, :], dP2[i, :] = Polynomials4ML.evaluate_ed(basis.alp, S[i])
 end
 
 println_slim(@test P2 ≈ P1)

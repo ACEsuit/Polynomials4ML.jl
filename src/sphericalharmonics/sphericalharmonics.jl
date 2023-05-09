@@ -93,12 +93,6 @@ natural_indices(basis::XlmBasis) =
 
 degree(basis::XlmBasis, b::NamedTuple) = b.l 
 
-"""
-max L degree for which the alp coefficients have been precomputed
-"""
-maxL(basis::XlmBasis) = basis.alp.L
-
-Base.length(basis::XlmBasis) = sizeY(maxL(basis))
 
 import Base.==
 ==(B1::XlmBasis, B2::XlmBasis) =
@@ -171,16 +165,4 @@ function rand_sphere()
 	return r / norm(r)
 end
 
-# ---------------------- evaluation interface code 
-function evaluate(basis::XlmBasis, x::AbstractVector{<: Real})
-	Y = acquire!(basis.pool, length(basis), _valtype(basis, x))
-	evaluate!(parent(Y), basis, x)
-	return Y 
-end
-
-function evaluate(basis::XlmBasis, X::AbstractVector{<: AbstractVector})
-	Y = acquire!(basis.ppool, (length(X), length(basis)))
-	evaluate!(parent(Y), basis, X)
-	return Y 
-end
 
