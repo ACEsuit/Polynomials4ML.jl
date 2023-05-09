@@ -1,14 +1,17 @@
-struct GaussianBasis
+struct GaussianBasis <: AbstractPoly4MLBasis
     # ----------------- metadata 
-    meta::Dict{String, Any}
+    @reqfields
 end
  
-GaussianBasis(; meta = Dict{String, Any}()) = GaussianBasis(meta)
+GaussianBasis() = GaussianBasis(_make_reqfields()...)
+
+_valtype(::GaussianBasis, T::Type{<: Real}) = T
 
 function evaluate(basis::GaussianBasis, ζ::AbstractVector{<: Number}, x::AbstractVector{<: Number}) 
     N = length(ζ)
     nX = length(x)
-    P = zeros(eltype(x), nX, N)
+    P = acquire!(basis.pool, :P, (nX, N), eltype(x))
+    fill!(P, 0)
 
     @inbounds begin 
         for n = 1:N
@@ -24,8 +27,10 @@ end
 function evaluate_ed(basis::GaussianBasis, ζ::AbstractVector{<: Number}, x::AbstractVector{<: Number})
     N = length(ζ)
     nX = length(x)
-    P = zeros(eltype(x), nX, N)
-    dP = zeros(eltype(x), nX, N)
+    P = acquire!(basis.pool, :P, (nX, N), eltype(x))
+    dP = acquire!(basis.pool, :dP, (nX, N), eltype(x))
+    fill!(P, 0)
+    fill!(dP, 0)
 
     @inbounds begin 
         for n = 1:N
@@ -41,9 +46,13 @@ end
 function evaluate_ed2(basis::GaussianBasis, ζ::AbstractVector{<: Number}, x::AbstractVector{<: Number})
     N = length(ζ)
     nX = length(x)
-    P = zeros(eltype(x), nX, N)
-    dP = zeros(eltype(x), nX, N)
-    ddP = zeros(eltype(x), nX, N)
+
+    P = acquire!(basis.pool, :P, (nX, N), eltype(x))
+    dP = acquire!(basis.pool, :dP, (nX, N), eltype(x))
+    ddP = acquire!(basis.pool, :ddP, (nX, N), eltype(x))
+    fill!(P, 0)
+    fill!(dP, 0)
+    fill!(ddP, 0)
 
     @inbounds begin 
         for n = 1:N

@@ -2,7 +2,7 @@
 
 using StaticArrays, LinearAlgebra, LoopVectorization
 
-export CYlmBasis, RYlmBasis, RRlmBasis, CRlmBasis, RRlmBasis 
+export CYlmBasis, RYlmBasis, CRlmBasis, RRlmBasis 
 
 
 # --------------------------------------------------------

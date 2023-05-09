@@ -18,7 +18,7 @@ using Test
     @testset "Real Solid Harmonics" begin include("test_rrlm.jl"); end
 
     # Quantum Chemistry 
-    @testset "Rnl" begin include("test_rnl.jl"); end
+    @testset "Atomic Orbitals Radials" begin include("test_atorbrad.jl"); end
 
     # Misc
     @testset "Flex Array Interface" begin include("test_flex.jl"); end 
