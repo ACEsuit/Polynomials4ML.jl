@@ -1,32 +1,28 @@
+
 """
 `ALPolynomials` : an auxiliary datastructure for evaluating the associated Legendre functions
-used for the spherical harmonics Constructor:
+used for the spherical and solid harmonics. Constructor:
 ```julia
 ALPolynomials(maxL::Integer, T::Type=Float64)
 ```
-This is not part of the public API and not semver-stable.
+This is not part of the public API and not guaranteed to be semver-stable.
+Only the resulting harmonics that use the ALPs are guaranteed to be backward 
+compatible. 
+
+Important Note: `evaluate_ed!`` does NOT return derivatives, but rather 
+produces rescaled derivatives for better numerical stability near the poles. 
+See comments in code for details on how to use the ALP derivatives correctly. 
 """
-struct ALPolynomials{T} 
+struct ALPolynomials{T} <: AbstractPoly4MLBasis
 	L::Int
 	A::Vector{T}
 	B::Vector{T}
-	pool::ArrayCache{T, 1}
-	ppool::ArrayCache{T, 2}
-   tmp_t::TempArray{T, 1}
-   tmp_td::TempArray{T, 1}
-   tmp_co::TempArray{T, 1}
-   tmp_si::TempArray{T, 1}
+	@reqfields
 end
 
 
 ALPolynomials(L::Integer, A::Vector{T}, B::Vector{T}) where {T}  = 
-		ALPolynomials(L, A, B, 
-                    ArrayCache{T, 1}(), 
-                    ArrayCache{T, 2}(), 
-                    TempArray{T, 1}(), 
-						  TempArray{T, 1}(), 
-						  TempArray{T, 1}(), 
-						  TempArray{T, 1}() )
+		ALPolynomials(L, A, B, _make_reqfields()...)
 
 Base.length(alp::ALPolynomials) = sizeP(alp.L)
 
@@ -79,36 +75,45 @@ end
 
 # -------------------- evaluation interface
 
-_valtype(alp::ALPolynomials{T}, x::SphericalCoords{S}) where {T, S} = 
+_valtype(alp::ALPolynomials{T}, ::Type{SphericalCoords{S}}) where {T, S} = 
 			promote_type(T, S) 
 
-function evaluate(alp::ALPolynomials, S::SphericalCoords) 
-	P = acquire!(alp.pool, length(alp), _valtype(alp, S))
-	evaluate!(parent(P), alp, S)
-	return P 
-end
+_gradtype(alp::ALPolynomials{T}, ::Type{SphericalCoords{S}}) where {T, S} = 
+			promote_type(T, S) 
+			
+# function evaluate(alp::ALPolynomials, S::SphericalCoords) 
+# 	P = acquire!(alp.pool, length(alp), _valtype(alp, S))
+# 	evaluate!(parent(P), alp, S)
+# 	return P 
+# end
 
-function evaluate(alp::ALPolynomials, S::AbstractVector{<: SphericalCoords}) 
-	P = acquire!(alp.ppool, (length(S), length(alp)), _valtype(alp, S[1]))
-	evaluate!(parent(P), alp, S)
-	return P 
-end
+# function evaluate(alp::ALPolynomials, S::AbstractVector{<: SphericalCoords}) 
+# 	P = acquire!(alp.ppool, (length(S), length(alp)), _valtype(alp, S[1]))
+# 	evaluate!(parent(P), alp, S)
+# 	return P 
+# end
 
-function _evaluate_ed(alp::ALPolynomials, S::SphericalCoords) 
-	VT = _valtype(alp, S)
-	P = acquire!(alp.pool, length(alp), VT)
-	dP = acquire!(alp.pool, length(alp), VT)
-	_evaluate_ed!(parent(P), parent(dP), alp, S)
-	return P, dP 
-end
 
-function _evaluate_ed(alp::ALPolynomials, S::AbstractVector{<: SphericalCoords}) 
-	VT = _valtype(alp, S[1])
-	P = acquire!(alp.ppool, (length(S), length(alp)), VT)
-	dP = acquire!(alp.ppool, (length(S), length(alp)), VT)
-	_evaluate_ed!(parent(P), parent(dP), alp, S)
-	return P, dP 
-end
+# Note: _evaluate_ed does not acually produce the derivatives, but a rescaled 
+#       derivative from which it is easy to compute the Ylm derivatives in 
+#       a numerically stable way. Hence the _ and hence we need the interface
+#       functions.
+
+# function _evaluate_ed(alp::ALPolynomials, S::SphericalCoords) 
+# 	VT = _valtype(alp, S)
+# 	P = Vector{VT}(undef, length(alp))
+# 	dP = Vector{VT}(undef, length(alp))
+# 	_evaluate_ed!(parent(P), parent(dP), alp, S)
+# 	return P, dP 
+# end
+
+# function _evaluate_ed(alp::ALPolynomials, S::AbstractVector{<: SphericalCoords}) 
+# 	VT = _valtype(alp, S[1])
+# 	P = Matrix{VT}(undef, (length(S), length(alp)))
+# 	dP = Matrix{VT}(undef, (length(S), length(alp)))
+# 	_evaluate_ed!(parent(P), parent(dP), alp, S)
+# 	return P, dP 
+# end
 
 
 # -------------------- serial evaluation codes
@@ -148,11 +153,10 @@ end
 
 
 
-# this doesn't use the standard name because it doesn't 
-# technically perform the derivative w.r.t. S, but w.r.t. θ
+# this doesn't implement the derivative w.r.t. S, but w.r.t. θ
 # further, P doesn't store P but (P if m == 0) or (P * sinθ if m > 0)
 # this is done for numerical stability 
-function _evaluate_ed!(P, dP, alp::ALPolynomials, S::SphericalCoords)
+function evaluate_ed!(P, dP, alp::ALPolynomials, S::SphericalCoords)
 	L = alp.L 
 	A = alp.A 
 	B = alp.B 
@@ -215,7 +219,7 @@ end
 
 
 function evaluate!(P, alp::ALPolynomials, 
-                   S::AbstractVector{<: SphericalCoords} )
+                   S::AbstractVector{SphericalCoords{T}} ) where {T} 
 	L = alp.L 
 	A = alp.A 
 	B = alp.B 
@@ -225,12 +229,9 @@ function evaluate!(P, alp::ALPolynomials,
 	@assert size(P, 2) >= sizeP(L)
 	@assert size(P, 1) >= length(S)
 
-   # NB: There are 3 minimal allocations here because a CachedArray is not 
-   #     a bitstype. Removing this allocation appears to improve the performance 
-   #     but around 1%, so not even close to worthwhile. 
-   t = acquire!(alp.tmp_t, length(S)) # temp from the serial version 
-   co = acquire!(alp.tmp_co, length(S)) 
-   si = acquire!(alp.tmp_si, length(S)) 
+   t = acquire!(alp.tmp, :t, (length(S),), T) # temp from the serial version 
+   co = acquire!(alp.tmp, :co, (length(S),), T) 
+   si = acquire!(alp.tmp, :si, (length(S),), T) 
 
    @inbounds begin 
       t0 = sqrt(0.5/π)
@@ -282,7 +283,8 @@ end
 
 
 
-function _evaluate_ed!(P, dP, alp::ALPolynomials, S::AbstractVector{<: SphericalCoords})
+function evaluate_ed!(P, dP, alp::ALPolynomials, 
+					       S::AbstractVector{SphericalCoords{T}} ) where {T} 
 	L = alp.L 
 	A = alp.A 
 	B = alp.B 
@@ -294,10 +296,10 @@ function _evaluate_ed!(P, dP, alp::ALPolynomials, S::AbstractVector{<: Spherical
 	@assert size(dP, 2) >= sizeP(L)
 	@assert size(dP, 1) >= length(S)
 
-	temp1 = acquire!(alp.tmp_t, length(S))
-	temp_d = acquire!(alp.tmp_td, length(S))
-	cosθ = acquire!(alp.tmp_co, length(S))
-	sinθ = acquire!(alp.tmp_si, length(S))
+	temp1 = acquire!(alp.tmp, :t, (length(S),), T)
+	temp_d = acquire!(alp.tmp, :td, (length(S),), T)
+	cosθ = acquire!(alp.tmp, :co, (length(S),), T)
+	sinθ = acquire!(alp.tmp, :si, (length(S),), T)
 
 	temp = sqrt(0.5/π)
 	i_p00 = index_p(0, 0)

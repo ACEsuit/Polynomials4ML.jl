@@ -12,6 +12,9 @@ using Test
     @testset "Real Solid Harmonics" begin include("test_rrlm.jl"); end
     @testset "Rnl" begin include("test_rnl.jl"); end
     
+
+    @testset "Flex Array Interface" begin include("test_flex.jl"); end 
+
     @testset "Sparse Product" begin include("test_sparseproduct.jl"); end 
     @testset "Lux" begin include("test_lux.jl"); end 
 end

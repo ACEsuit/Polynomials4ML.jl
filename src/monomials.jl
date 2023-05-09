@@ -8,12 +8,13 @@ Standard Monomials basis. This should very rarely be used. Possibly useful in co
 """
 struct MonoBasis <: AbstractPoly4MLBasis
    N::Int
+   pool::POOL
    # ----------------- metadata 
    meta::Dict{String, Any}
 end
 
 MonoBasis(N::Integer, meta = Dict{String, Any}()) = 
-         MonoBasis(N, meta)
+         MonoBasis(N, _makepool(), meta)
 
 
 # ----------------- interface functions 
@@ -37,7 +38,7 @@ _alloc(basis::MonoBasis, X::AbstractVector{T2}) where {T2 <: Number} =
             
 # ----------------- main evaluation code 
 
-function evaluate!(P, basis::MonoBasis, x::Number) 
+function evaluate!(P::AbstractArray, basis::MonoBasis, x::Number) 
    N = basis.N 
    @assert length(P) >= length(basis) 
    @inbounds P[1] = 1 
@@ -47,7 +48,7 @@ function evaluate!(P, basis::MonoBasis, x::Number)
    return P 
 end
 
-function evaluate!(P, basis::MonoBasis, X::AbstractVector)
+function evaluate!(P::AbstractArray, basis::MonoBasis, X::AbstractVector)
    N = basis.N 
    nX = length(X) 
    @assert size(P, 2) >= N+1
@@ -65,7 +66,7 @@ function evaluate!(P, basis::MonoBasis, X::AbstractVector)
    return P 
 end
 
-function evaluate_ed!(P, dP, basis::MonoBasis, x) 
+function evaluate_ed!(P::AbstractArray, dP::AbstractArray, basis::MonoBasis, x) 
    N = basis.N 
    @assert length(P) >= length(basis) 
    @assert length(dP) >= length(basis) 
@@ -78,7 +79,7 @@ function evaluate_ed!(P, dP, basis::MonoBasis, x)
    return P, dP 
 end
 
-function evaluate_ed2!(P, dP, ddP, basis::MonoBasis, x) 
+function evaluate_ed2!(P::AbstractArray, dP::AbstractArray, ddP::AbstractArray, basis::MonoBasis, x) 
    N = basis.N 
    @assert length(P) >= length(basis) 
    @assert length(dP) >= length(basis) 

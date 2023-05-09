@@ -11,9 +11,10 @@ where `θ` is input variable.
 """
 struct RTrigBasis <: AbstractPoly4MLBasis
    N::Int
-   # ----------------- metadata 
-   meta::Dict{String, Any}
+   @reqfields
 end
+
+RTrigBasis(N::Integer) = RTrigBasis(N, _make_reqfields()...)
 
 Base.length(basis::RTrigBasis) = 2 * basis.N + 1
 
@@ -27,10 +28,7 @@ function natural_indices(basis::RTrigBasis)
    return inds
 end
 
-RTrigBasis(N::Integer, meta = Dict{String, Any}()) = 
-         RTrigBasis{T}(N, meta)
-
-_valtype(basis::RTrigBasis, x::Real) = typeof(x) 
+_valtype(basis::RTrigBasis, T::Type{<: Real}) = T
 
 
 function evaluate!(P::AbstractVector, basis::RTrigBasis, θ::Real)

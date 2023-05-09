@@ -60,8 +60,6 @@ for i = 1:length(X)
 end
 println_slim(@test Y1 ≈ Y2)
 
-##
-
 
 ##
 

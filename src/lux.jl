@@ -1,8 +1,6 @@
 
 import LuxCore 
 import LuxCore: initialparameters, initialstates, AbstractExplicitLayer
-
-using ObjectPools: ArrayPool, FlexTempArray, FlexArrayCache, acquire!
 using Random: AbstractRNG
 
 """
@@ -24,7 +22,7 @@ _init_luxparams(basis) = NamedTuple()
 
 _init_luxstate(rng::AbstractRNG, basis) = _init_luxstate(basis)
 _init_luxstate(basis) = _init_default_luxstate()
-_init_default_luxstate() = ( tmp = ArrayPool(FlexTempArray), 
+_init_default_luxstate() = ( tmp = ArrayPool(FlexArray), 
                            cache = ArrayPool(FlexArrayCache) )
 
 

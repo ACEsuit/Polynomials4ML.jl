@@ -2,7 +2,7 @@
 using Polynomials4ML, Test
 using Polynomials4ML: evaluate, evaluate_d, evaluate_dd
 using Polynomials4ML.Testing: println_slim, test_derivatives
-using LinearAlgebra: I
+using LinearAlgebra: I, norm 
 using QuadGK
 
 @info("Testing OrthPolyBasis1D3T")
@@ -47,7 +47,6 @@ end
 
 ##
 
-using LinearAlgebra: norm
 
 # @warn("turn off Chebyshev test - coeffs seem poorly normalized?!?")
 # cheb = chebyshev_basis(N, normalize=true)
