@@ -33,9 +33,9 @@ Base.show(io::IO, basis::RRlmBasis) =
 function evaluate!(Y::AbstractArray, basis::RRlmBasis, X)
 	L = maxL(basis)
    S = cart2spher(basis, X)
-	_P = _acqu_P!(basis, S)
-	P = evaluate!(_P, basis.alp, S)
+	P = evaluate(basis.alp, S)
 	rRlm!(Y, maxL(basis), S, parent(P), basis)
+	release!(P)
 	return Y
 end
 
@@ -93,14 +93,14 @@ end
 """
 evaluate gradients of real spherical harmonics
 """
-function rRlm_ed!(Y, dY, L, S, P, dP, basis::RRlmBasis)
+function rRlm_ed!(Y, dY, L, S::SphericalCoords{T}, P, dP, basis::RRlmBasis) where {T} 
 	@assert length(P) >= sizeP(L)
 	@assert length(Y) >= sizeY(L)
     @assert abs(S.cosθ) <= 1.0
 
     oort2 = 1 / sqrt(2)
-	rL = acquire!(basis.tmp_rL, (1, L+2))
-	aL = acquire!(basis.tmp_aL, L+1)
+	rL = acquire!(basis.tmp, :rL, (L+2,), T)
+	aL = acquire!(basis.tmp, :aL, (L+1,), T)
 	fill!(rL,1.0)
 
 	for l = 0:L
@@ -134,20 +134,20 @@ end
 
 
 # ---------------------- Batched evaluation
-function rRlm!(Y::Matrix, L, S::AbstractVector{<: SphericalCoords}, P::AbstractMatrix, basis::RRlmBasis)
-    nX = length(S) 
-    @assert size(P, 1) >= nX
-    @assert size(P, 2) >= sizeP(L)
-    @assert size(Y, 1) >= nX
-    @assert size(Y, 2) >= sizeY(L)
+function rRlm!(Y::AbstractMatrix, L, S::AbstractVector{SphericalCoords{T}}, P::AbstractMatrix, basis::RRlmBasis) where {T} 
+   nX = length(S) 
+   @assert size(P, 1) >= nX
+   @assert size(P, 2) >= sizeP(L)
+   @assert size(Y, 1) >= nX
+   @assert size(Y, 2) >= sizeY(L)
  
-    sinφ = acquire!(basis.tmp_sin, nX)
-    cosφ = acquire!(basis.tmp_cos, nX)
-    sinmφ = acquire!(basis.tmp_sinm, nX)
-    cosmφ = acquire!(basis.tmp_cosm, nX)
-	r = acquire!(basis.tmp_r, nX)
-    rL = acquire!(basis.tmp_rL, (nX, L+2))
-	aL = acquire!(basis.tmp_aL, L+1)
+   sinφ = acquire!(basis.tmp, :sin, (nX,), T)
+   cosφ = acquire!(basis.tmp, :cos, (nX,), T)
+   sinmφ = acquire!(basis.tmp, :sinm, (nX,), T)
+   cosmφ = acquire!(basis.tmp, :cosm, (nX,), T)
+	r = acquire!(basis.tmp, :r, (nX,), T)
+   rL = acquire!(basis.tmp, :rL, (nX, L+2), T)
+	aL = acquire!(basis.tmp, :aL, (L+1,), T)
  
     @inbounds begin 
         for i = 1:nX 
@@ -199,7 +199,7 @@ end
 
 
 
-function rRlm_ed!(Y::AbstractMatrix, dY::AbstractMatrix, L, S::AbstractVector, P, dP, basis::RRlmBasis)
+function rRlm_ed!(Y::AbstractMatrix, dY::AbstractMatrix, L, S::AbstractVector{SphericalCoords{T}}, P, dP, basis::RRlmBasis) where {T}
     nX = length(S) 
     @assert size(P, 1) >= nX
     @assert size(P, 2) >= sizeP(L)
@@ -210,13 +210,13 @@ function rRlm_ed!(Y::AbstractMatrix, dY::AbstractMatrix, L, S::AbstractVector, P
     @assert size(dY, 1) >= nX
     @assert size(dY, 2) >= sizeY(L)
  
-    sinφ = acquire!(basis.tmp_sin, nX)
-    cosφ = acquire!(basis.tmp_cos, nX)
-    sinmφ = acquire!(basis.tmp_sinm, nX)
-    cosmφ = acquire!(basis.tmp_cosm, nX)
-	r = acquire!(basis.tmp_r, nX)
-    rL = acquire!(basis.tmp_rL, (nX, L+2))
-	aL = acquire!(basis.tmp_aL, L+1)
+    sinφ = acquire!(basis.tmp, :sin, (nX,), T)
+    cosφ = acquire!(basis.tmp, :cos, (nX,), T)
+    sinmφ = acquire!(basis.tmp, :sinm, (nX,), T)
+    cosmφ = acquire!(basis.tmp, :cosm, (nX,), T)
+	r = acquire!(basis.tmp, :r, (nX,), T)
+    rL = acquire!(basis.tmp, :rL, (nX, L+2), T)
+	aL = acquire!(basis.tmp, :aL, (L+1,), T)
 
     @inbounds begin 
         @simd ivdep for i = 1:nX 
@@ -277,18 +277,18 @@ end
 ##  ---------------- Laplacian Implementation 
 
 function _lap(basis::RRlmBasis, Y::AbstractVector) 
-	ΔY = acquire!(basis.pool, length(Y))
+	ΔY = acquire!(basis.pool, :ΔY, (length(Y),), eltype(Y))
 	_lap!(parent(ΔY), basis, Y)
 	return ΔY
 end
 
 function _lap!(ΔY, basis::RRlmBasis, Y::AbstractVector)
-	ΔY .= 0
+	fill!(ΔY, 0)
 	return nothing 
 end 
 
 function _lap(basis::RRlmBasis, Y::AbstractMatrix) 
-	ΔY = acquire!(basis.ppool, size(Y))
+	ΔY = acquire!(basis.pool, :ΔYbatch, size(Y), eltype(Y))
 	_lap!(parent(ΔY), basis, Y)
 	return ΔY
 end
@@ -297,7 +297,7 @@ function _lap!(ΔY, basis::RRlmBasis, Y::AbstractMatrix)
 	@assert size(ΔY, 1) >= size(Y, 1)
 	@assert size(ΔY, 2) >= size(Y, 2)
 	@assert size(Y, 2) >= length(basis)
-	ΔY .= 0
+	fill!(ΔY, 0)
 	return nothing 
 end 
 
