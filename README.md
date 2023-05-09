@@ -4,15 +4,18 @@
 [![Dev](https://img.shields.io/badge/docs-dev-blue.svg)](https://ACEsuit.github.io/Polynomials4ML.jl/dev/)
 [![Build Status](https://github.com/ACEsuit/Polynomials4ML.jl/actions/workflows/CI.yml/badge.svg?branch=main)](https://github.com/ACEsuit/Polynomials4ML.jl/actions/workflows/CI.yml?query=branch%3Amain)
 
-This package implements a few polynomial basis types, convenient methods for evaluation, derivatives up to second order and (fast) batched evaluation. The bases currently implemented include: 
+This package implements a few polynomial basis types, convenient methods for evaluation, derivatives up to second order and (hopefull fast) batched evaluation. The bases currently implemented include: 
 * `OrthPolyBasis1D3T` : univariate polynomial bases specified in terms of the 3-point recursion. Convenient constructors are provided for Jacobi polynomials (`jacobi_basis`, `legendre_basis`, `chebyshev_basis`) and for orthogonality w.r.t. a discrete weight distribution (cf `DiscreteWeights`)
 * `MonoBasis` : monomials, included mostly for completeness
 * `CTrigBasis` : complex trigonometric polynomials 
 * `RTrigBasis` : real trigonometric polynomials 
+* `RTrigBasis` : real trigonometric polynomials 
 * `CYlmBasis` : complex spherical harmonics 
-* `RYlmBasis` : real spherical harmonics 
+* `RYlmBasis` : real spherical  harmonics 
+* `CRlmBasis` : complex solid harmonics 
+* `RRlmBasis` : real solid harmonics 
+* several radial bases for atomic orbitals: Slater, STO, STO-NG
 
-These bases can also be used as Lux layers, but this functionality is experimental and not yet part of the official API. 
 
 ## Basic Usage 
 
@@ -37,7 +40,7 @@ dbasis = orthpolybasis(N, X, W, :normalize)
 
 Evaluate a basis; take `basis` one of the above
 ```julia 
-basis = cheb 
+basis = cheb
 # assume that [0, 1] is part of the domain of the basis
 x = rand()
 

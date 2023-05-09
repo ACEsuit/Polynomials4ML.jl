@@ -49,51 +49,6 @@ function evaluate_ed!(Y::AbstractArray, dY::AbstractArray, basis::RYlmBasis, X)
 end
 
 
-# function evaluate!(Y, basis::RYlmBasis, x::AbstractVector{<: Real})
-# 	L = maxL(basis)
-# 	S = cart2spher(x) 
-# 	P = evaluate(basis.alp, S)
-# 	rYlm!(Y, maxL(basis), S, P)
-# 	release!(P)
-# 	return nothing 
-# end
-
-
-# function evaluate!(Y, basis::RYlmBasis, 
-# 						 X::AbstractVector{<: AbstractVector{<: Real}})
-# 	L = maxL(basis)
-# 	S = cart2spher(basis, X)
-# 	P = evaluate(basis.alp, S)
-# 	rYlm!(parent(Y), maxL(basis), S, parent(P), basis)
-# 	release!(P)
-# 	return nothing 
-# end
-
-
-# function evaluate_ed!(Y, dY, basis::RYlmBasis, 
-# 						     x::AbstractVector{<: Real})
-# 	L = maxL(basis)
-# 	s = cart2spher(x)
-# 	P, dP = _evaluate_ed(basis.alp, s)
-# 	rYlm_ed!(parent(Y), parent(dY), maxL(basis), s, parent(P), parent(dP))
-# 	release!(P)
-# 	release!(dP)
-# 	return nothing 
-# end
-
-
-# function evaluate_ed!(Y, dY, basis::RYlmBasis, 
-# 						     X::AbstractVector{<: AbstractVector{<: Real}})
-# 	L = maxL(basis)
-# 	S = cart2spher(basis, X)
-# 	P, dP = _evaluate_ed(basis.alp, S)
-# 	rYlm_ed!(parent(Y), parent(dY), maxL(basis), S, parent(P), parent(dP), basis)
-# 	release!(P)
-# 	release!(dP)
-# 	return nothing 
-# end
-
-
 # -------------------- actual kernels 
 
 """
@@ -336,8 +291,8 @@ function _lap!(ΔY, basis::RYlmBasis, Y::AbstractVector)
 end 
 
 function _lap(basis::RYlmBasis, Y::AbstractMatrix) 
-	ΔY = Matrix{eltype(Y)}(undef, size(Y))
-	_lap!(ΔY, basis, Y)
+	ΔY = acquire!(basis.pool, :ΔY, size(Y), eltype(Y))
+	_lap!(parent(ΔY), basis, Y)
 	return ΔY
 end
 
