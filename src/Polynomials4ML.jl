@@ -68,7 +68,11 @@ include("lux.jl")
 # basis components to implement cluster expansion methods
 include("ace/ace.jl")
 
+# some nice utility functions to generate basis sets and other things  
+include("utils/utils.jl")
+
 # submodule with some useful utilities for writing unit tests 
 include("testing.jl")
+
 
 end
