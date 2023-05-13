@@ -12,13 +12,17 @@ using Test
     @testset "Real Trig Polys" begin include("test_rtrig.jl"); end
 
     # 3D Harmonics 
-    @testset "Complex SphericalHarmonics" begin include("test_cylm.jl"); end
-    @testset "Real Spherical Harmonics" begin include("test_rylm.jl"); end
-    @testset "Complex Solid Harmonics" begin include("test_crlm.jl"); end
-    @testset "Real Solid Harmonics" begin include("test_rrlm.jl"); end
+    @testset "Complex SphericalHarmonics" begin include("sphericalharmonics/test_cylm.jl"); end
+    @testset "Real Spherical Harmonics" begin include("sphericalharmonics/test_rylm.jl"); end
+    @testset "Complex Solid Harmonics" begin include("sphericalharmonics/test_crlm.jl"); end
+    @testset "Real Solid Harmonics" begin include("sphericalharmonics/test_rrlm.jl"); end
 
     # Quantum Chemistry 
     @testset "Atomic Orbitals Radials" begin include("test_atorbrad.jl"); end
+
+    # ACE 
+    @testset "SparsePooledProduct" begin include("ace/test_1pbasis.jl"); end 
+    @testset "Sparse Symmetric Product" begin include("ace/test_prodbasis1.jl"); end 
 
     # Misc
     @testset "Flex Array Interface" begin include("test_flex.jl"); end 

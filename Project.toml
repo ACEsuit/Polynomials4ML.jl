@@ -5,7 +5,10 @@ version = "0.1.2"
 
 [deps]
 ACEbase = "14bae519-eb20-449c-a949-9c58ed33163e"
+Adapt = "79e6a3ab-5dfb-504d-930d-738a2a938a0e"
 BenchmarkTools = "6e4b80f9-dd63-53aa-95a3-0cdb28fa8baf"
+ChainRulesCore = "d360d2e6-b24c-11e9-a2a3-2a2ae2dbcce4"
+Combinatorics = "861a8166-3701-5b0c-9a16-15d98fcdc6aa"
 ForwardDiff = "f6369f11-7733-5829-9624-2563aa707210"
 LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
 LoopVectorization = "bdcacae8-1622-11e9-2a5c-532679323890"
@@ -21,6 +24,9 @@ Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 
 [compat]
 ACEbase = "0.4.2"
+Adapt = "3.5"
+ChainRulesCore = "1"
+Combinatorics = "1"
 BenchmarkTools = "1"
 ForwardDiff = "0.10"
 LoopVectorization = "0.12"
@@ -31,9 +37,11 @@ SpecialFunctions = "2.2"
 StaticArrays = "1.5"
 julia = "1.8"
 
+
 [extras]
 Lux = "b2108857-7c20-44ae-9111-449ecde12c47"
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
+Printf = "de0858da-6303-5e67-8744-51eddeeeb8d7"
 
 [targets]
-test = ["Test", "Lux"]
+test = ["Test", "Lux", "Printf"]
