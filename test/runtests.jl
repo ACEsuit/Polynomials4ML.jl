@@ -26,6 +26,6 @@ using Test
 
     # Misc
     @testset "Flex Array Interface" begin include("test_flex.jl"); end 
-    @testset "Sparse Product" begin include("test_sparseproduct.jl"); end 
+    @testset "Static Product" begin include("test_staticproduct.jl"); end 
     @testset "Lux" begin include("test_lux.jl"); end 
 end
