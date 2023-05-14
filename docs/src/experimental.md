@@ -28,6 +28,15 @@ eval_grad_laplace!(Y, dY, ΔY, basis, X)
 Y, dY, ΔY = eval_grad_laplace(basis, X)
 ```
 
+
+## (Atomic) Cluster Expansion 
+
+Two key operations are probided that are needed for the implementation of the (atomic) cluster expansion. The precise deficitions and interface may still change, so those are also still labelled experimental. 
+* [`PooledSparseProduct`](@ref) : implements a merged product basis and pooling operation; in the atomic cluster expansion this is called the atomic basis; in GAP it is called the density projection.
+* [`SparseSymmProd`](@ref) : implements a sparse symmetric rank-1 tensor product, in ACE this is called the product basis, in GAP the n-correlations.
+
+Both of those operations have pullbacks implemented, but not `evaluate_ed!` or `evaluate_ed2!`.
+
 ## Backward Differentiation w.r.t. Inputs `X`
 
 [WORK IN PROGRESS] We implement "manual" pullbacks w.r.t. the `X` variable. These  take the form
@@ -40,4 +49,4 @@ and analogously for the `evaluate_***` variants. The `args...` can differ betwee
 
 ## Lux  
 
-[TODO]
+[TODO] describe the lux layer interface as it evolves ... 

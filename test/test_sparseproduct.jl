@@ -50,25 +50,6 @@ println_slim(@test bA1 ≈ bA2)
 
 ## 
 
-@info("Testing _prod_grad")
-
-using StaticArrays, ForwardDiff
-
-prodgrad = Polynomials4ML._prod_grad
-
-for N = 1:5 
-   for ntest = 1:10
-      local v1, g 
-      b = rand(SVector{N, Float64})
-      g = prodgrad(b.data, Val(N))
-      g1 = ForwardDiff.gradient(prod, b)
-      print_tf(@test g1 ≈ SVector(g...))
-   end
-end
-println()
-
-##
-
 @info("Testing _rrule_evaluate")
 using LinearAlgebra: dot 
 

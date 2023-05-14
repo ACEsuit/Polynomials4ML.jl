@@ -40,25 +40,40 @@ export natural_indices,
 
 
 
-# some interface functions that we should maybe retire 
+# generic fallbacks for a lot of wrapper kind of functionality 
 include("interface.jl")
 
+# polynomials 
 include("orthopolybasis.jl")
 include("discreteweights.jl")
 include("jacobiweights.jl")
-
 include("monomials.jl")
 
+# 2d harmonics / trigonometric polynomials 
 include("trig.jl")
 include("rtrig.jl")
 
+# 3d harmonics 
 include("sphericalharmonics/sphericalharmonics.jl")
+
+# quantum chemistry 
 include("atomicorbitalsradials/atomicorbitalsradials.jl")
 
+# generating product bases (generalisation of tensor products)
+include("staticprod.jl")
 include("sparseproduct.jl")
 
+# generic machinery for wrapping poly4ml bases into lux layers 
 include("lux.jl")
 
+# basis components to implement cluster expansion methods
+include("ace/ace.jl")
+
+# some nice utility functions to generate basis sets and other things  
+include("utils/utils.jl")
+
+# submodule with some useful utilities for writing unit tests 
 include("testing.jl")
+
 
 end
