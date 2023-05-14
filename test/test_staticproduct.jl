@@ -1,6 +1,6 @@
 using Test
 using Polynomials4ML.Testing: println_slim, print_tf
-using Polynomials4ML: SparseProduct, evaluate, test_evaluate
+using Polynomials4ML: StaticProduct, evaluate, test_evaluate
 using LinearAlgebra: norm
 using Polynomials4ML
 using ACEbase.Testing: fdtest
@@ -17,7 +17,7 @@ B3 = randn(N3)
 
 spec = sort([ (rand(1:N1), rand(1:N2), rand(1:N3)) for i = 1:100 ])
 
-basis = SparseProduct(spec)
+basis = StaticProduct(spec)
 
 
 ## 
@@ -49,25 +49,6 @@ println_slim(@test bA1 ≈ bA2)
 
 
 ## 
-
-@info("Testing _prod_grad")
-
-using StaticArrays, ForwardDiff
-
-prodgrad = Polynomials4ML._prod_grad
-
-for N = 1:5 
-   for ntest = 1:10
-      local v1, g 
-      b = rand(SVector{N, Float64})
-      g = prodgrad(b.data, Val(N))
-      g1 = ForwardDiff.gradient(prod, b)
-      print_tf(@test g1 ≈ SVector(g...))
-   end
-end
-println()
-
-##
 
 @info("Testing _rrule_evaluate")
 using LinearAlgebra: dot 

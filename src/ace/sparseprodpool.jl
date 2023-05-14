@@ -207,9 +207,16 @@ end
 
 using StaticArrays
 
+
+@inline function _prod_grad(b, ::Val{1})
+   return (one(eltype(b)),)
+end
+
+
 @inline function _prod_grad(b::SVector{1, T}) where {T} 
    return b[1], SVector(one(T))
 end
+
 
 function _code_prod_grad(NB)
    code = Expr[] 

@@ -56,13 +56,13 @@ prodgrad = P4ML._prod_grad
 for N = 1:5 
    for ntest = 1:10
       local v1, g 
-      b = rand(SVector{3, Float64})
-      g = prodgrad(b.data, Val(3))
+      b = rand(SVector{N, Float64})
+      g = prodgrad(b.data, Val(N))
       g1 = ForwardDiff.gradient(prod, b)
       print_tf(@test g1 ≈ SVector(g...))
    end
 end
-println() 
+println()
 
 ##
 
