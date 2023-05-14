@@ -60,7 +60,8 @@ include("sphericalharmonics/sphericalharmonics.jl")
 include("atomicorbitalsradials/atomicorbitalsradials.jl")
 
 # generating product bases (generalisation of tensor products)
-include("staticproduct.jl")
+include("staticprod.jl")
+include("sparseproduct.jl")
 
 # generic machinery for wrapping poly4ml bases into lux layers 
 include("lux.jl")

@@ -1,6 +1,6 @@
 using Test
 using Polynomials4ML.Testing: println_slim, print_tf
-using Polynomials4ML: StaticProduct, evaluate, test_evaluate
+using Polynomials4ML: SparseProduct, evaluate, test_evaluate
 using LinearAlgebra: norm
 using Polynomials4ML
 using ACEbase.Testing: fdtest
@@ -17,7 +17,7 @@ B3 = randn(N3)
 
 spec = sort([ (rand(1:N1), rand(1:N2), rand(1:N3)) for i = 1:100 ])
 
-basis = StaticProduct(spec)
+basis = SparseProduct(spec)
 
 
 ## 

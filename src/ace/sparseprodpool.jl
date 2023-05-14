@@ -54,61 +54,72 @@ test_evalpool(basis::PooledSparseProduct, BB::Tuple) =
 
 import Base.Cartesian: @nexprs
 
-# Stolen from KernelAbstractions
-import Adapt 
-struct ConstAdaptor end
-
-import Base.Experimental: @aliasscope
-
-Adapt.adapt_storage(::ConstAdaptor, a::Array) = Base.Experimental.Const(a)
-constify(arg) = Adapt.adapt(ConstAdaptor(), arg)
+# # Stolen from KernelAbstractions
+# import Adapt 
+# struct ConstAdaptor end
+# import Base.Experimental: @aliasscope
+# Adapt.adapt_storage(::ConstAdaptor, a::Array) = Base.Experimental.Const(a)
+# constify(arg) = Adapt.adapt(ConstAdaptor(), arg)
 
 
-@inline function BB_prod(ϕ::NTuple{NB}, BB) where NB
-   reduce(Base.FastMath.mul_fast, ntuple(Val(NB)) do i
-      @inline 
-      @inbounds BB[i][ϕ[i]]
-   end)
-end
-
+# Valentin Churavy's Version (which we don't really understand)
+# function evaluate!(A, basis::PooledSparseProduct{NB}, BB) where {NB}
+#    @assert length(BB) == NB
+#    # evaluate the 1p product basis functions and add/write into _A
+#    BB = constify(BB)
+#    spec = constify(basis.spec)
+#    @aliasscope begin # No store to A aliases any read from any B
+#       for (iA, ϕ) in enumerate(spec)
+#          @inbounds A[iA] += BB_prod(ϕ, BB)
+#       end
+#    end
+#    return nothing 
+# end
 
 function evaluate!(A, basis::PooledSparseProduct{NB}, BB) where {NB}
    @assert length(BB) == NB
    # evaluate the 1p product basis functions and add/write into _A
-   BB = constify(BB)
-   spec = constify(basis.spec)
-   @aliasscope begin # No store to A aliases any read from any B
-      for (iA, ϕ) in enumerate(spec)
-         @inbounds A[iA] += BB_prod(ϕ, BB)
-      end
+   spec = basis.spec
+   for (iA, ϕ) in enumerate(spec)
+      @inbounds A[iA] += BB_prod(ϕ, BB)
    end
    return nothing 
 end
 
-@inline function BB_prod(ϕ::NTuple{NB}, BB, j) where NB
-   reduce(Base.FastMath.mul_fast, ntuple(Val(NB)) do i
-      @inline 
-      @inbounds BB[i][j, ϕ[i]]
-   end)
-end
 
+# # BB::tuple of matrices 
+# function evalpool!(A, basis::PooledSparseProduct{NB}, BB, 
+#                    nX = size(BB[1], 1)) where {NB}
+#    @assert all(B->size(B, 1) >= nX, BB)
+#    BB = constify(BB) # Assumes that no B aliases A
+#    spec = constify(basis.spec)
+
+#    @aliasscope begin # No store to A aliases any read from any B
+#       @inbounds for (iA, ϕ) in enumerate(spec)
+#          a = zero(eltype(A))
+#          @simd ivdep for j = 1:nX
+#             a += BB_prod(ϕ, BB, j)
+#          end
+#          A[iA] = a
+#       end
+#    end
+#    return nothing
+# end
 
 # BB::tuple of matrices 
 function evalpool!(A, basis::PooledSparseProduct{NB}, BB, 
                    nX = size(BB[1], 1)) where {NB}
    @assert all(B->size(B, 1) >= nX, BB)
-   BB = constify(BB) # Assumes that no B aliases A
-   spec = constify(basis.spec)
+   spec = basis.spec
 
-   @aliasscope begin # No store to A aliases any read from any B
-      @inbounds for (iA, ϕ) in enumerate(spec)
-         a = zero(eltype(A))
-         @simd ivdep for j = 1:nX
-            a += BB_prod(ϕ, BB, j)
-         end
-         A[iA] = a
+   @inbounds for (iA, ϕ) in enumerate(spec)
+      a = zero(eltype(A))
+      @simd ivdep for j = 1:nX
+         a += BB_prod(ϕ, BB, j)
       end
+      A[iA] = a
    end
+
    return nothing
 end
 
@@ -144,8 +155,7 @@ function evalpool_batch!(A, basis::PooledSparseProduct{NB}, BB,
    nA = size(A, 1)
    @assert length(target.groups)-1 <= nA 
    @assert all(B->size(B, 1) == nX, BB)
-   BB = constify(BB) # Assumes that no B aliases A
-   spec = constify(basis.spec)
+   spec = basis.spec
 
    @inbounds for (iA, ϕ) in enumerate(spec)
       for t = 1:length(target.groups)-1
@@ -164,8 +174,7 @@ function evalpool!(A::VA, basis::PooledSparseProduct{2}, BB) where {VA}
    nX = size(BB[1], 1)
    @assert size(BB[2], 1) >= nX 
    @assert length(A) == length(basis)
-   BB = constify(BB) # Assumes that no B aliases A
-   spec = constify(basis.spec)
+   spec = basis.spec
    BB1 = BB[1] 
    BB2 = BB[2] 
 
@@ -207,48 +216,6 @@ end
 
 using StaticArrays
 
-
-@inline function _prod_grad(b, ::Val{1})
-   return (one(eltype(b)),)
-end
-
-
-@inline function _prod_grad(b::SVector{1, T}) where {T} 
-   return b[1], SVector(one(T))
-end
-
-
-function _code_prod_grad(NB)
-   code = Expr[] 
-   # g[2] = b[1] 
-   push!(code, :(g2 = b[1]))
-   for i = 3:NB 
-      # g[i] = g[i-1] * b[i-1]
-      push!(code, Meta.parse("g$i = g$(i-1) * b[$(i-1)]"))
-   end
-   # h = b[N]
-   push!(code, Meta.parse("h = b[$NB]"))
-   for i = NB-1:-1:2
-      # g[i] *= h
-      push!(code, Meta.parse("g$i *= h"))
-      # h *= b[i]
-      push!(code, Meta.parse("h *= b[$i]"))
-   end
-   # g[1] = h
-   push!(code, :(g1 = h))
-   # return (g[1], g[2], ..., g[N])
-   push!(code, Meta.parse(
-            "return (" * join([ "g$i" for i = 1:NB ], ", ") * ")" ))
-end
-
-@inline @generated function _prod_grad(b, ::Val{NB}) where {NB}
-   code = _code_prod_grad(NB)
-   quote
-      @fastmath begin 
-         $(code...)
-      end
-   end
-end
 
 
 
