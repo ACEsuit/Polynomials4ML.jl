@@ -1,4 +1,3 @@
-
 @inline function BB_prod(ϕ::NTuple{NB}, BB) where NB
    reduce(Base.FastMath.mul_fast, ntuple(Val(NB)) do i
       @inline 
@@ -15,6 +14,35 @@ end
 end
 
 
+@inline function BB2_prod(ϕ::NTuple{NB}, BB1, BB2, j, z) where NB
+   reduce(Base.FastMath.mul_fast, ntuple(Val(NB)) do i 
+      if i == j 
+         @inline 
+         @inbounds BB2[i][ϕ[i]]
+      elseif i == z
+         @inline 
+         @inbounds BB2[i][ϕ[i]]
+      else
+         @inline 
+         @inbounds BB1[i][ϕ[i]]
+      end
+   end)
+end
+
+@inline function BB2_prod(ϕ::NTuple{NB}, BB1, BB2, j, m, n) where NB
+   reduce(Base.FastMath.mul_fast, ntuple(Val(NB)) do i
+      if i == m
+         @inline 
+         @inbounds BB2[i][j, ϕ[i]]
+      elseif i == n
+         @inline 
+         @inbounds BB2[i][j, ϕ[i]]
+      else
+         @inline 
+         @inbounds BB1[i][j, ϕ[i]]
+      end
+   end)
+end
 
 @inline function _prod_grad(b, ::Val{1})
    return (one(eltype(b)),)
@@ -57,4 +85,3 @@ end
       end
    end
 end
-
