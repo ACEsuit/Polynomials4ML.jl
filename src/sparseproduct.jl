@@ -104,7 +104,7 @@ function evaluate_ed!(A, dA, basis::SparseProduct{NB}, BB::Tuple{Vararg{Abstract
       b = ntuple(Val(NB)) do i 
          @inbounds BB[i][ϕ[i]] 
       end 
-      g = _prod_grad_ed(b, Val(NB))
+      g = _prod_ed(b, Val(NB))
       A[iA] = g[1]
       for i = 1:NB
          dA[iA] = muladd(∂BB[i][ϕ[i]], g[i + 1], dA[iA])
@@ -124,7 +124,7 @@ function evaluate_ed!(A, dA, basis::SparseProduct{NB}, BB::Tuple{Vararg{Abstract
         b = ntuple(Val(NB)) do i 
            @inbounds BB[i][j, ϕ[i]] 
         end 
-        g = _prod_grad_ed(b, Val(NB))
+        g = _prod_ed(b, Val(NB))
         A[j, iA] = g[1] 
         for i = 1:NB
            dA[j, iA] = muladd(∂BB[i][j, ϕ[i]], g[i + 1], dA[j, iA])
@@ -140,19 +140,21 @@ function evaluate_ed2!(A, dA, ddA, basis::SparseProduct{NB}, BB::Tuple{Vararg{Ab
    @assert length(∂∂BB) == NB
    spec = basis.spec
 
-   evaluate_ed!(A, dA, basis, BB, ∂BB)
-
    for (iA, ϕ) in enumerate(spec)
       b = ntuple(Val(NB)) do i 
          @inbounds BB[i][ϕ[i]] 
       end 
-      dg = _prod_grad(b, Val(NB))
+      g = _prod_ed2(b, Val(NB))
+      A[iA] = g[1]
       for i = 1:NB 
-         ddA[iA] = muladd(∂∂BB[i][ϕ[i]], dg[i], ddA[iA])
+         dA[iA] = muladd(∂BB[i][ϕ[i]], g[i + 1], dA[iA])
+         ddA[iA] = muladd(∂∂BB[i][ϕ[i]], g[i + 1], ddA[iA])
       end
+      t = 1
       for m = 1:NB-1
          for n = m+1:NB
-            @inbounds ddA[iA] += 2 * BB2_prod(ϕ, BB, ∂BB, m, n)
+            ddA[iA] = muladd(2 * ∂BB[m][ϕ[m]] * ∂BB[n][ϕ[n]], g[t + 1 + NB], ddA[iA])
+            t += 1
          end
       end
    end 
@@ -165,21 +167,23 @@ function evaluate_ed2!(A, dA, ddA, basis::SparseProduct{NB}, BB::Tuple{Vararg{Ab
    @assert all(∂B->size(∂B, 1) == nX, ∂BB)
    @assert all(∂∂B->size(∂∂B, 1) == nX, ∂∂BB)
    spec = basis.spec
-
-   evaluate_ed!(A, dA, basis, BB, ∂BB)
    
    @inbounds for (iA, ϕ) in enumerate(spec)
       @simd ivdep for j = 1:nX
          b = ntuple(Val(NB)) do i 
             @inbounds BB[i][j, ϕ[i]] 
          end 
-         g = _prod_grad(b, Val(NB))
+         g = _prod_ed2(b, Val(NB))
+         A[j, iA] = g[1]
          for i = 1:NB 
-            ddA[j, iA] = muladd(∂∂BB[i][j, ϕ[i]], g[i], ddA[j, iA])
+            dA[j, iA] = muladd(∂BB[i][j, ϕ[i]], g[i + 1], dA[j, iA])
+            ddA[j, iA] = muladd(∂∂BB[i][j, ϕ[i]], g[i + 1], ddA[j, iA])
          end
+         t = 1
          for m = 1:NB-1
             for n = m+1:NB
-               @inbounds ddA[j, iA] += 2 * BB2_prod(ϕ, BB, ∂BB, j, m, n)
+               ddA[j, iA] = muladd(2 * ∂BB[m][j, ϕ[m]] * ∂BB[n][j, ϕ[n]], g[t + 1 + NB], ddA[j, iA])
+               t += 1
             end
          end
       end

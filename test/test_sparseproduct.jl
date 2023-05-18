@@ -6,25 +6,14 @@ using Polynomials4ML
 using ACEbase.Testing: fdtest
 
 ##
+NB = rand(collect(5:30))
+N = [i * 4 for i = 1:NB]
 
-N1 = 10
-N2 = 20
-N3 = 30
+B = [randn(N[i]) for i = 1:NB]
+∂B = [randn(N[i]) for i = 1:NB]
+∂∂B = [randn(N[i]) for i = 1:NB]
 
-B1 = randn(N1)
-B2 = randn(N2)
-B3 = randn(N3)
-
-∂B1 = randn(N1)
-∂B2 = randn(N2)
-∂B3 = randn(N3)
-
-∂∂B1 = randn(N1)
-∂∂B2 = randn(N2)
-∂∂B3 = randn(N3)
-
-
-spec = sort([ (rand(1:N1), rand(1:N2), rand(1:N3)) for i = 1:100 ])
+spec = sort([ Tuple([rand(1:N[i]) for i = 1:NB]) for _ = 1:100 ])
 
 basis = SparseProduct(spec)
 
@@ -33,7 +22,7 @@ basis = SparseProduct(spec)
 
 @info("Test serial evaluation")
 
-BB = (B1, B2, B3)
+BB = Tuple(B)
 
 A1 = test_evaluate(basis, BB)
 A2 = evaluate(basis, BB)
@@ -41,33 +30,43 @@ A2 = evaluate(basis, BB)
 println_slim(@test A1 ≈ A2 )
 
 @info("Test serial evaluation_ed")
-BB = (B1, B2, B3)
-∂BB = (∂B1, ∂B2, ∂B3)
+BB = Tuple(B)
+∂BB = Tuple(∂B)
 
-A1 = test_evaluate_ed(basis, BB, ∂BB)
+A = test_evaluate_ed(basis, BB, ∂BB)
+
+AA = evaluate(basis, BB)
+A1 = evaluate_ed(basis, BB, ∂BB)[1]
 A2 = evaluate_ed(basis, BB, ∂BB)[2]
 
-println_slim(@test A1 ≈ A2 )
+println_slim(@test A ≈ A2 )
+println_slim(@test AA ≈ A1 )
 ##
 
 @info("Test serial evaluation_d2")
-BB = (B1, B2, B3)
-∂BB = (∂B1, ∂B2, ∂B3)
-∂∂BB = (∂∂B1, ∂∂B2, ∂∂B3)
+BB = Tuple(B)
+∂BB = Tuple(∂B)
+∂∂BB = Tuple(∂∂B)
 
-A1 = test_evaluate_ed2(basis, BB, ∂BB, ∂∂BB)
-A2 = evaluate_ed2(basis, BB, ∂BB, ∂∂BB)[3]
+A = test_evaluate_ed2(basis, BB, ∂BB, ∂∂BB)
 
-println_slim(@test A1 ≈ A2 )
+AA = evaluate(basis, BB)
+dA = evaluate_ed(basis, BB, ∂BB)[2]
+A1 = evaluate_ed2(basis, BB, ∂BB, ∂∂BB)[1]
+A2 = evaluate_ed2(basis, BB, ∂BB, ∂∂BB)[2]
+A3 = evaluate_ed2(basis, BB, ∂BB, ∂∂BB)[3]
 
+println_slim(@test A ≈ A3 )
+println_slim(@test AA ≈ A1 )
+println_slim(@test dA ≈ A2 )
 @info("Test batch evaluation")
 
 nX = 64 
-bBB = ( randn(nX, N1), randn(nX, N2), randn(nX, N3) )
+bBB = Tuple([randn(nX, N[i]) for i = 1:NB])
 bA1 = zeros(ComplexF64, nX, length(basis))
 
 for j = 1:nX
-    bA1[j, :] = evaluate(basis, (bBB[1][j, :], bBB[2][j, :], bBB[3][j, :]))
+    bA1[j, :] = evaluate(basis, Tuple([bBB[i][j, :] for i = 1:NB]))
 end
 
 bA2 = evaluate(basis, bBB)
@@ -77,33 +76,45 @@ println_slim(@test bA1 ≈ bA2)
 @info("Test batch evaluate_ed")
 
 nX = 64 
-bBB = ( randn(nX, N1), randn(nX, N2), randn(nX, N3) )
-bdBB = ( randn(nX, N1), randn(nX, N2), randn(nX, N3) )
+bBB = Tuple([randn(nX, N[i]) for i = 1:NB])
+bdBB = Tuple([randn(nX, N[i]) for i = 1:NB])
+A1 = zeros(ComplexF64, nX, length(basis))
 bA1 = zeros(ComplexF64, nX, length(basis))
 
 for j = 1:nX
-    bA1[j, :] = evaluate_ed(basis, (bBB[1][j, :], bBB[2][j, :], bBB[3][j, :]), (bdBB[1][j, :], bdBB[2][j, :], bdBB[3][j, :]))[2]
+    A1[j, :] = evaluate_ed(basis, Tuple([bBB[i][j, :] for i = 1:NB]), Tuple([bdBB[i][j, :] for i = 1:NB]))[1]
+    bA1[j, :] = evaluate_ed(basis, Tuple([bBB[i][j, :] for i = 1:NB]), Tuple([bdBB[i][j, :] for i = 1:NB]))[2]
 end
 
+A2 = evaluate_ed(basis, bBB, bdBB)[1]
 bA2 = evaluate_ed(basis, bBB, bdBB)[2]
 
+println_slim(@test A1 ≈ A2)
 println_slim(@test bA1 ≈ bA2)
 ## 
 @info("Test batch evaluate_d2")
 
 nX = 64 
-bBB = ( randn(nX, N1), randn(nX, N2), randn(nX, N3) )
-bdBB = ( randn(nX, N1), randn(nX, N2), randn(nX, N3) )
-bddBB = ( randn(nX, N1), randn(nX, N2), randn(nX, N3) )
+bBB = Tuple([randn(nX, N[i]) for i = 1:NB])
+bdBB = Tuple([randn(nX, N[i]) for i = 1:NB])
+bddBB = Tuple([randn(nX, N[i]) for i = 1:NB])
+A1 = zeros(ComplexF64, nX, length(basis))
 bA1 = zeros(ComplexF64, nX, length(basis))
+bbA1 = zeros(ComplexF64, nX, length(basis))
 
 for j = 1:nX
-    bA1[j, :] = evaluate_ed2(basis, (bBB[1][j, :], bBB[2][j, :], bBB[3][j, :]), (bdBB[1][j, :], bdBB[2][j, :], bdBB[3][j, :]), (bddBB[1][j, :], bddBB[2][j, :], bddBB[3][j, :]))[3]
+    A1[j, :] = evaluate_ed2(basis, Tuple([bBB[i][j, :] for i = 1:NB]), Tuple([bBB[i][j, :] for i = 1:NB]), Tuple([bddBB[i][j, :] for i = 1:NB]))[1]
+    bA1[j, :] = evaluate_ed2(basis, Tuple([bBB[i][j, :] for i = 1:NB]), Tuple([bdBB[i][j, :] for i = 1:NB]), Tuple([bddBB[i][j, :] for i = 1:NB]))[2]
+    bbA1[j, :] = evaluate_ed2(basis, Tuple([bBB[i][j, :] for i = 1:NB]), Tuple([bdBB[i][j, :] for i = 1:NB]), Tuple([bddBB[i][j, :] for i = 1:NB]))[3]
 end
 
-bA2 = evaluate_ed2(basis, bBB, bdBB, bddBB)[3]
+A2 = evaluate_ed2(basis, bBB, bdBB, bddBB)[1]
+bA2 = evaluate_ed2(basis, bBB, bdBB, bddBB)[2]
+bbA2 = evaluate_ed2(basis, bBB, bdBB, bddBB)[3]
 
+println_slim(@test A1 ≈ A2)
 println_slim(@test bA1 ≈ bA2)
+println_slim(@test bbA1 ≈ bbA2)
 
 @info("Testing _rrule_evaluate")
 using LinearAlgebra: dot 
