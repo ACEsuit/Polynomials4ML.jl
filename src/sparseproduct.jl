@@ -37,32 +37,36 @@ end
    
 function evaluate_ed(basis::SparseProduct, BB::Tuple{Vararg{AbstractVector}}, ∂BB::Tuple{Vararg{AbstractVector}}) 
    VT = mapreduce(eltype, promote_type, ∂BB)
-   A = zeros(VT, length(basis))
-   evaluate_ed!(A, basis, BB::Tuple, ∂BB::Tuple)
-   return A 
+   A, dA = zeros(VT, length(basis)), zeros(VT, length(basis))
+   evaluate_ed!(A, dA, basis, BB::Tuple, ∂BB::Tuple)
+   return A, dA
 end
 
 function evaluate_ed(basis::SparseProduct, BB::Tuple{Vararg{AbstractMatrix}}, ∂BB::Tuple{Vararg{AbstractMatrix}}) 
    VT = mapreduce(eltype, promote_type, ∂BB)
    nX = size(∂BB[1], 1)
-   A = zeros(VT, nX, length(basis))
-   evaluate_ed!(A, basis, BB::Tuple, ∂BB::Tuple)
-   return A 
+   A, dA = zeros(VT, nX, length(basis)), zeros(VT, nX, length(basis))
+   evaluate_ed!(A, dA, basis, BB::Tuple, ∂BB::Tuple)
+   return A, dA
 end
 
 function evaluate_ed2(basis::SparseProduct, BB::Tuple{Vararg{AbstractVector}}, ∂BB::Tuple{Vararg{AbstractVector}}, ∂∂BB::Tuple{Vararg{AbstractVector}}) 
    VT = mapreduce(eltype, promote_type, ∂∂BB)
    A = zeros(VT, length(basis))
-   evaluate_ed2!(A, basis, BB::Tuple, ∂BB::Tuple, ∂∂BB::Tuple)
-   return A 
+   dA = zeros(VT, length(basis))
+   ddA = zeros(VT, length(basis))
+   evaluate_ed2!(A, dA, ddA, basis, BB::Tuple, ∂BB::Tuple, ∂∂BB::Tuple)
+   return A, dA, ddA
 end
 
 function evaluate_ed2(basis::SparseProduct, BB::Tuple{Vararg{AbstractMatrix}}, ∂BB::Tuple{Vararg{AbstractMatrix}}, ∂∂BB::Tuple{Vararg{AbstractMatrix}}) 
    VT = mapreduce(eltype, promote_type, ∂∂BB)
    nX = size(∂∂BB[1], 1)
    A = zeros(VT, nX, length(basis))
-   evaluate_ed2!(A, basis, BB::Tuple, ∂BB::Tuple, ∂∂BB::Tuple)
-   return A 
+   dA = zeros(VT, nX, length(basis))
+   ddA = zeros(VT, nX, length(basis))
+   evaluate_ed2!(A, dA, ddA, basis, BB::Tuple, ∂BB::Tuple, ∂∂BB::Tuple)
+   return A, dA, ddA
 end
 # ----------------------- evaluation kernels 
 
@@ -72,7 +76,7 @@ function evaluate!(A, basis::SparseProduct{NB}, BB::Tuple{Vararg{AbstractVector}
    for (iA, ϕ) in enumerate(spec)
        @inbounds A[iA] = BB_prod(ϕ, BB)
    end
-   return nothing 
+   return A 
 end
 
 function evaluate!(A, basis::SparseProduct{NB}, BB::Tuple{Vararg{AbstractMatrix}}) where {NB}
@@ -85,73 +89,85 @@ function evaluate!(A, basis::SparseProduct{NB}, BB::Tuple{Vararg{AbstractMatrix}
          A[j, iA] = BB_prod(ϕ, BB, j)
       end
    end
-   return nothing
+   return A
 end
 
-function evaluate_ed!(A, basis::SparseProduct{NB}, BB::Tuple{Vararg{AbstractVector}}, ∂BB::Tuple{Vararg{AbstractVector}}) where {NB}
+# Not sure whether we can everything below
+# faster by eval and diff at the same time from prod_grad
+
+function evaluate_ed!(A, dA, basis::SparseProduct{NB}, BB::Tuple{Vararg{AbstractVector}}, ∂BB::Tuple{Vararg{AbstractVector}}) where {NB}
    @assert length(BB) == NB
    @assert length(∂BB) == NB
    spec = basis.spec
+   # evaluate!(A, basis, BB)
    for (iA, ϕ) in enumerate(spec)
       b = ntuple(Val(NB)) do i 
          @inbounds BB[i][ϕ[i]] 
       end 
-      g = _prod_grad(b, Val(NB))
-      for i = 1:NB 
-         A[iA] = muladd(∂BB[i][ϕ[i]], g[i], A[iA])
+      g = _prod_grad_ed(b, Val(NB))
+      A[iA] = g[1]
+      for i = 1:NB
+         dA[iA] = muladd(∂BB[i][ϕ[i]], g[i + 1], dA[iA])
       end
    end 
-   return nothing 
+   return A, dA 
 end
 
-function evaluate_ed!(A, basis::SparseProduct{NB}, BB::Tuple{Vararg{AbstractMatrix}}, ∂BB::Tuple{Vararg{AbstractMatrix}}) where {NB}
+function evaluate_ed!(A, dA, basis::SparseProduct{NB}, BB::Tuple{Vararg{AbstractMatrix}}, ∂BB::Tuple{Vararg{AbstractMatrix}}) where {NB}
    nX = size(BB[1], 1)
    @assert all(B->size(B, 1) == nX, BB)
    @assert all(∂B->size(∂B, 1) == nX, ∂BB)
    spec = basis.spec
+   # evaluate!(A, basis, BB)
    @inbounds for (iA, ϕ) in enumerate(spec)
       @simd ivdep for j = 1:nX 
         b = ntuple(Val(NB)) do i 
            @inbounds BB[i][j, ϕ[i]] 
         end 
-        g = _prod_grad(b, Val(NB))
-        for i = 1:NB 
-           A[j, iA] = muladd(∂BB[i][j, ϕ[i]], g[i], A[j, iA])
+        g = _prod_grad_ed(b, Val(NB))
+        A[j, iA] = g[1] 
+        for i = 1:NB
+           dA[j, iA] = muladd(∂BB[i][j, ϕ[i]], g[i + 1], dA[j, iA])
         end
       end 
    end
-   return nothing
+   return A, dA
 end
 
-function evaluate_ed2!(A, basis::SparseProduct{NB}, BB::Tuple{Vararg{AbstractVector}}, ∂BB::Tuple{Vararg{AbstractVector}}, ∂∂BB::Tuple{Vararg{AbstractVector}}) where {NB}
+function evaluate_ed2!(A, dA, ddA, basis::SparseProduct{NB}, BB::Tuple{Vararg{AbstractVector}}, ∂BB::Tuple{Vararg{AbstractVector}}, ∂∂BB::Tuple{Vararg{AbstractVector}}) where {NB}
    @assert length(BB) == NB
    @assert length(∂BB) == NB
    @assert length(∂∂BB) == NB
    spec = basis.spec
+
+   evaluate_ed!(A, dA, basis, BB, ∂BB)
+
    for (iA, ϕ) in enumerate(spec)
       b = ntuple(Val(NB)) do i 
          @inbounds BB[i][ϕ[i]] 
       end 
       dg = _prod_grad(b, Val(NB))
       for i = 1:NB 
-         A[iA] = muladd(∂∂BB[i][ϕ[i]], dg[i], A[iA])
+         ddA[iA] = muladd(∂∂BB[i][ϕ[i]], dg[i], ddA[iA])
       end
       for m = 1:NB-1
          for n = m+1:NB
-            @inbounds A[iA] += 2 * BB2_prod(ϕ, BB, ∂BB, m, n)
+            @inbounds ddA[iA] += 2 * BB2_prod(ϕ, BB, ∂BB, m, n)
          end
       end
    end 
-   return nothing 
+   return A, dA, ddA 
 end
 
-function evaluate_ed2!(A, basis::SparseProduct{NB}, BB::Tuple{Vararg{AbstractMatrix}}, ∂BB::Tuple{Vararg{AbstractMatrix}}, ∂∂BB::Tuple{Vararg{AbstractMatrix}}) where {NB}
+function evaluate_ed2!(A, dA, ddA, basis::SparseProduct{NB}, BB::Tuple{Vararg{AbstractMatrix}}, ∂BB::Tuple{Vararg{AbstractMatrix}}, ∂∂BB::Tuple{Vararg{AbstractMatrix}}) where {NB}
    nX = size(BB[1], 1)
    @assert all(B->size(B, 1) == nX, BB)
    @assert all(∂B->size(∂B, 1) == nX, ∂BB)
    @assert all(∂∂B->size(∂∂B, 1) == nX, ∂∂BB)
    spec = basis.spec
 
+   evaluate_ed!(A, dA, basis, BB, ∂BB)
+   
    @inbounds for (iA, ϕ) in enumerate(spec)
       @simd ivdep for j = 1:nX
          b = ntuple(Val(NB)) do i 
@@ -159,16 +175,16 @@ function evaluate_ed2!(A, basis::SparseProduct{NB}, BB::Tuple{Vararg{AbstractMat
          end 
          g = _prod_grad(b, Val(NB))
          for i = 1:NB 
-            A[j, iA] = muladd(∂∂BB[i][j, ϕ[i]], g[i], A[j, iA])
+            ddA[j, iA] = muladd(∂∂BB[i][j, ϕ[i]], g[i], ddA[j, iA])
          end
          for m = 1:NB-1
             for n = m+1:NB
-               @inbounds A[j, iA] += 2 * BB2_prod(ϕ, BB, ∂BB, j, m, n)
+               @inbounds ddA[j, iA] += 2 * BB2_prod(ϕ, BB, ∂BB, j, m, n)
             end
          end
       end
    end
-   return nothing
+   return A, dA, ddA
 end
 # -------------------- reverse mode gradient
 

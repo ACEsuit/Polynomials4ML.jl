@@ -45,7 +45,7 @@ BB = (B1, B2, B3)
 ∂BB = (∂B1, ∂B2, ∂B3)
 
 A1 = test_evaluate_ed(basis, BB, ∂BB)
-A2 = evaluate_ed(basis, BB, ∂BB)
+A2 = evaluate_ed(basis, BB, ∂BB)[2]
 
 println_slim(@test A1 ≈ A2 )
 ##
@@ -56,7 +56,7 @@ BB = (B1, B2, B3)
 ∂∂BB = (∂∂B1, ∂∂B2, ∂∂B3)
 
 A1 = test_evaluate_ed2(basis, BB, ∂BB, ∂∂BB)
-A2 = evaluate_ed2(basis, BB, ∂BB, ∂∂BB)
+A2 = evaluate_ed2(basis, BB, ∂BB, ∂∂BB)[3]
 
 println_slim(@test A1 ≈ A2 )
 
@@ -82,10 +82,10 @@ bdBB = ( randn(nX, N1), randn(nX, N2), randn(nX, N3) )
 bA1 = zeros(ComplexF64, nX, length(basis))
 
 for j = 1:nX
-    bA1[j, :] = evaluate_ed(basis, (bBB[1][j, :], bBB[2][j, :], bBB[3][j, :]), (bdBB[1][j, :], bdBB[2][j, :], bdBB[3][j, :]))
+    bA1[j, :] = evaluate_ed(basis, (bBB[1][j, :], bBB[2][j, :], bBB[3][j, :]), (bdBB[1][j, :], bdBB[2][j, :], bdBB[3][j, :]))[2]
 end
 
-bA2 = evaluate_ed(basis, bBB, bdBB)
+bA2 = evaluate_ed(basis, bBB, bdBB)[2]
 
 println_slim(@test bA1 ≈ bA2)
 ## 
@@ -98,10 +98,10 @@ bddBB = ( randn(nX, N1), randn(nX, N2), randn(nX, N3) )
 bA1 = zeros(ComplexF64, nX, length(basis))
 
 for j = 1:nX
-    bA1[j, :] = evaluate_ed2(basis, (bBB[1][j, :], bBB[2][j, :], bBB[3][j, :]), (bdBB[1][j, :], bdBB[2][j, :], bdBB[3][j, :]), (bddBB[1][j, :], bddBB[2][j, :], bddBB[3][j, :]))
+    bA1[j, :] = evaluate_ed2(basis, (bBB[1][j, :], bBB[2][j, :], bBB[3][j, :]), (bdBB[1][j, :], bdBB[2][j, :], bdBB[3][j, :]), (bddBB[1][j, :], bddBB[2][j, :], bddBB[3][j, :]))[3]
 end
 
-bA2 = evaluate_ed2(basis, bBB, bdBB, bddBB)
+bA2 = evaluate_ed2(basis, bBB, bdBB, bddBB)[3]
 
 println_slim(@test bA1 ≈ bA2)
 
