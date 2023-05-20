@@ -35,37 +35,81 @@ function evaluate(basis::SparseProduct, BB::Tuple{Vararg{AbstractMatrix}})
    return A 
 end
    
-function evaluate_ed(basis::SparseProduct, BB::Tuple{Vararg{AbstractVector}}, ∂BB::Tuple{Vararg{AbstractVector}}) 
-   VT = mapreduce(eltype, promote_type, ∂BB)
-   A, dA = zeros(VT, length(basis)), zeros(VT, length(basis))
-   evaluate_ed!(A, dA, basis, BB::Tuple, ∂BB::Tuple)
+function evaluate_ed(basis::SparseProduct, BB::Tuple{Vararg{AbstractVector}}) 
+   VT = mapreduce(eltype, promote_type, BB)
+   A = zeros(VT, length(basis))
+   _similar(BB::Tuple) = Tuple([similar(BB[i]) for i = 1:length(BB)])
+   dA = [_similar(BB) for _ = 1:length(basis)]
+   evaluate_ed!(A, dA, basis, BB::Tuple)
    return A, dA
 end
 
-function evaluate_ed(basis::SparseProduct, BB::Tuple{Vararg{AbstractMatrix}}, ∂BB::Tuple{Vararg{AbstractMatrix}}) 
-   VT = mapreduce(eltype, promote_type, ∂BB)
+function evaluate_ed(basis::SparseProduct, BB::Tuple{Vararg{AbstractMatrix}}) 
+   VT = mapreduce(eltype, promote_type, BB)
+   nX = size(BB[1], 1)
+   A = zeros(VT, nX, length(basis))
+   _similar(BB::Tuple) = Tuple([similar(BB[i]) for i = 1:length(BB)])
+   dA = [_similar(BB) for i = 1:nX, j = 1:length(basis)]
+   evaluate_ed!(A, dA, basis, BB::Tuple)
+   return A, dA
+end
+
+function evaluate_ed2(basis::SparseProduct, BB::Tuple{Vararg{AbstractVector}}) 
+   VT = mapreduce(eltype, promote_type, BB)
+   A = zeros(VT, length(basis))
+   _similar(BB::Tuple) = Tuple([similar(BB[i]) for i = 1:length(BB)])
+   dA, ddA = ([_similar(BB) for _ = 1:length(basis)], [_similar(BB) for _ = 1:length(basis)])
+   evaluate_ed2!(A, dA, ddA, basis, BB::Tuple)
+   return A, dA, ddA
+end
+
+function evaluate_ed2(basis::SparseProduct, BB::Tuple{Vararg{AbstractMatrix}}) 
+   VT = mapreduce(eltype, promote_type, BB)
+   nX = size(∂∂BB[1], 1)
+   A = zeros(VT, nX, length(basis))
+   _similar(BB::Tuple) = Tuple([similar(BB[i]) for i = 1:length(BB)])
+   dA, ddA = ([_similar(BB) for i = 1:nX, j = 1:length(basis)], [_similar(BB) for i = 1:nX, j = 1:length(basis)])
+   evaluate_ed2!(A, dA, ddA, basis, BB::Tuple)
+   return A, dA, ddA
+end
+
+function _frule_evaluate(basis::SparseProduct, BB::Tuple{Vararg{AbstractVector}}, ∂BB::Tuple{Vararg{AbstractVector}}) 
+   VT = mapreduce(eltype, promote_type, BB)
+   A = zeros(VT, length(basis))
+   # ∂BB: Vector of SVector{3, Float64}
+   # dA: Matrix 3 * length(basis)
+   dA = zeros(VT, length(∂BB[1][1]), length(basis)) 
+   _frule_evaluate!(A, dA, basis, BB::Tuple, ∂BB::Tuple)
+   return A, dA
+end
+
+function _frule_evaluate(basis::SparseProduct, BB::Tuple{Vararg{AbstractMatrix}}, ∂BB::Tuple{Vararg{AbstractMatrix}}) 
+   VT = mapreduce(eltype, promote_type, BB)
    nX = size(∂BB[1], 1)
-   A, dA = zeros(VT, nX, length(basis)), zeros(VT, nX, length(basis))
-   evaluate_ed!(A, dA, basis, BB::Tuple, ∂BB::Tuple)
+   # BB: Matrix Nel * length(basis)
+   # ∂BB: Matrix of SVector{3, Float64}: Nel * length(basis)
+   A = zeros(VT, nX, length(basis))
+   dA = [zeros(VT, nX, length(basis)) for _ = 1:length(basis)]
+   _frule_evaluate!(A, dA, basis, BB::Tuple, ∂BB::Tuple)
    return A, dA
 end
 
-function evaluate_ed2(basis::SparseProduct, BB::Tuple{Vararg{AbstractVector}}, ∂BB::Tuple{Vararg{AbstractVector}}, ∂∂BB::Tuple{Vararg{AbstractVector}}) 
+function _frule_frule_evaluate(basis::SparseProduct, BB::Tuple{Vararg{AbstractVector}}, ∂BB::Tuple{Vararg{AbstractVector}}, ∂∂BB::Tuple{Vararg{AbstractVector}}) 
    VT = mapreduce(eltype, promote_type, ∂∂BB)
    A = zeros(VT, length(basis))
    dA = zeros(VT, length(basis))
    ddA = zeros(VT, length(basis))
-   evaluate_ed2!(A, dA, ddA, basis, BB::Tuple, ∂BB::Tuple, ∂∂BB::Tuple)
+   _frule_frule_evaluate!(A, dA, ddA, basis, BB::Tuple, ∂BB::Tuple, ∂∂BB::Tuple)
    return A, dA, ddA
 end
 
-function evaluate_ed2(basis::SparseProduct, BB::Tuple{Vararg{AbstractMatrix}}, ∂BB::Tuple{Vararg{AbstractMatrix}}, ∂∂BB::Tuple{Vararg{AbstractMatrix}}) 
+function _frule_frule_evaluate(basis::SparseProduct, BB::Tuple{Vararg{AbstractMatrix}}, ∂BB::Tuple{Vararg{AbstractMatrix}}, ∂∂BB::Tuple{Vararg{AbstractMatrix}}) 
    VT = mapreduce(eltype, promote_type, ∂∂BB)
    nX = size(∂∂BB[1], 1)
    A = zeros(VT, nX, length(basis))
    dA = zeros(VT, nX, length(basis))
    ddA = zeros(VT, nX, length(basis))
-   evaluate_ed2!(A, dA, ddA, basis, BB::Tuple, ∂BB::Tuple, ∂∂BB::Tuple)
+   _frule_frule_evaluate!(A, dA, ddA, basis, BB::Tuple, ∂BB::Tuple, ∂∂BB::Tuple)
    return A, dA, ddA
 end
 # ----------------------- evaluation kernels 
@@ -95,7 +139,88 @@ end
 # Not sure whether we can everything below
 # faster by eval and diff at the same time from prod_grad
 
-function evaluate_ed!(A, dA, basis::SparseProduct{NB}, BB::Tuple{Vararg{AbstractVector}}, ∂BB::Tuple{Vararg{AbstractVector}}) where {NB}
+function evaluate_ed!(A, dA, basis::SparseProduct{NB}, BB::Tuple{Vararg{AbstractVector}}) where {NB}
+   @assert length(BB) == NB
+   spec = basis.spec
+   # evaluate!(A, basis, BB)
+   for (iA, ϕ) in enumerate(spec)
+      b = ntuple(Val(NB)) do i 
+         @inbounds BB[i][ϕ[i]] 
+      end 
+      g = _prod_ed(b, Val(NB))
+      A[iA] = g[1]
+      fill!.(dA[iA], 0.0)
+      for i = 1:NB
+         dA[iA][i][ϕ[i]] += g[i + 1]
+      end
+   end 
+   return A, dA 
+end
+
+function evaluate_ed!(A, dA, basis::SparseProduct{NB}, BB::Tuple{Vararg{AbstractMatrix}}) where {NB}
+   nX = size(BB[1], 1)
+   @assert all(B->size(B, 1) == nX, BB)
+   spec = basis.spec
+   # evaluate!(A, basis, BB)
+   @inbounds for (iA, ϕ) in enumerate(spec)
+      @simd ivdep for j = 1:nX 
+        b = ntuple(Val(NB)) do i 
+           @inbounds BB[i][j, ϕ[i]] 
+        end 
+        g = _prod_ed(b, Val(NB))
+        A[j, iA] = g[1] 
+        fill!.(dA[j, iA], 0.0)
+        for i = 1:NB
+           dA[j, iA][i][j, ϕ[i]] += g[i + 1]
+        end
+      end 
+   end
+   return A, dA
+end
+
+function evaluate_ed2!(A, dA, ddA, basis::SparseProduct{NB}, BB::Tuple{Vararg{AbstractVector}}) where {NB}
+   @assert length(BB) == NB
+   spec = basis.spec
+
+   for (iA, ϕ) in enumerate(spec)
+      b = ntuple(Val(NB)) do i 
+         @inbounds BB[i][ϕ[i]] 
+      end 
+      g = _prod_ed2(b, Val(NB))
+      A[iA] = g[1]
+      fill!.(dA[iA], 0.0)
+      fill!.(ddA[iA], 0.0)
+      for i = 1:NB 
+         dA[iA][i][ϕ[i]] += g[i + 1]
+      end
+   end 
+   return A, dA, ddA 
+end
+
+
+function evaluate_ed2!(A, dA, ddA, basis::SparseProduct{NB}, BB::Tuple{Vararg{AbstractMatrix}}) where {NB}
+   nX = size(BB[1], 1)
+   @assert all(B->size(B, 1) == nX, BB)
+   spec = basis.spec
+   # evaluate!(A, basis, BB)
+   @inbounds for (iA, ϕ) in enumerate(spec)
+      @simd ivdep for j = 1:nX 
+        b = ntuple(Val(NB)) do i 
+           @inbounds BB[i][j, ϕ[i]] 
+        end 
+        g = _prod_ed(b, Val(NB))
+        A[j, iA] = g[1] 
+        fill!.(dA[j, iA], 0.0)
+        fill!.(ddA[j, iA], 0.0)
+        for i = 1:NB
+           dA[j, iA][i][j, ϕ[i]] += g[i + 1]
+        end
+      end 
+   end
+   return A, dA
+end
+
+function _frule_evaluate!(A, dA, basis::SparseProduct{NB}, BB::Tuple{Vararg{AbstractVector}}, ∂BB::Tuple{Vararg{AbstractVector}}) where {NB}
    @assert length(BB) == NB
    @assert length(∂BB) == NB
    spec = basis.spec
@@ -107,13 +232,15 @@ function evaluate_ed!(A, dA, basis::SparseProduct{NB}, BB::Tuple{Vararg{Abstract
       g = _prod_ed(b, Val(NB))
       A[iA] = g[1]
       for i = 1:NB
-         dA[iA] = muladd(∂BB[i][ϕ[i]], g[i + 1], dA[iA])
+         for j = 1:length(∂BB[1][1])
+            dA[j, iA] = muladd(∂BB[i][ϕ[i]][j], g[i + 1], dA[iA])
+         end
       end
    end 
    return A, dA 
 end
 
-function evaluate_ed!(A, dA, basis::SparseProduct{NB}, BB::Tuple{Vararg{AbstractMatrix}}, ∂BB::Tuple{Vararg{AbstractMatrix}}) where {NB}
+function _frule_evaluate!(A, dA, basis::SparseProduct{NB}, BB::Tuple{Vararg{AbstractMatrix}}, ∂BB::Tuple{Vararg{AbstractMatrix}}) where {NB}
    nX = size(BB[1], 1)
    @assert all(B->size(B, 1) == nX, BB)
    @assert all(∂B->size(∂B, 1) == nX, ∂BB)
@@ -134,7 +261,7 @@ function evaluate_ed!(A, dA, basis::SparseProduct{NB}, BB::Tuple{Vararg{Abstract
    return A, dA
 end
 
-function evaluate_ed2!(A, dA, ddA, basis::SparseProduct{NB}, BB::Tuple{Vararg{AbstractVector}}, ∂BB::Tuple{Vararg{AbstractVector}}, ∂∂BB::Tuple{Vararg{AbstractVector}}) where {NB}
+function _frule_frule_evaluate!(A, dA, ddA, basis::SparseProduct{NB}, BB::Tuple{Vararg{AbstractVector}}, ∂BB::Tuple{Vararg{AbstractVector}}, ∂∂BB::Tuple{Vararg{AbstractVector}}) where {NB}
    @assert length(BB) == NB
    @assert length(∂BB) == NB
    @assert length(∂∂BB) == NB
@@ -161,7 +288,7 @@ function evaluate_ed2!(A, dA, ddA, basis::SparseProduct{NB}, BB::Tuple{Vararg{Ab
    return A, dA, ddA 
 end
 
-function evaluate_ed2!(A, dA, ddA, basis::SparseProduct{NB}, BB::Tuple{Vararg{AbstractMatrix}}, ∂BB::Tuple{Vararg{AbstractMatrix}}, ∂∂BB::Tuple{Vararg{AbstractMatrix}}) where {NB}
+function _frule_frule_evaluate!(A, dA, ddA, basis::SparseProduct{NB}, BB::Tuple{Vararg{AbstractMatrix}}, ∂BB::Tuple{Vararg{AbstractMatrix}}, ∂∂BB::Tuple{Vararg{AbstractMatrix}}) where {NB}
    nX = size(BB[1], 1)
    @assert all(B->size(B, 1) == nX, BB)
    @assert all(∂B->size(∂B, 1) == nX, ∂BB)
@@ -234,7 +361,6 @@ end
 test_evaluate(basis::SparseProduct, BB::Tuple) = 
        [ prod(BB[j][basis.spec[i][j]] for j = 1:length(BB)) 
             for i = 1:length(basis) ]
-
 
 function test_evaluate_ed(basis::SparseProduct, BB::Tuple, ∂BB::Tuple) 
    A = zeros(length(basis))
