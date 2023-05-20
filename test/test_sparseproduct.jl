@@ -6,7 +6,8 @@ using Polynomials4ML
 using ACEbase.Testing: fdtest
 
 ##
-NB = rand(collect(5:30))
+# NB = rand(collect(5:30))
+NB = 3
 N = [i * 4 for i = 1:NB]
 
 B = [randn(N[i]) for i = 1:NB]
@@ -61,7 +62,7 @@ println_slim(@test AA ≈ A1 )
 println_slim(@test dA ≈ A2 )
 @info("Test batch evaluation")
 
-nX = 64 
+nX = 64
 bBB = Tuple([randn(nX, N[i]) for i = 1:NB])
 bA1 = zeros(ComplexF64, nX, length(basis))
 

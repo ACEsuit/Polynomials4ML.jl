@@ -19,7 +19,7 @@ Base.length(basis::SparseProduct) = length(basis.spec)
 
 SparseProduct(spec) = SparseProduct(spec, _make_reqfields()...)
 
-_valtype(basis::SparseProduct{T1}, TX::NTuple{NB, Vector{T2}}) where {T1, T2, NB} = T2
+_valtype(basis::SparseProduct{T1}, TX::NTuple{NB, AbstractVecOrMat{T2}}) where {T1, T2, NB} = T2
 
 # ----------------------- evaluation interfaces 
 
