@@ -107,8 +107,19 @@ _laplacetype(basis::AbstractPoly4MLBasis, X::BATCH) =
 
 _out_size(basis::AbstractPoly4MLBasis, x::SINGLE) = (length(basis),)
 _out_size(basis::AbstractPoly4MLBasis, X::BATCH) = (length(X), length(basis))
+
+# specfically for SparseProduct
+_out_size(basis::AbstractPoly4MLBasis, x::NTuple) = (length(basis), )
+
+
 _outsym(x::SINGLE) = :out 
 _outsym(X::BATCH) = :outb
+
+# this is just for temporary use and we should think about how to do it generally...
+
+# speccially for SparseProduct
+_outsym(x::NTuple) = :out
+
 
 _alloc(basis::AbstractPoly4MLBasis, X) = 
       acquire!(basis.pool, _outsym(X), _out_size(basis, X), _valtype(basis, X) )

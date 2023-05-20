@@ -1,6 +1,7 @@
-struct SparseProduct{NB}
+struct SparseProduct{NB} <: AbstractPoly4MLBasis
    spec::Vector{NTuple{NB, Int}}
-   # ---- temporaries & caches 
+   # ---- temporaries & caches
+   @reqfields()   
 end
 
 function SparseProduct()
@@ -16,24 +17,27 @@ end
  
 Base.length(basis::SparseProduct) = length(basis.spec)
 
+SparseProduct(spec) = SparseProduct(spec, _make_reqfields()...)
+
+_valtype(basis::SparseProduct{T1}, TX::NTuple{NB, Vector{T2}}) where {T1, T2, NB} = T2
 
 # ----------------------- evaluation interfaces 
 
 
-function evaluate(basis::SparseProduct, BB::Tuple{Vararg{AbstractVector}}) 
-   VT = mapreduce(eltype, promote_type, BB)
-   A = zeros(VT, length(basis))
-   evaluate!(A, basis, BB::Tuple)
-   return A 
-end
+# function evaluate(basis::SparseProduct, BB::Tuple{Vararg{AbstractVector}}) 
+#    VT = mapreduce(eltype, promote_type, BB)
+#    A = zeros(VT, length(basis))
+#    evaluate!(A, basis, BB::Tuple)
+#    return A
+# end
 
-function evaluate(basis::SparseProduct, BB::Tuple{Vararg{AbstractMatrix}}) 
-   VT = mapreduce(eltype, promote_type, BB)
-   nX = size(BB[1], 1)
-   A = zeros(VT, nX, length(basis))
-   evaluate!(A, basis, BB::Tuple)
-   return A 
-end
+# function evaluate(basis::SparseProduct, BB::Tuple{Vararg{AbstractMatrix}}) 
+#    VT = mapreduce(eltype, promote_type, BB)
+#    nX = size(BB[1], 1)
+#    A = zeros(VT, nX, length(basis))
+#    evaluate!(A, basis, BB::Tuple)
+#    return A 
+# end
    
 function evaluate_ed(basis::SparseProduct, BB::Tuple{Vararg{AbstractVector}}) 
    VT = mapreduce(eltype, promote_type, BB)
