@@ -53,7 +53,7 @@ function evaluate_ed(basis::SparseProduct, BB::Tuple{Vararg{AbstractMatrix}})
    nX = size(BB[1], 1)
    A = zeros(VT, nX, length(basis))
    _similar(BB::Tuple) = Tuple([similar(BB[i]) for i = 1:length(BB)])
-   dA = [_similar(BB) for i = 1:nX, j = 1:length(basis)] # nX * basis
+   dA = [_similar(BB) for i = 1:length(basis)] # nX * basis
    evaluate_ed!(A, dA, basis, BB::Tuple)
    return A, dA
 end
@@ -69,10 +69,10 @@ end
 
 function evaluate_ed2(basis::SparseProduct, BB::Tuple{Vararg{AbstractMatrix}}) 
    VT = mapreduce(eltype, promote_type, BB)
-   nX = size(∂∂BB[1], 1)
+   nX = size(BB[1], 1)
    A = zeros(VT, nX, length(basis))
    _similar(BB::Tuple) = Tuple([similar(BB[i]) for i = 1:length(BB)])
-   dA, ddA = ([_similar(BB) for i = 1:nX, j = 1:length(basis)], [_similar(BB) for i = 1:nX, j = 1:length(basis)])
+   dA, ddA = ([_similar(BB) for _ = 1:length(basis)], [_similar(BB) for _ = 1:length(basis)])
    evaluate_ed2!(A, dA, ddA, basis, BB::Tuple)
    return A, dA, ddA
 end
@@ -171,15 +171,15 @@ function evaluate_ed!(A, dA, basis::SparseProduct{NB}, BB::Tuple{Vararg{Abstract
    spec = basis.spec
    # evaluate!(A, basis, BB)
    @inbounds for (iA, ϕ) in enumerate(spec)
+      fill!.(dA[iA], 0.0)
       @simd ivdep for j = 1:nX 
         b = ntuple(Val(NB)) do i 
            @inbounds BB[i][j, ϕ[i]] 
         end 
         g = _prod_ed(b, Val(NB))
         A[j, iA] = g[1] 
-        fill!.(dA[j, iA], 0.0)
         for i = 1:NB
-           dA[j, iA][i][j, ϕ[i]] += g[i + 1]
+           dA[iA][i][j, ϕ[i]] += g[i + 1]
         end
       end 
    end
@@ -212,16 +212,16 @@ function evaluate_ed2!(A, dA, ddA, basis::SparseProduct{NB}, BB::Tuple{Vararg{Ab
    spec = basis.spec
    # evaluate!(A, basis, BB)
    @inbounds for (iA, ϕ) in enumerate(spec)
+      fill!.(dA[iA], 0.0)
+      fill!.(ddA[iA], 0.0)
       @simd ivdep for j = 1:nX 
         b = ntuple(Val(NB)) do i 
            @inbounds BB[i][j, ϕ[i]] 
         end 
         g = _prod_ed(b, Val(NB))
         A[j, iA] = g[1] 
-        fill!.(dA[j, iA], 0.0)
-        fill!.(ddA[j, iA], 0.0)
         for i = 1:NB
-           dA[j, iA][i][j, ϕ[i]] += g[i + 1]
+           dA[iA][i][j, ϕ[i]] += g[i + 1]
         end
       end 
    end
@@ -374,85 +374,4 @@ function _pullback_evaluate!(∂BB, ∂A, basis::SparseProduct{NB}, BB::Tuple) w
    return nothing 
 end
 
-test_evaluate(basis::SparseProduct, BB::Tuple) = 
-       [ prod(BB[j][basis.spec[i][j]] for j = 1:length(BB)) 
-            for i = 1:length(basis) ]
-
-function test_evaluate_ed(basis, BB)
-    A = evaluate_ed(basis, BB)[1]
-    dA = evaluate_ed(basis, BB)[2]
-    errors = Float64[]
-    # loop through finite-difference step-lengths
-    @printf("---------|----------- \n")
-    @printf("    h    | error \n")
-    @printf("---------|----------- \n")
-    for p = 2:11
-        h = 0.1^p
-        dAh = deepcopy(dA)
-        Δ = deepcopy(dA)
-        for n = 1:length(dAh) # basis
-            for i = 1:length(dAh[n]) #NB
-                for j = 1:length(dAh[n][i]) #BB[i]
-                    BB[i][j] += h
-                    dAh[n][i][j] = (evaluate(basis, BB)[n] - A[n])/h
-                    Δ[n][i][j] = dA[n][i][j] - dAh[n][i][j]
-                    BB[i][j] -= h
-                end
-            end
-        end
-        push!(errors, maximum([norm(Δ[i][j], Inf) for i = 1:length(Δ), j = 1:length(Δ[i])] ))
-        @printf(" %1.1e | %4.2e  \n", h, errors[end])
-    end
-    @printf("---------|----------- \n")
-    if minimum(errors) <= 1e-3 * maximum(errors)
-        println("passed")
-        return true
-   else
-        @warn("""It seems the finite-difference test has failed, which indicates
-        that there is an inconsistency between the function and gradient
-        evaluation. Please double-check this manually / visually. (It is
-        also possible that the function being tested is poorly scaled.)""")
-        return false
-   end
-end
-
-function test_evaluate_ed2(basis, BB)
-   A = evaluate_ed2(basis, BB)[1]
-   ddA = evaluate_ed2(basis, BB)[3]
-   errors = Float64[]
-   # loop through finite-difference step-lengths
-   @printf("---------|----------- \n")
-   @printf("    h    | error \n")
-   @printf("---------|----------- \n")
-   for p = 2:11
-       h = 0.1^p
-       ddAh = deepcopy(ddA)
-       Δ = deepcopy(ddA)
-       for n = 1:length(ddAh) # basis
-           for i = 1:length(ddAh[n]) #NB
-               for j = 1:length(ddAh[n][i]) #BB[i]
-                   BB[i][j] += h
-                   ddAh[n][i][j] = evaluate(basis, BB)[n] - 2 * A[n]
-                   BB[i][j] -= 2*h
-                   ddAh[n][i][j] = (ddAh[n][i][j] + evaluate(basis, BB)[n])/h^2
-                   BB[i][j] += h 
-                   Δ[n][i][j] = ddA[n][i][j] - ddAh[n][i][j]
-               end
-           end
-       end
-       push!(errors, maximum([norm(Δ[i][j], Inf) for i = 1:length(Δ), j = 1:length(Δ[i])] ))
-       @printf(" %1.1e | %4.2e  \n", h, errors[end])
-   end
-   @printf("---------|----------- \n")
-   if minimum(errors) <= 1e-3 * maximum(errors)
-       println("passed")
-       return true
-  else
-       @warn("""It seems the finite-difference test has failed, which indicates
-       that there is an inconsistency between the function and gradient
-       evaluation. Please double-check this manually / visually. (It is
-       also possible that the function being tested is poorly scaled.)""")
-       return false
-  end
-end
 
