@@ -1,10 +1,19 @@
 
 using BenchmarkTools, Test, Polynomials4ML
-using Polynomials4ML:  PooledSparseProduct, test_evaluate, evaluate, evaluate!, 
-                evalpool, test_evalpool, evalpool!
+using Polynomials4ML:  PooledSparseProduct, evaluate, evaluate! 
 using ACEbase.Testing: fdtest, println_slim, print_tf
+       
+test_evaluate(basis::PooledSparseProduct, BB::Tuple{Vararg{<: AbstractVector}}) = 
+       [ prod(BB[j][basis.spec[i][j]] for j = 1:length(BB)) 
+            for i = 1:length(basis) ]
+
+test_evaluate(basis::PooledSparseProduct, BB::Tuple{Vararg{<: AbstractMatrix}}) = 
+      sum( test_evaluate(basis, ntuple(i -> BB[i][j, :], length(BB)))
+         for j = 1:size(BB[1], 1) )            
 
 P4ML = Polynomials4ML
+
+##
 
 N1 = 10 
 N2 = 20 
@@ -20,7 +29,7 @@ basis = PooledSparseProduct(spec)
 
 ## 
 
-@info("Test serial evaluation")
+@info("Test evaluation with a single input (no pooling)")
 
 BB = (B1, B2, B3)
 
@@ -31,16 +40,16 @@ println_slim(@test A1 ≈ A2 )
 
 ## 
 
-@info("Test batched evaluation")
+@info("Test pooling of multiple inputs")
 nX = 64 
 bBB = ( randn(nX, N1), randn(nX, N2), randn(nX, N3) )
 
 # using the naive evaluation code 
-bA1 = test_evalpool(basis, bBB)
-bA2 = evalpool(basis, bBB)
+bA1 = test_evaluate(basis, bBB)
+bA2 = evaluate(basis, bBB)
 
 bA3 = copy(bA2)
-evalpool!(bA3, basis, bBB)
+evaluate!(bA3, basis, bBB)
 
 println_slim(@test bA1 ≈ bA2 ≈ bA3 )
 
