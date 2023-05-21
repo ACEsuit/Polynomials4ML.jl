@@ -22,6 +22,6 @@ for (basis, rnd) in test_bases
    B1 = evaluate(basis, x)
    l = lux(basis)
    ps, st = Lux.setup(rng, l)
-   B2 = l(x, ps, st)
+   B2, _ = l(x, ps, st)
    println_slim(@test B1 == parent(B2))
 end
