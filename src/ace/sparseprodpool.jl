@@ -224,22 +224,22 @@ using StaticArrays
 
 
 
-function _rrule_evalpool(basis::PooledSparseProduct{NB}, BB::Tuple) where {NB}
-   A = evalpool(basis, BB)
-   return A, ∂A -> _pullback_evalpool(∂A, basis, BB)
+function _rrule_evaluate(basis::PooledSparseProduct{NB}, BB::TupMat) where {NB}
+   A = evaluate(basis, BB)
+   return A, ∂A -> _pullback_evaluate(∂A, basis, BB)
 end
 
 
-function _pullback_evalpool(∂A, basis::PooledSparseProduct{NB}, BB::Tuple) where {NB}
+function _pullback_evaluate(∂A, basis::PooledSparseProduct{NB}, BB::TupMat) where {NB}
    nX = size(BB[1], 1)
    TA = promote_type(eltype.(BB)...)
    ∂BB = ntuple(i -> zeros(TA, size(BB[i])...), NB)
-   _pullback_evalpool!(∂BB, ∂A, basis, BB)
+   _pullback_evaluate!(∂BB, ∂A, basis, BB)
    return ∂BB
 end
 
 
-function _pullback_evalpool!(∂BB, ∂A, basis::PooledSparseProduct{NB}, BB::Tuple) where {NB}
+function _pullback_evaluate!(∂BB, ∂A, basis::PooledSparseProduct{NB}, BB::TupMat) where {NB}
    nX = size(BB[1], 1)
    @assert all(nX <= size(BB[i], 1) for i = 1:NB)
    @assert all(nX <= size(∂BB[i], 1) for i = 1:NB)
@@ -268,7 +268,7 @@ end
 #       a cruder code generation strategy. This specialized code 
 #       confirms this. 
 
-function _pullback_evalpool!(∂BB, ∂A, basis::PooledSparseProduct{2}, BB::Tuple)
+function _pullback_evaluate!(∂BB, ∂A, basis::PooledSparseProduct{2}, BB::Tuple)
    nX = size(BB[1], 1)
    NB = 2 
    @assert length(∂A) == length(basis)
@@ -293,48 +293,48 @@ end
 
 
 
-function _pullback_evalpool!(∂BB, ∂A, basis::PooledSparseProduct{NB}, 
-                             BB::Tuple, target::AbstractVector{<: Integer}) where {NB}
-   nX = size(BB[1], 1)
-   nT = size(∂A, 1)
-   mint, maxt = extrema(target)
-   @assert 0 < mint <= maxt <= nT
-   @assert all(nX <= size(BB[i], 1) for i = 1:NB)
-   @assert all(nX <= size(∂BB[i], 1) for i = 1:NB)
-   @assert all(size(∂BB[i], 2) >= size(BB[i], 2) for i = 1:NB)
-   @assert size(∂A, 2) == length(basis)
-   @assert length(BB) == NB 
-   @assert length(∂BB) == NB 
+# function _pullback_evaluate!(∂BB, ∂A, basis::PooledSparseProduct{NB}, 
+#                              BB::Tuple, target::AbstractVector{<: Integer}) where {NB}
+#    nX = size(BB[1], 1)
+#    nT = size(∂A, 1)
+#    mint, maxt = extrema(target)
+#    @assert 0 < mint <= maxt <= nT
+#    @assert all(nX <= size(BB[i], 1) for i = 1:NB)
+#    @assert all(nX <= size(∂BB[i], 1) for i = 1:NB)
+#    @assert all(size(∂BB[i], 2) >= size(BB[i], 2) for i = 1:NB)
+#    @assert size(∂A, 2) == length(basis)
+#    @assert length(BB) == NB 
+#    @assert length(∂BB) == NB 
 
-   # ∂A_loc = zeros(eltype(∂A), nT)
+#    # ∂A_loc = zeros(eltype(∂A), nT)
 
-   @inbounds for (iA, ϕ) in enumerate(basis.spec)
-      # @simd ivdep for t = 1:nT 
-      #    ∂A_loc[t] = ∂A[t, iA]
-      # end
-      @simd ivdep for j = 1:nX 
-         ∂A_iA = ∂A[target[j], iA] # ∂A_loc[target[j] ] 
-         b = ntuple(Val(NB)) do i 
-            @inbounds BB[i][j, ϕ[i]] 
-         end 
-         g = _prod_grad(b, Val(NB))
-         for i = 1:NB 
-            ∂BB[i][j, ϕ[i]] = muladd(∂A_iA, g[i], ∂BB[i][j, ϕ[i]])
-         end
-      end 
-   end
-   return nothing 
-end
+#    @inbounds for (iA, ϕ) in enumerate(basis.spec)
+#       # @simd ivdep for t = 1:nT 
+#       #    ∂A_loc[t] = ∂A[t, iA]
+#       # end
+#       @simd ivdep for j = 1:nX 
+#          ∂A_iA = ∂A[target[j], iA] # ∂A_loc[target[j] ] 
+#          b = ntuple(Val(NB)) do i 
+#             @inbounds BB[i][j, ϕ[i]] 
+#          end 
+#          g = _prod_grad(b, Val(NB))
+#          for i = 1:NB 
+#             ∂BB[i][j, ϕ[i]] = muladd(∂A_iA, g[i], ∂BB[i][j, ϕ[i]])
+#          end
+#       end 
+#    end
+#    return nothing 
+# end
 
 
 # --------------------- connect with ChainRules 
 # todo ... 
 
-function rrule(::typeof(evaluate), basis::PooledSparseProduct{NB}, BB::Tuple) where {NB}
+function rrule(::typeof(evaluate), basis::PooledSparseProduct{NB}, BB::TupMat) where {NB}
    A = evaluate(basis, BB)
 
    function pb(Δ)
-      ∂BB = _pullback_evalpool(Δ, basis, BB)
+      ∂BB = _pullback_evaluate(Δ, basis, BB)
       return NoTangent(), NoTangent(), ∂BB
    end 
 

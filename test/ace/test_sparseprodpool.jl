@@ -83,11 +83,11 @@ for ntest = 1:30
    bBB = ( randn(nX, N1), randn(nX, N2), randn(nX, N3) )
    bUU = ( randn(nX, N1), randn(nX, N2), randn(nX, N3) )
    _BB(t) = ( bBB[1] + t * bUU[1], bBB[2] + t * bUU[2], bBB[3] + t * bUU[3] )
-   bA2 = evalpool(basis, bBB)
+   bA2 = evaluate(basis, bBB)
    u = randn(size(bA2))
-   F(t) = dot(u, evalpool(basis, _BB(t)))
+   F(t) = dot(u, evaluate(basis, _BB(t)))
    dF(t) = begin
-      val, pb = P4ML._rrule_evalpool(basis, _BB(t))
+      val, pb = P4ML._rrule_evaluate(basis, _BB(t))
       ∂BB = pb(u)
       return sum( dot(∂BB[i], bUU[i]) for i = 1:length(bUU) )
    end
