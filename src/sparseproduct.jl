@@ -22,61 +22,6 @@ SparseProduct(spec) = SparseProduct(spec, _make_reqfields()...)
 _valtype(basis::SparseProduct{T1}, TX::NTuple{NB, AbstractVecOrMat{T2}}) where {T1, T2, NB} = T2
 
 # ----------------------- evaluation interfaces 
-
-
-# function evaluate(basis::SparseProduct, BB::Tuple{Vararg{AbstractVector}}) 
-#    VT = mapreduce(eltype, promote_type, BB)
-#    A = zeros(VT, length(basis))
-#    evaluate!(A, basis, BB::Tuple)
-#    return A
-# end
-
-# function evaluate(basis::SparseProduct, BB::Tuple{Vararg{AbstractMatrix}}) 
-#    VT = mapreduce(eltype, promote_type, BB)
-#    nX = size(BB[1], 1)
-#    A = zeros(VT, nX, length(basis))
-#    evaluate!(A, basis, BB::Tuple)
-#    return A 
-# end
-   
-function evaluate_ed(basis::SparseProduct, BB::Tuple{Vararg{AbstractVector}}) 
-   VT = mapreduce(eltype, promote_type, BB)
-   A = zeros(VT, length(basis))
-   _similar(BB::Tuple) = Tuple([similar(BB[i]) for i = 1:length(BB)])
-   dA = [_similar(BB) for _ = 1:length(basis)]
-   evaluate_ed!(A, dA, basis, BB::Tuple)
-   return A, dA
-end
-
-function evaluate_ed(basis::SparseProduct, BB::Tuple{Vararg{AbstractMatrix}}) 
-   VT = mapreduce(eltype, promote_type, BB)
-   nX = size(BB[1], 1)
-   A = zeros(VT, nX, length(basis))
-   _similar(BB::Tuple) = Tuple([similar(BB[i]) for i = 1:length(BB)])
-   dA = [_similar(BB) for i = 1:length(basis)] # nX * basis
-   evaluate_ed!(A, dA, basis, BB::Tuple)
-   return A, dA
-end
-
-function evaluate_ed2(basis::SparseProduct, BB::Tuple{Vararg{AbstractVector}}) 
-   VT = mapreduce(eltype, promote_type, BB)
-   A = zeros(VT, length(basis))
-   _similar(BB::Tuple) = Tuple([similar(BB[i]) for i = 1:length(BB)])
-   dA, ddA = ([_similar(BB) for _ = 1:length(basis)], [_similar(BB) for _ = 1:length(basis)])
-   evaluate_ed2!(A, dA, ddA, basis, BB::Tuple)
-   return A, dA, ddA
-end
-
-function evaluate_ed2(basis::SparseProduct, BB::Tuple{Vararg{AbstractMatrix}}) 
-   VT = mapreduce(eltype, promote_type, BB)
-   nX = size(BB[1], 1)
-   A = zeros(VT, nX, length(basis))
-   _similar(BB::Tuple) = Tuple([similar(BB[i]) for i = 1:length(BB)])
-   dA, ddA = ([_similar(BB) for _ = 1:length(basis)], [_similar(BB) for _ = 1:length(basis)])
-   evaluate_ed2!(A, dA, ddA, basis, BB::Tuple)
-   return A, dA, ddA
-end
-
 function _frule_evaluate(basis::SparseProduct, BB::Tuple{Vararg{AbstractVector}}, ∂BB::Tuple{Vararg{AbstractVector}}) 
    VT = mapreduce(eltype, promote_type, BB)
    A = zeros(VT, length(basis))

@@ -5,8 +5,10 @@ using Polynomials4ML: SparseProduct, evaluate, evaluate_ed, evaluate_ed2
 using LinearAlgebra: norm
 using Polynomials4ML
 using ACEbase.Testing: fdtest
+
 ##
-NB = 3
+NB = 3 # For _rrule_evaluate test we need NB = 3, fix later by generalizing the test case
+
 
 N = [i * 4 for i = 1:NB]
 
@@ -131,7 +133,7 @@ A2 = evaluate_ed2(basis, BB)[2]
 
 println_slim(@test AA ≈ A1 )
 Δ = maximum([norm(dA[i][j] - A2[i][j], Inf) for i = 1:length(dA) for j = 1:length(dA[i])])
-println_slim(@test Δ ≈ 0.0)
+println_slim(@test norm(Δ) <= 1e-15)
 @info("Test batch evaluation")
 
 nX = 5
@@ -201,9 +203,9 @@ bbA2 = evaluate_ed2(basis, bBB)[3]
 
 println_slim(@test A1 ≈ A2)
 Δ = maximum([norm(bA1[i][j] - bA2[i][j], Inf) for i = 1:length(bA1) for j = 1:length(bA1[i])])
-println_slim(@test Δ ≈ 0)
+println_slim(@test norm(Δ) <= 1e-15)
 Δ = maximum([norm(bbA1[i][j] - bbA2[i][j], Inf) for i = 1:length(bbA1) for j = 1:length(bbA1[i])])
-println_slim(@test Δ ≈ 0)
+println_slim(@test norm(Δ) <= 1e-15)
 
 @info("Testing _rrule_evaluate")
 using LinearAlgebra: dot 
@@ -211,6 +213,7 @@ using LinearAlgebra: dot
 N1 = 10
 N2 = 20
 N3 = 30
+
 for ntest = 1:30
     local bBB
     local bUU

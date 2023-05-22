@@ -110,7 +110,7 @@ _out_size(basis::AbstractPoly4MLBasis, X::BATCH) = (length(X), length(basis))
 
 # specfically for SparseProduct
 _out_size(basis::AbstractPoly4MLBasis, x::NTuple{NB, AbstractVector{T}}) where {NB, T} = (length(basis), )
-_out_size(basis::AbstractPoly4MLBasis, X::NTuple{NB, AbstractMatrix{T}}) where {NB, T} = (size(X[1], 1), length(basis), )
+_out_size(basis::AbstractPoly4MLBasis, X::NTuple{NB, AbstractMatrix{T}}) where {NB, T} = (size(X[1], 1), length(basis))
 
 
 _outsym(x::SINGLE) = :out 
@@ -137,6 +137,21 @@ _alloc_ed(basis::AbstractPoly4MLBasis, x) =
 
 _alloc_ed2(basis::AbstractPoly4MLBasis, x) = 
       _alloc(basis, x), _alloc_d(basis, x), _alloc_dd(basis, x)
+
+
+# special functions for SparseProduct
+function _alloc_d(basis::AbstractPoly4MLBasis, BBs::NTuple{NB, AbstractVecOrMat{T}}) where {NB, T}
+      BBs_size = [size(bb) for bb in BBs]
+      return [Tuple([acquire!(basis.pool, _outsym(BBs), (BBsize), _valtype(basis, BBs)) for BBsize in BBs_size]) for _ = 1:length(basis)]
+end
+
+function _alloc_dd(basis::AbstractPoly4MLBasis, BBs::NTuple{NB, AbstractVecOrMat{T}}) where {NB, T}
+      BBs_size = [size(bb) for bb in BBs]
+      return [Tuple([acquire!(basis.pool, _outsym(BBs), (BBsize), _valtype(basis, BBs)) for BBsize in BBs_size]) for _ = 1:length(basis)]
+end
+
+_alloc_ed(basis::AbstractPoly4MLBasis, x::NTuple{NB, AbstractVecOrMat{T}}) where {NB, T} = _alloc(basis, x), _alloc_d(basis, x)
+_alloc_ed2(basis::AbstractPoly4MLBasis, x::NTuple{NB, AbstractVecOrMat{T}}) where {NB, T} = _alloc(basis, x), _alloc_d(basis, x), _alloc_dd(basis, x)
 
 
 # OLD ARRAY BASED INTERFACE 
