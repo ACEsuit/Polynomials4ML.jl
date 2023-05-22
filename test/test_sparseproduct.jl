@@ -1,9 +1,18 @@
 using Test
 using Polynomials4ML.Testing: println_slim, print_tf
-using Polynomials4ML: SparseProduct, evaluate, test_evaluate
+using Polynomials4ML: SparseProduct, evaluate
 using LinearAlgebra: norm
 using Polynomials4ML
 using ACEbase.Testing: fdtest
+
+test_evaluate(basis::SparseProduct, BB::Tuple{Vararg{<: AbstractVector}}) = 
+       [ prod(BB[j][basis.spec[i][j]] for j = 1:length(BB)) 
+            for i = 1:length(basis) ]
+
+# test_evaluate(basis::SparseProduct, BB::Tuple{Vararg{<: AbstractMatrix}}) = 
+#         [ test_evaluate(basis, ntuple(i -> BB[i][j, :], length(BB)))
+#          for j = 1:size(BB[1], 1) )            
+
 
 ##
 

@@ -5,26 +5,29 @@ using Combinatorics: combinations, partitions
 
 const BinDagNode = Tuple{Int, Int}
 
-struct SparseSymmProdDAG{T}
+struct SparseSymmProdDAG <: AbstractPoly4MLBasis
    nodes::Vector{BinDagNode}
    has0::Bool
    num1::Int
    numstore::Int
    projection::Vector{Int}
    # ---- temps
-   pool::ArrayPool{FlexArrayCache}
+   @reqfields
 end
 
-# warning: this is not the length of the basis!!! 
+# warning: if SparseSymmProdDAG is an extended basis, then `length` will be 
+# the extended length and not the length of the actual basis. 
+
 length(dag::SparseSymmProdDAG) = length(dag.nodes)
 
 # ==(dag1::SparseSymmProdDAG, dag2::SparseSymmProdDAG) = ACE1._allfieldsequal(dag1, dag2)
 
-SparseSymmProdDAG(; T=Float64) = SparseSymmProdDAG{T}(Vector{BinDagNode}(undef, 0), 0, 0)
+SparseSymmProdDAG() = SparseSymmProdDAG(Vector{BinDagNode}(undef, 0), false, 0, 0)
 
-SparseSymmProdDAG{T}(nodes, has0, num1, numstore, projection)  where {T} = 
-               SparseSymmProdDAG{T}(nodes, has0, num1, numstore, projection, 
-                                    ArrayPool(FlexArrayCache))
+SparseSymmProdDAG(nodes, has0, num1, numstore, proj)   = 
+         SparseSymmProdDAG(nodes, has0, num1, numstore, proj, 
+                              _make_reqfields()...)
+
 
 # # -------------- FIO
 
@@ -128,8 +131,7 @@ Kwargs:
 """
 function SparseSymmProdDAG(spec::AbstractVector; 
                            filter = _->true, 
-                           verbose = false, 
-                           T = Float64)
+                           verbose = false)
    @assert issorted(length.(spec))
    @assert all(issorted, spec)
    # we need to separate them into 0-corr, 1-corr and N-corr
@@ -179,7 +181,7 @@ function SparseSymmProdDAG(spec::AbstractVector;
    # re-organise the dag layout to minimise numstore
    # nodesfinal, num1, numstore = _reorder_dag!(nodes)
 
-   return SparseSymmProdDAG{T}(nodes, has0, num1, numstore, projection)
+   return SparseSymmProdDAG(nodes, has0, num1, numstore, projection)
 end
 
 
@@ -231,7 +233,7 @@ end
 
 
 # ------------------------------------------------------------------
-# reconstruct the specification without the tree ... 
+# reconstruct the specification from the DAG ... 
 
 
 function reconstruct_spec(dag::SparseSymmProdDAG)

@@ -18,19 +18,22 @@ A = randn(ComplexF64, 2*M+1)
 basis1 = SimpleProdBasis(spec)
 AA1 = basis1(A)
 
-basis2 = SparseSymmProd(spec; T = ComplexF64)
+basis2 = SparseSymmProd(spec)
 AA2 = basis2(A)
 
+@info("check against simple implementation")
+println_slim(@test AA1 ≈ AA2)
+
+@info("reconstruct spec")
 spec_ = P4ML.reconstruct_spec(basis2)
 println_slim(@test spec_ == spec)
-println_slim(@test AA1 ≈ AA2)
 
 ##
 
 @info("Test with a constant")
 spec_c = [ [Int[],]; spec]
 basis1_c = SimpleProdBasis(spec_c)
-basis2_c = SparseSymmProd(spec_c; T = ComplexF64)
+basis2_c = SparseSymmProd(spec_c)
 
 spec_c_ = P4ML.reconstruct_spec(basis2_c)
 println_slim(@test spec_c_ == spec_c)

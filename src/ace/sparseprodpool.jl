@@ -341,7 +341,11 @@ function rrule(::typeof(evaluate), basis::PooledSparseProduct{NB}, BB::TupMat) w
    return A, pb 
 end
 
+
 # --------------------- connect with Lux 
+# it looks like we could use the standard P4ML basis wrapper 
+# but technically the pooling operation changes the behaviour in
+# a few ways and we need to be very careful about this
 
 
 # struct PooledSparseProductLayer{NB} <: AbstractExplicitLayer 

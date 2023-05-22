@@ -3,6 +3,8 @@ import LuxCore
 import LuxCore: initialparameters, initialstates, AbstractExplicitLayer
 using Random: AbstractRNG
 
+using ChainRulesCore
+
 """
 lux(basis) : convert a basis / embedding object into a lux layer. This assumes 
 that the basis accepts a number or short vector as input and produces an output 
@@ -34,6 +36,8 @@ _init_default_luxstate() = ( tmp = ArrayPool(FlexArray),
 # ---------- PolyLuxLayer
 # the simplest lux layer implementation 
 
+
+
 struct PolyLuxLayer{TB} <: AbstractExplicitLayer
    basis::TB
    meta::Dict{String, Any}
@@ -52,6 +56,11 @@ initialstates(rng::AbstractRNG, l::PolyLuxLayer) = _init_luxstate(rng, l.basis)
 
 (l::PolyLuxLayer)(args...) = evaluate(l, args...)
 
-evaluate(l::PolyLuxLayer, X, ps, st) = evaluate(l.basis, X), st
+function evaluate(l::PolyLuxLayer, X, ps, st) 
+   B = ChainRulesCore.ignore_derivatives() do 
+      evaluate(l.basis, X)
+   end
+   return B, st 
+end 
 
 
