@@ -68,7 +68,7 @@ end
 
 # -------------- Chainrules integration 
 
-function _pullback(Δ, basis::SparseSymmProd, A, AA, AAdag)
+function _pullback(Δ, basis::SparseSymmProd, A::AbstractVector, AA, AAdag)
    Δdag = zeros(eltype(Δ), length(AAdag))
    Δdag[basis.proj] .= Δ
    T = promote_type(eltype(Δdag), eltype(AAdag))
@@ -76,6 +76,17 @@ function _pullback(Δ, basis::SparseSymmProd, A, AA, AAdag)
    pullback_arg!(ΔA, Δdag, basis.dag, AAdag)
    return ΔA
 end
+
+
+function _pullback(Δ, basis::SparseSymmProd, A::AbstractMatrix, AA, AAdag)
+   Δdag = zeros(eltype(Δ), size(AAdag)...)
+   Δdag[:, basis.proj] .= Δ
+   T = promote_type(eltype(Δdag), eltype(AAdag))
+   ΔA = zeros(T, size(A)...)
+   pullback_arg!(ΔA, Δdag, basis.dag, AAdag)
+   return ΔA
+end
+
 
 function rrule(::typeof(evaluate), basis::SparseSymmProd, A::AbstractVector)
    AAdag = evaluate(basis.dag, A)
@@ -89,6 +100,12 @@ function rrule(::typeof(evaluate), basis::SparseSymmProd, A::AbstractVector)
    #    pullback_arg!(ΔA, Δdag, basis.dag, AAdag)
    #    return NoTangent(), NoTangent(), ΔA
    # end
+   return AA, Δ -> (NoTangent(), NoTangent(), _pullback(Δ, basis, A, AA, AAdag))
+end
+
+function rrule(::typeof(evaluate), basis::SparseSymmProd, A::AbstractMatrix)
+   AAdag = evaluate(basis.dag, A)
+   AA = AAdag[:, basis.proj]
    return AA, Δ -> (NoTangent(), NoTangent(), _pullback(Δ, basis, A, AA, AAdag))
 end
 
