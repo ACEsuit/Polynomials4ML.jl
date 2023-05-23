@@ -5,6 +5,7 @@ using Polynomials4ML: SparseProduct, evaluate, evaluate_ed, evaluate_ed2
 using LinearAlgebra: norm
 using Polynomials4ML
 using ACEbase.Testing: fdtest
+using Zygote
 
 ##
 NB = 3 # For _rrule_evaluate test we need NB = 3, fix later by generalizing the test case
@@ -225,8 +226,8 @@ for ntest = 1:30
     u = randn(size(bA2))
     F(t) = dot(u, Polynomials4ML.evaluate(basis, _BB(t)))
     dF(t) = begin
-        val, pb = Polynomials4ML._rrule_evaluate(basis, _BB(t))
-        ∂BB = pb(u)
+        val, pb = Zygote.pullback(evaluate, basis, _BB(t))
+        ∂BB = pb(u)[2] # pb(u)[1] returns NoTangent() for basis argument
         return sum( dot(∂BB[i], bUU[i]) for i = 1:length(bUU) )
     end
     print_tf(@test fdtest(F, dF, 0.0; verbose=false))
@@ -234,3 +235,8 @@ end
 println()
 
 ##
+
+# try with rrule
+u, pb = Zygote.pullback(evaluate, basis, bBB)
+# u1, pb1 = Polynomials4ML._rrule_evaluate(basis, bBB)
+

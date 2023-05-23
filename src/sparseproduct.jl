@@ -1,3 +1,6 @@
+using ChainRulesCore
+using ChainRulesCore: NoTangent
+
 struct SparseProduct{NB} <: AbstractPoly4MLBasis
    spec::Vector{NTuple{NB, Int}}
    # ---- temporaries & caches
@@ -280,10 +283,19 @@ function _frule_frule_evaluate!(A, dA, ddA, basis::SparseProduct{NB}, BB::Tuple{
 end
 # -------------------- reverse mode gradient
 
-function _rrule_evaluate(basis::SparseProduct{NB}, BB::Tuple) where {NB}
+function ChainRulesCore.rrule(::typeof(evaluate), basis::SparseProduct{NB}, BB::Tuple) where {NB}
    A = evaluate(basis, BB)
-   return A, ∂A -> _pullback_evaluate(∂A, basis, BB)
+   function pb(∂A)
+      return NoTangent(), NoTangent(), _pullback_evaluate(∂A, basis, BB)
+   end
+   return A, pb
 end
+
+
+# function _rrule_evaluate(basis::SparseProduct{NB}, BB::Tuple) where {NB}
+#    A = evaluate(basis, BB)
+#    return A, ∂A -> _pullback_evaluate(∂A, basis, BB)
+# end
 
 
 function _pullback_evaluate(∂A, basis::SparseProduct{NB}, BB::Tuple) where {NB}
