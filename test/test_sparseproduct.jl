@@ -23,7 +23,7 @@ test_evaluate(basis::SparseProduct, BB::Tuple) =
             for i = 1:length(basis) ]
 
 function test_evaluate_ed(basis, BB)
-    A = evaluate_ed(basis, BB)[1]
+    A = deepcopy(evaluate_ed(basis, BB)[1])
     dA = evaluate_ed(basis, BB)[2]
     errors = Float64[]
     # loop through finite-difference step-lengths
@@ -32,19 +32,17 @@ function test_evaluate_ed(basis, BB)
     @printf("---------|----------- \n")
     for p = 2:11
         h = 0.1^p
-        dAh = deepcopy(dA)
-        Δ = deepcopy(dA)
-        for n = 1:length(dAh) # basis
-            for i = 1:length(dAh[n]) #NB
-                for j = 1:length(dAh[n][i]) #BB[i]
+        Δ = []
+        for n = 1:length(dA) # basis
+            for i = 1:length(dA[n]) #NB
+                for j = 1:length(dA[n][i]) #BB[i]
                     BB[i][j] += h
-                    dAh[n][i][j] = (evaluate(basis, BB)[n] - A[n])/h
-                    Δ[n][i][j] = dA[n][i][j] - dAh[n][i][j]
+                    push!(Δ, dA[n][i][j] - (evaluate(basis, BB)[n] - A[n])/h)
                     BB[i][j] -= h
                 end
             end
         end
-        push!(errors, maximum([norm(Δ[i][j], Inf) for i = 1:length(Δ) for j = 1:length(Δ[i])] ))
+        push!(errors, norm(Δ, Inf))
         @printf(" %1.1e | %4.2e  \n", h, errors[end])
     end
     @printf("---------|----------- \n")
@@ -70,21 +68,20 @@ function test_evaluate_ed2(basis, BB)
    @printf("---------|----------- \n")
    for p = 2:11
        h = 0.1^p
-       ddAh = deepcopy(ddA)
-       Δ = deepcopy(ddA)
-       for n = 1:length(ddAh) # basis
-           for i = 1:length(ddAh[n]) #NB
-               for j = 1:length(ddAh[n][i]) #BB[i]
+       Δ = []
+       for n = 1:length(ddA) # basis
+           for i = 1:length(ddA[n]) #NB
+               for j = 1:length(ddA[n][i]) #BB[i]
                    BB[i][j] += h
-                   ddAh[n][i][j] = evaluate(basis, BB)[n] - 2 * A[n]
+                   AA = evaluate(basis, BB)[n] - 2 * A[n]
                    BB[i][j] -= 2*h
-                   ddAh[n][i][j] = (ddAh[n][i][j] + evaluate(basis, BB)[n])/h^2
+                   AA = (AA + evaluate(basis, BB)[n])/h^2
                    BB[i][j] += h 
-                   Δ[n][i][j] = ddA[n][i][j] - ddAh[n][i][j]
+                   push!(Δ, ddA[n][i][j] - AA)
                end
            end
        end
-       push!(errors, maximum([norm(Δ[i][j], Inf) for i = 1:length(Δ) for j = 1:length(Δ[i])] ))
+       push!(errors, norm(Δ, Inf))
        @printf(" %1.1e | %4.2e  \n", h, errors[end])
    end
    @printf("---------|----------- \n")
@@ -100,7 +97,6 @@ function test_evaluate_ed2(basis, BB)
   end
 end
 
-
 @info("Test serial evaluation")
 
 BB = Tuple(B)
@@ -113,7 +109,7 @@ println_slim(@test A1 ≈ A2 )
 @info("Test serial evaluation_ed")
 BB = Tuple(B)
 
-A = test_evaluate_ed(basis, BB)
+test_evaluate_ed(basis, BB)
 
 AA = evaluate(basis, BB)
 A1 = evaluate_ed(basis, BB)[1]
@@ -124,7 +120,7 @@ println_slim(@test AA ≈ A1 )
 @info("Test serial evaluation_ed2")
 BB = Tuple(B)
 
-A = test_evaluate_ed2(basis, BB)
+test_evaluate_ed2(basis, BB)
 
 AA = evaluate(basis, BB)
 dA = evaluate_ed(basis, BB)[2]
