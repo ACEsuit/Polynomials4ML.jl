@@ -1,4 +1,6 @@
 export AtomicOrbitalsRadials, GaussianBasis, SlaterBasis, STO_NG
+using ChainRulesCore
+using ChainRulesCore: NoTangent
 
 const NLM{T} = NamedTuple{(:n1, :n2, :l, :m), Tuple{T, T, T, T}}
 const NL{T} = NamedTuple{(:n1, :n2, :l), Tuple{T, T, T}}
@@ -89,6 +91,21 @@ function evaluate_ed2!(Rnl, dRnl, ddRnl, basis::AtomicOrbitalsRadials, R)
     release!(Dn); release!(dDn); release!(ddDn)
 
     return Rnl, dRnl, ddRnl
+end
+
+# not test
+function ChainRulesCore.rrule(::typeof(evaluate), basis::AtomicOrbitalsRadials, R::AbstractVector{<: Real})
+   A  = evaluate(basis, R)
+   ∂R = similar(R)
+   dR = evaluate_ed(basis, R)[2]
+   function pb(∂A)
+        @assert size(∂A) == (length(R), length(basis))
+        for i = 1:length(R)
+            ∂R[i] = dot(∂A[i,:], dR[i,:])
+        end
+        return NoTangent(), NoTangent(), ∂R
+   end
+   return A, pb
 end
 
 include("gaussian.jl")

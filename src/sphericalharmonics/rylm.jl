@@ -333,3 +333,12 @@ function eval_grad_laplace(basis::RYlmBasis, X)
 	ΔY = _lap(basis, Y)
 	return Y, dY, ΔY
 end
+
+# Placeholder for now
+function ChainRulesCore.rrule(::typeof(evaluate), basis::RYlmBasis, X)
+	A  = evaluate(basis, X)
+	function pb(∂A)
+		return NoTangent(), NoTangent(), X
+	end
+	return A, pb
+end
