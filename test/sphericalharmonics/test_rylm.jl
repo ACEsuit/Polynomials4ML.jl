@@ -164,7 +164,7 @@ for ntest = 1:30
     F(t) = dot(u, evaluate(rSH, _x(t)))
     dF(t) = begin
         val, pb = Zygote.pullback(rSH, _x(t))
-        ∂BB = pb1(u)[1] # pb(u)[1] returns NoTangent() for basis argument
+        ∂BB = pb(u)[1] # pb(u)[1] returns NoTangent() for basis argument
         return sum( dot(∂BB[i], Y[i]) for i = 1:length(Y) )
     end
     print_tf(@test fdtest(F, dF, 0.0; verbose = false))

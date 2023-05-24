@@ -344,7 +344,7 @@ function ChainRulesCore.rrule(::typeof(evaluate), basis::RYlmBasis, X)
 	function pb(∂A)
 		@assert size(∂A) == (length(X), length(basis))
 		for i = 1:length(X)
-            ∂X[i] = sum([∂A[i,j] * X[i,j] for j = 1:length(X[i,:])])
+            ∂X[i] = sum([∂A[i,j] * dX[i,j] for j = 1:length(dX[i,:])])
         end
 		return NoTangent(), NoTangent(), ∂X
 	end
