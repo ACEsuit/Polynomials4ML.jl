@@ -101,7 +101,7 @@ function ChainRulesCore.rrule(::typeof(evaluate), basis::AtomicOrbitalsRadials, 
    function pb(∂A)
         @assert size(∂A) == (length(R), length(basis))
         for i = 1:length(R)
-            ∂R[i] = dot(∂A[i,:], dR[i,:])
+            ∂R[i] = dot(@view(∂A[i, :]), @view(dR[i, :]))
         end
         return NoTangent(), NoTangent(), ∂R
    end

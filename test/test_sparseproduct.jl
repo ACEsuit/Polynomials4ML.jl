@@ -236,3 +236,7 @@ println()
 u, pb = Zygote.pullback(evaluate, basis, bBB)
 # u1, pb1 = Polynomials4ML._rrule_evaluate(basis, bBB)
 
+
+# TODO: look into why this is failing
+# using ChainRulesTestUtils
+# test_rrule(evaluate, basis, bBB)
