@@ -1,3 +1,5 @@
+using ChainRulesCore
+
 export RYlmBasis 
 
 """
@@ -332,4 +334,19 @@ function eval_grad_laplace(basis::RYlmBasis, X)
 	Y, dY = evaluate_ed(basis, X)
 	ΔY = _lap(basis, Y)
 	return Y, dY, ΔY
+end
+
+# Placeholder for now
+function ChainRulesCore.rrule(::typeof(evaluate), basis::RYlmBasis, X)
+	A  = evaluate(basis, X)
+	∂X = similar(X)
+   	dX = evaluate_ed(basis, X)[2]
+	function pb(∂A)
+		@assert size(∂A) == (length(X), length(basis))
+		for i = 1:length(X)
+            ∂X[i] = sum([∂A[i,j] * dX[i,j] for j = 1:length(dX[i,:])])
+        end
+		return NoTangent(), NoTangent(), ∂X
+	end
+	return A, pb
 end

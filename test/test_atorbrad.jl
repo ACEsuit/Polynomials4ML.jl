@@ -3,6 +3,9 @@ using Polynomials4ML, Polynomials4ML.Testing
 using Polynomials4ML: evaluate, evaluate_d, evaluate_ed 
 using Polynomials4ML.Testing: print_tf, println_slim 
 using ForwardDiff
+using ChainRulesTestUtils
+using ACEbase.Testing: fdtest
+using Zygote
 
 ##
 
@@ -78,3 +81,28 @@ fddRnl = vcat([ ForwardDiff.derivative(r -> evaluate_ed(bRnl, [r,])[2], r)
 println_slim(@test  Rnl ≈ Rnl1 ≈ Rnl2  )
 println_slim(@test  dRnl1 ≈ dRnl2 ≈ fdRnl )
 println_slim(@test  ddRnl2 ≈ fddRnl )
+
+
+@info("Test rrule")
+using LinearAlgebra: dot 
+
+for ntest = 1:30
+    local rr
+    local uu
+    local Rnl
+    local u
+    
+    rr = 2 .* randn(10) .- 1
+    uu = 2 .* randn(10) .- 1
+    _rr(t) = rr + t * uu
+    Rnl = evaluate(bRnl, rr)
+    u = randn(size(Rnl))
+    F(t) = dot(u, evaluate(bRnl, _rr(t)))
+    dF(t) = begin
+        val, pb = Zygote.pullback(evaluate, bRnl, _rr(t))
+        ∂BB = pb(u)[2] # pb(u)[1] returns NoTangent() for basis argument
+        return sum( dot(∂BB[i], uu[i]) for i = 1:length(uu) )
+    end
+    print_tf(@test fdtest(F, dF, 0.0; verbose = false))
+end
+println()
