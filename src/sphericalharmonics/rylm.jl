@@ -339,8 +339,14 @@ end
 # Placeholder for now
 function ChainRulesCore.rrule(::typeof(evaluate), basis::RYlmBasis, X)
 	A  = evaluate(basis, X)
+	∂X = similar(X)
+   	dX = evaluate_ed(basis, X)[2]
 	function pb(∂A)
-		return NoTangent(), NoTangent(), X
+		@assert size(∂A) == (length(X), length(basis))
+		for i = 1:length(X)
+            ∂X[i] = sum([∂A[i,j] * X[i,j] for j = 1:length(X[i,:])])
+        end
+		return NoTangent(), NoTangent(), ∂X
 	end
 	return A, pb
 end
