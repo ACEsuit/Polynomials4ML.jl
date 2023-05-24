@@ -14,8 +14,6 @@ end
 
 Base.length(basis::SparseSymmProd) = length(basis.proj)
 
-(basis::SparseSymmProd)(args...) = evaluate(basis, args...)
-
 reconstruct_spec(basis::SparseSymmProd) = reconstruct_spec(basis.dag)[basis.proj]
 
 # -------------- evaluation interfaces 

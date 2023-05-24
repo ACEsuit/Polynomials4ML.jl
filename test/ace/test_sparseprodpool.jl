@@ -80,6 +80,7 @@ using LinearAlgebra: dot
 
 for ntest = 1:30 
    local bBB, bA2 
+   local u
    bBB = ( randn(nX, N1), randn(nX, N2), randn(nX, N3) )
    bUU = ( randn(nX, N1), randn(nX, N2), randn(nX, N3) )
    _BB(t) = ( bBB[1] + t * bUU[1], bBB[2] + t * bUU[2], bBB[3] + t * bUU[3] )

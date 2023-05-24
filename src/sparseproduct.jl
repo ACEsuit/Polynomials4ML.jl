@@ -68,6 +68,37 @@ function _frule_frule_evaluate(basis::SparseProduct, BB::Tuple{Vararg{AbstractMa
    _frule_frule_evaluate!(A, dA, ddA, basis, BB::Tuple, ∂BB::Tuple, ∂∂BB::Tuple)
    return A, dA, ddA
 end
+
+# ----------------------- overiding alloc functions
+const TupVec = Tuple{Vararg{<: AbstractVector}}
+const TupMat = Tuple{Vararg{<: AbstractMatrix}}
+const TupVecMat = Union{TupVec, TupMat}
+
+# specifically for SparseProduct/PooledSparseProduct
+_outsym(x::NTuple{NB, AbstractVector{T}}) where {NB, T} = :out
+_outsym(X::NTuple{NB, AbstractMatrix{T}}) where {NB, T} = :outb
+
+_alloc(basis::SparseProduct, BB::TupVec) = 
+      acquire!(basis.pool, :out, (length(basis), ), _valtype(basis, BB) )
+
+_alloc(basis::SparseProduct, BB::TupMat) = 
+      acquire!(basis.pool, :outb, (size(BB[1], 1), length(basis) ), _valtype(basis, BB) )
+
+function _alloc_d(basis::SparseProduct, BBs::NTuple{NB, AbstractVecOrMat{T}}) where {NB, T}
+      BBs_size = [size(bb) for bb in BBs]
+      return [Tuple([acquire!(basis.pool, _outsym(BBs), (BBsize), _valtype(basis, BBs)) for BBsize in BBs_size]) for _ = 1:length(basis)]
+end
+
+function _alloc_dd(basis::SparseProduct, BBs::NTuple{NB, AbstractVecOrMat{T}}) where {NB, T}
+      BBs_size = [size(bb) for bb in BBs]
+      return [Tuple([acquire!(basis.pool, _outsym(BBs), (BBsize), _valtype(basis, BBs)) for BBsize in BBs_size]) for _ = 1:length(basis)]
+end
+
+_alloc_ed(basis::SparseProduct, x::NTuple{NB, AbstractVecOrMat{T}}) where {NB, T} = _alloc(basis, x), _alloc_d(basis, x)
+_alloc_ed2(basis::SparseProduct, x::NTuple{NB, AbstractVecOrMat{T}}) where {NB, T} = _alloc(basis, x), _alloc_d(basis, x), _alloc_dd(basis, x)
+
+
+
 # ----------------------- evaluation kernels 
 
 function evaluate!(A, basis::SparseProduct{NB}, BB::Tuple{Vararg{AbstractVector}}) where {NB}
@@ -92,8 +123,6 @@ function evaluate!(A, basis::SparseProduct{NB}, BB::Tuple{Vararg{AbstractMatrix}
    return A
 end
 
-# Not sure whether we can everything below
-# faster by eval and diff at the same time from prod_grad
 
 function evaluate_ed!(A, dA, basis::SparseProduct{NB}, BB::Tuple{Vararg{AbstractVector}}) where {NB}
    @assert length(BB) == NB

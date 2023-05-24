@@ -7,7 +7,7 @@
 
 using BenchmarkTools, Test, Polynomials4ML
 using ACEbase.Testing: println_slim, print_tf
-using Polynomials4ML:  PooledSparseProduct, test_evaluate, evaluate , 
+using Polynomials4ML:  PooledSparseProduct, evaluate, 
                        evaluate!, evalpool!
 
 function evalpool_multi!(A, bA, BBB)

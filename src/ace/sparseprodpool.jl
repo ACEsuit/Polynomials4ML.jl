@@ -34,23 +34,27 @@ const TupVec = Tuple{Vararg{<: AbstractVector}}
 const TupMat = Tuple{Vararg{<: AbstractMatrix}}
 const TupVecMat = Union{TupVec, TupMat}
 
-_valtype(basis::PooledSparseProduct, BB::Tuple) = 
+_valtype(basis::AbstractPoly4MLBasis, BB::Tuple) = 
       mapreduce(eltype, promote_type, BB)
 
-_alloc(basis::AbstractPoly4MLBasis, BB::TupVecMat) = 
-      acquire!(basis.pool, :A, (length(basis),), _valtype(basis, BB) )
+_gradtype(basis::AbstractPoly4MLBasis, BB::Tuple) = 
+      mapreduce(eltype, promote_type, BB)
 
-_alloc_d(basis::AbstractPoly4MLBasis, BB::TupVecMat) = 
-      acquire!(basis.pool, _outsym(BB), length(basis), _gradtype(basis, BB) )
+_alloc(basis::PooledSparseProduct, BB::TupVecMat) = 
+      acquire!(basis.pool, :A, (length(basis), ), _valtype(basis, BB) )
 
-_alloc_dd(basis::AbstractPoly4MLBasis, BB::TupVecMat) = 
-      acquire!(basis.pool, _outsym(BB), length(basis), _gradtype(basis, BB) )
+# _alloc_d(basis::AbstractPoly4MLBasis, BB::TupVecMat) = 
+#       acquire!(basis.pool, _outsym(BB), (length(basis), ), _gradtype(basis, BB) )
 
-_alloc_ed(basis::AbstractPoly4MLBasis, BB::TupVecMat) = 
-      _alloc(basis, BB), _alloc_d(basis, BB)
+# _alloc_dd(basis::AbstractPoly4MLBasis, BB::TupVecMat) = 
+#       acquire!(basis.pool, _outsym(BB), (length(basis), ), _gradtype(basis, BB) )
 
-_alloc_ed2(basis::AbstractPoly4MLBasis, BB::TupVecMat) = 
-      _alloc(basis, BB), _alloc_d(basis, BB), _alloc_dd(basis, BB)
+# _alloc_ed(basis::AbstractPoly4MLBasis, BB::TupVecMat) = 
+#       _alloc(basis, BB), _alloc_d(basis, BB)
+
+# _alloc_ed2(basis::AbstractPoly4MLBasis, BB::TupVecMat) = 
+#       _alloc(basis, BB), _alloc_d(basis, BB), _alloc_dd(basis, BB)
+
 
 
 # ----------------------- evaluation kernels 
