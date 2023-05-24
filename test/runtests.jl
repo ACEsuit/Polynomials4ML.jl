@@ -21,7 +21,7 @@ using Test
     @testset "Atomic Orbitals Radials" begin include("test_atorbrad.jl"); end
 
     # ACE 
-    @testset "SparsePooledProduct" begin include("ace/test_1pbasis.jl"); end 
+    @testset "SparsePooledProduct" begin include("ace/test_sparseprodpool.jl"); end 
     @testset "Sparse Symmetric Product" begin include("ace/test_prodbasis1.jl"); end 
 
     # Misc

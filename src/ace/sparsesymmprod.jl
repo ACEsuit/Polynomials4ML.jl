@@ -1,15 +1,15 @@
 
 using LoopVectorization
 
-struct SparseSymmProd{T} 
-   dag::SparseSymmProdDAG{T} 
+struct SparseSymmProd <: AbstractPoly4MLBasis
+   dag::SparseSymmProdDAG
    proj::Vector{Int}
-   pool::ArrayPool{FlexArrayCache}
+   @reqfields
 end
 
-function SparseSymmProd(spec::AbstractVector{<: AbstractVector}; T = Float64, kwargs...)
-   dag = SparseSymmProdDAG(spec; T=T, kwargs...)
-   return SparseSymmProd(dag, dag.projection, ArrayPool(FlexArrayCache))
+function SparseSymmProd(spec::AbstractVector{<: Union{Tuple, AbstractVector}}; kwargs...)
+   dag = SparseSymmProdDAG(spec; kwargs...)
+   return SparseSymmProd(dag, dag.projection, _make_reqfields()... )
 end
 
 Base.length(basis::SparseSymmProd) = length(basis.proj)
@@ -20,16 +20,20 @@ reconstruct_spec(basis::SparseSymmProd) = reconstruct_spec(basis.dag)[basis.proj
 
 # -------------- evaluation interfaces 
 
+_valtype(basis::SparseSymmProd, ::Type{T}) where {T} = T
+
+(basis::SparseSymmProd)(args...) = evaluate(basis, args...)
+
 function evaluate(basis::SparseSymmProd, A::AbstractVector{T}) where {T}
    AA = acquire!(basis.pool, :AA, (length(basis),), T)
-   evaluate!(parent(AA), basis, A)
+   evaluate!(AA, basis, A)
    return AA
 end
 
 function evaluate(basis::SparseSymmProd, A::AbstractMatrix{T}) where {T}
    nX = size(A, 1)
    AA = acquire!(basis.pool, :AAbatch, (nX, length(basis)), T)
-   evaluate!(parent(AA), basis, A)
+   evaluate!(AA, basis, A)
    return AA
 end
 
@@ -45,7 +49,7 @@ function evaluate!(AA, basis::SparseSymmProd, A)
 end
 
 # serial projection 
-function _project!(BB, proj::Vector{<: Integer}, AA::AbstractVector)
+function _project!(BB, proj::Vector{<: Integer}, AA::AbstractVector{<: Number})
    @inbounds for i = 1:length(proj)
       BB[i] = AA[proj[i]]
    end
@@ -53,12 +57,12 @@ function _project!(BB, proj::Vector{<: Integer}, AA::AbstractVector)
 end
 
 # batched projection 
-function _project!(BB, proj::Vector{<: Integer}, AA::AbstractMatrix)
+function _project!(BB, proj::Vector{<: Integer}, AA::AbstractMatrix{<: Number})
    nX = size(AA, 1)
    @assert size(BB, 1) >= nX
    @inbounds for i = 1:length(proj)
       p_i = proj[i]
-      for j = 1:nX
+      @simd ivdep for j = 1:nX
          BB[j, i] = AA[j, p_i]
       end
    end
@@ -111,21 +115,21 @@ end
 
 # -------------- Lux integration 
 
-struct SparseSymmProdLayer{T} <: AbstractExplicitLayer
-   basis::SparseSymmProd{T}
-end
+# struct SparseSymmProdLayer{T} <: AbstractExplicitLayer
+#    basis::SparseSymmProd{T}
+# end
 
-function lux(basis::SparseSymmProd) 
-   return SparseSymmProdLayer(basis)
-end
+# function lux(basis::SparseSymmProd) 
+#    return SparseSymmProdLayer(basis)
+# end
 
-Base.length(l::SparseSymmProdLayer) = length(l.basis)
+# Base.length(l::SparseSymmProdLayer) = length(l.basis)
 
-initialparameters(rng::AbstractRNG, l::SparseSymmProdLayer) = NamedTuple() 
+# initialparameters(rng::AbstractRNG, l::SparseSymmProdLayer) = NamedTuple() 
 
-initialstates(rng::AbstractRNG, l::SparseSymmProdLayer) = NamedTuple()
+# initialstates(rng::AbstractRNG, l::SparseSymmProdLayer) = NamedTuple()
 
-(l::SparseSymmProdLayer)(A, ps, st) = evaluate(l.basis, A), st 
+# (l::SparseSymmProdLayer)(A, ps, st) = evaluate(l.basis, A), st 
 
 
 

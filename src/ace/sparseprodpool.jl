@@ -1,12 +1,17 @@
 
 
-struct PooledSparseProduct{NB}
+struct PooledSparseProduct{NB} <: AbstractPoly4MLBasis
    spec::Vector{NTuple{NB, Int}}
    # ---- temporaries & caches 
+   @reqfields
 end
 
 function PooledSparseProduct()
-   return PooledSparseProduct(bases, NTuple{NB, Int}[])
+   return PooledSparseProduct(NTuple{NB, Int}[], _make_reqfields()...)
+end
+
+function PooledSparseProduct(spect::AbstractVector{<: Tuple})
+   return PooledSparseProduct(spect, _make_reqfields()...)
 end
 
 # each column defines a basis element
@@ -18,37 +23,35 @@ end
 
 Base.length(basis::PooledSparseProduct) = length(basis.spec)
 
-# function Base.show(io::IO, basis::PooledSparseProduct)
-#    print(io, "PooledSparseProduct(")
-#    print(io, basis.bases)
-# end
+function Base.show(io::IO, basis::PooledSparseProduct{NB}) where {NB}
+   print(io, "PooledSparseProduct{$NB}(...)")
+end
 
 
 # ----------------------- evaluation interfaces 
 
+const TupVec = Tuple{Vararg{<: AbstractVector}}
+const TupMat = Tuple{Vararg{<: AbstractMatrix}}
+const TupVecMat = Union{TupVec, TupMat}
 
-function evaluate(basis::PooledSparseProduct, BB::Tuple) 
-   VT = mapreduce(eltype, promote_type, BB)
-   A = zeros(VT, length(basis))
-   evaluate!(A, basis, BB::Tuple)
-   return A 
-end
+_valtype(basis::PooledSparseProduct, BB::Tuple) = 
+      mapreduce(eltype, promote_type, BB)
 
-function evalpool(basis::PooledSparseProduct, BB::Tuple)
-   VT = mapreduce(eltype, promote_type, BB)
-   A = zeros(VT, length(basis))
-   evalpool!(A, basis, BB::Tuple)
-   return A
-end
+_alloc(basis::AbstractPoly4MLBasis, BB::TupVecMat) = 
+      acquire!(basis.pool, :A, (length(basis),), _valtype(basis, BB) )
 
+_alloc_d(basis::AbstractPoly4MLBasis, BB::TupVecMat) = 
+      acquire!(basis.pool, _outsym(BB), length(basis), _gradtype(basis, BB) )
 
-test_evaluate(basis::PooledSparseProduct, BB::Tuple) = 
-       [ prod(BB[j][basis.spec[i][j]] for j = 1:length(BB)) 
-            for i = 1:length(basis) ]
+_alloc_dd(basis::AbstractPoly4MLBasis, BB::TupVecMat) = 
+      acquire!(basis.pool, _outsym(BB), length(basis), _gradtype(basis, BB) )
 
-test_evalpool(basis::PooledSparseProduct, BB::Tuple) = 
-      sum( test_evaluate(basis, ntuple(i -> BB[i][j, :], length(BB)))
-         for j = 1:size(BB[1], 1) )            
+_alloc_ed(basis::AbstractPoly4MLBasis, BB::TupVecMat) = 
+      _alloc(basis, BB), _alloc_d(basis, BB)
+
+_alloc_ed2(basis::AbstractPoly4MLBasis, BB::TupVecMat) = 
+      _alloc(basis, BB), _alloc_d(basis, BB), _alloc_dd(basis, BB)
+
 
 # ----------------------- evaluation kernels 
 
@@ -76,7 +79,7 @@ import Base.Cartesian: @nexprs
 #    return nothing 
 # end
 
-function evaluate!(A, basis::PooledSparseProduct{NB}, BB) where {NB}
+function evaluate!(A, basis::PooledSparseProduct{NB}, BB::TupVec) where {NB}
    @assert length(BB) == NB
    # evaluate the 1p product basis functions and add/write into _A
    spec = basis.spec
@@ -107,7 +110,7 @@ end
 # end
 
 # BB::tuple of matrices 
-function evalpool!(A, basis::PooledSparseProduct{NB}, BB, 
+function evaluate!(A, basis::PooledSparseProduct{NB}, BB::TupMat, 
                    nX = size(BB[1], 1)) where {NB}
    @assert all(B->size(B, 1) >= nX, BB)
    spec = basis.spec
@@ -124,71 +127,73 @@ function evalpool!(A, basis::PooledSparseProduct{NB}, BB,
 end
 
 
-struct LinearBatch
-   groups::Vector{Int}
-end
-
-function linearbatch(target::AbstractVector{<: Integer})
-   @assert issorted(target)
-   @assert minimum(target) > 0 
-   ngroups = target[end] 
-   groups = zeros(Int, ngroups+1)
-   gidx = 1 
-   i = 1
-   groups[1] = 1 
-   for gidx = 1:ngroups 
-      while (i <= length(target)) && (target[i] == gidx)
-         i += 1
-      end
-      groups[gidx+1] = i
-   end
-   return LinearBatch(groups)
-end
-
-evalpool_batch!(A, basis::PooledSparseProduct, BB, 
-                   target::AbstractVector{<: Integer}) = 
-    evalpool_batch!(A, basis, BB, linearbatch(target))
-
-function evalpool_batch!(A, basis::PooledSparseProduct{NB}, BB, 
-                         target::LinearBatch) where {NB}
-   nX = size(BB[1], 1)
-   nA = size(A, 1)
-   @assert length(target.groups)-1 <= nA 
-   @assert all(B->size(B, 1) == nX, BB)
-   spec = basis.spec
-
-   @inbounds for (iA, ϕ) in enumerate(spec)
-      for t = 1:length(target.groups)-1
-         a_t = zero(eltype(A))
-         @simd ivdep for j = target.groups[t]:target.groups[t+1]-1
-            a_t += BB_prod(ϕ, BB, j)
-         end
-         A[t, iA] = a_t 
-      end
-   end
-   return nothing
-end
 
 
-function evalpool!(A::VA, basis::PooledSparseProduct{2}, BB) where {VA}
-   nX = size(BB[1], 1)
-   @assert size(BB[2], 1) >= nX 
-   @assert length(A) == length(basis)
-   spec = basis.spec
-   BB1 = BB[1] 
-   BB2 = BB[2] 
+# struct LinearBatch
+#    groups::Vector{Int}
+# end
 
-   @inbounds for (iA, ϕ) in enumerate(spec)
-      a = zero(eltype(A))
-      ϕ1 = ϕ[1]; ϕ2 = ϕ[2]
-      @simd ivdep for j = 1:nX
-         a = muladd(BB1[j, ϕ1], BB2[j, ϕ2], a)
-      end
-      A[iA] = a
-   end
+# function linearbatch(target::AbstractVector{<: Integer})
+#    @assert issorted(target)
+#    @assert minimum(target) > 0 
+#    ngroups = target[end] 
+#    groups = zeros(Int, ngroups+1)
+#    gidx = 1 
+#    i = 1
+#    groups[1] = 1 
+#    for gidx = 1:ngroups 
+#       while (i <= length(target)) && (target[i] == gidx)
+#          i += 1
+#       end
+#       groups[gidx+1] = i
+#    end
+#    return LinearBatch(groups)
+# end
 
-   return nothing
-end
+# evalpool_batch!(A, basis::PooledSparseProduct, BB, 
+#                    target::AbstractVector{<: Integer}) = 
+#     evalpool_batch!(A, basis, BB, linearbatch(target))
+
+# function evalpool_batch!(A, basis::PooledSparseProduct{NB}, BB, 
+#                          target::LinearBatch) where {NB}
+#    nX = size(BB[1], 1)
+#    nA = size(A, 1)
+#    @assert length(target.groups)-1 <= nA 
+#    @assert all(B->size(B, 1) == nX, BB)
+#    spec = basis.spec
+
+#    @inbounds for (iA, ϕ) in enumerate(spec)
+#       for t = 1:length(target.groups)-1
+#          a_t = zero(eltype(A))
+#          @simd ivdep for j = target.groups[t]:target.groups[t+1]-1
+#             a_t += BB_prod(ϕ, BB, j)
+#          end
+#          A[t, iA] = a_t 
+#       end
+#    end
+#    return nothing
+# end
+
+
+# function evalpool!(A::VA, basis::PooledSparseProduct{2}, BB) where {VA}
+#    nX = size(BB[1], 1)
+#    @assert size(BB[2], 1) >= nX 
+#    @assert length(A) == length(basis)
+#    spec = basis.spec
+#    BB1 = BB[1] 
+#    BB2 = BB[2] 
+
+#    @inbounds for (iA, ϕ) in enumerate(spec)
+#       a = zero(eltype(A))
+#       ϕ1 = ϕ[1]; ϕ2 = ϕ[2]
+#       @simd ivdep for j = 1:nX
+#          a = muladd(BB1[j, ϕ1], BB2[j, ϕ2], a)
+#       end
+#       A[iA] = a
+#    end
+
+#    return nothing
+# end
 
 # this code should never be used, we keep it just for testing 
 # the performance of the generated code. 
@@ -219,22 +224,22 @@ using StaticArrays
 
 
 
-function _rrule_evalpool(basis::PooledSparseProduct{NB}, BB::Tuple) where {NB}
-   A = evalpool(basis, BB)
-   return A, ∂A -> _pullback_evalpool(∂A, basis, BB)
+function _rrule_evaluate(basis::PooledSparseProduct{NB}, BB::TupMat) where {NB}
+   A = evaluate(basis, BB)
+   return A, ∂A -> _pullback_evaluate(∂A, basis, BB)
 end
 
 
-function _pullback_evalpool(∂A, basis::PooledSparseProduct{NB}, BB::Tuple) where {NB}
+function _pullback_evaluate(∂A, basis::PooledSparseProduct{NB}, BB::TupMat) where {NB}
    nX = size(BB[1], 1)
    TA = promote_type(eltype.(BB)...)
    ∂BB = ntuple(i -> zeros(TA, size(BB[i])...), NB)
-   _pullback_evalpool!(∂BB, ∂A, basis, BB)
+   _pullback_evaluate!(∂BB, ∂A, basis, BB)
    return ∂BB
 end
 
 
-function _pullback_evalpool!(∂BB, ∂A, basis::PooledSparseProduct{NB}, BB::Tuple) where {NB}
+function _pullback_evaluate!(∂BB, ∂A, basis::PooledSparseProduct{NB}, BB::TupMat) where {NB}
    nX = size(BB[1], 1)
    @assert all(nX <= size(BB[i], 1) for i = 1:NB)
    @assert all(nX <= size(∂BB[i], 1) for i = 1:NB)
@@ -263,7 +268,7 @@ end
 #       a cruder code generation strategy. This specialized code 
 #       confirms this. 
 
-function _pullback_evalpool!(∂BB, ∂A, basis::PooledSparseProduct{2}, BB::Tuple)
+function _pullback_evaluate!(∂BB, ∂A, basis::PooledSparseProduct{2}, BB::Tuple)
    nX = size(BB[1], 1)
    NB = 2 
    @assert length(∂A) == length(basis)
@@ -288,68 +293,72 @@ end
 
 
 
-function _pullback_evalpool!(∂BB, ∂A, basis::PooledSparseProduct{NB}, 
-                             BB::Tuple, target::AbstractVector{<: Integer}) where {NB}
-   nX = size(BB[1], 1)
-   nT = size(∂A, 1)
-   mint, maxt = extrema(target)
-   @assert 0 < mint <= maxt <= nT
-   @assert all(nX <= size(BB[i], 1) for i = 1:NB)
-   @assert all(nX <= size(∂BB[i], 1) for i = 1:NB)
-   @assert all(size(∂BB[i], 2) >= size(BB[i], 2) for i = 1:NB)
-   @assert size(∂A, 2) == length(basis)
-   @assert length(BB) == NB 
-   @assert length(∂BB) == NB 
+# function _pullback_evaluate!(∂BB, ∂A, basis::PooledSparseProduct{NB}, 
+#                              BB::Tuple, target::AbstractVector{<: Integer}) where {NB}
+#    nX = size(BB[1], 1)
+#    nT = size(∂A, 1)
+#    mint, maxt = extrema(target)
+#    @assert 0 < mint <= maxt <= nT
+#    @assert all(nX <= size(BB[i], 1) for i = 1:NB)
+#    @assert all(nX <= size(∂BB[i], 1) for i = 1:NB)
+#    @assert all(size(∂BB[i], 2) >= size(BB[i], 2) for i = 1:NB)
+#    @assert size(∂A, 2) == length(basis)
+#    @assert length(BB) == NB 
+#    @assert length(∂BB) == NB 
 
-   # ∂A_loc = zeros(eltype(∂A), nT)
+#    # ∂A_loc = zeros(eltype(∂A), nT)
 
-   @inbounds for (iA, ϕ) in enumerate(basis.spec)
-      # @simd ivdep for t = 1:nT 
-      #    ∂A_loc[t] = ∂A[t, iA]
-      # end
-      @simd ivdep for j = 1:nX 
-         ∂A_iA = ∂A[target[j], iA] # ∂A_loc[target[j] ] 
-         b = ntuple(Val(NB)) do i 
-            @inbounds BB[i][j, ϕ[i]] 
-         end 
-         g = _prod_grad(b, Val(NB))
-         for i = 1:NB 
-            ∂BB[i][j, ϕ[i]] = muladd(∂A_iA, g[i], ∂BB[i][j, ϕ[i]])
-         end
-      end 
-   end
-   return nothing 
-end
+#    @inbounds for (iA, ϕ) in enumerate(basis.spec)
+#       # @simd ivdep for t = 1:nT 
+#       #    ∂A_loc[t] = ∂A[t, iA]
+#       # end
+#       @simd ivdep for j = 1:nX 
+#          ∂A_iA = ∂A[target[j], iA] # ∂A_loc[target[j] ] 
+#          b = ntuple(Val(NB)) do i 
+#             @inbounds BB[i][j, ϕ[i]] 
+#          end 
+#          g = _prod_grad(b, Val(NB))
+#          for i = 1:NB 
+#             ∂BB[i][j, ϕ[i]] = muladd(∂A_iA, g[i], ∂BB[i][j, ϕ[i]])
+#          end
+#       end 
+#    end
+#    return nothing 
+# end
 
 
 # --------------------- connect with ChainRules 
 # todo ... 
 
-function rrule(::typeof(evalpool), basis::PooledSparseProduct{NB}, BB::Tuple) where {NB}
-   A = evalpool(basis, BB)
+function rrule(::typeof(evaluate), basis::PooledSparseProduct{NB}, BB::TupMat) where {NB}
+   A = evaluate(basis, BB)
 
    function pb(Δ)
-      ∂BB = _pullback_evalpool(Δ, basis, BB)
+      ∂BB = _pullback_evaluate(Δ, basis, BB)
       return NoTangent(), NoTangent(), ∂BB
    end 
 
    return A, pb 
 end
 
+
 # --------------------- connect with Lux 
+# it looks like we could use the standard P4ML basis wrapper 
+# but technically the pooling operation changes the behaviour in
+# a few ways and we need to be very careful about this
 
 
-struct PooledSparseProductLayer{NB} <: AbstractExplicitLayer 
-   basis::PooledSparseProduct{NB}
-end
+# struct PooledSparseProductLayer{NB} <: AbstractExplicitLayer 
+#    basis::PooledSparseProduct{NB}
+# end
 
-lux(basis::PooledSparseProduct) = PooledSparseProductLayer(basis)
+# lux(basis::PooledSparseProduct) = PooledSparseProductLayer(basis)
 
-initialparameters(rng::AbstractRNG, layer::PooledSparseProductLayer) = 
-      NamedTuple() 
+# initialparameters(rng::AbstractRNG, layer::PooledSparseProductLayer) = 
+#       NamedTuple() 
 
-initialstates(rng::AbstractRNG, layer::PooledSparseProductLayer) = 
-      NamedTuple()
+# initialstates(rng::AbstractRNG, layer::PooledSparseProductLayer) = 
+#       NamedTuple()
 
-(l::PooledSparseProductLayer)(BB, ps, st) = 
-      evalpool(l.basis, BB), st 
+# (l::PooledSparseProductLayer)(BB, ps, st) = 
+#       evaluate(l.basis, BB), st 

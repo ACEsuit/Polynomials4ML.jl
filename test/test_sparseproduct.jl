@@ -7,6 +7,15 @@ using Polynomials4ML
 using ACEbase.Testing: fdtest
 using Zygote
 
+test_evaluate(basis::SparseProduct, BB::Tuple{Vararg{<: AbstractVector}}) = 
+       [ prod(BB[j][basis.spec[i][j]] for j = 1:length(BB)) 
+            for i = 1:length(basis) ]
+
+# test_evaluate(basis::SparseProduct, BB::Tuple{Vararg{<: AbstractMatrix}}) = 
+#         [ test_evaluate(basis, ntuple(i -> BB[i][j, :], length(BB)))
+#          for j = 1:size(BB[1], 1) )            
+
+
 ##
 NB = 3 # For _rrule_evaluate test we need NB = 3, fix later by generalizing the test case
 

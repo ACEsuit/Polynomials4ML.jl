@@ -3,13 +3,19 @@ import LuxCore
 import LuxCore: initialparameters, initialstates, AbstractExplicitLayer
 using Random: AbstractRNG
 
+using ChainRulesCore
+
 """
 lux(basis) : convert a basis / embedding object into a lux layer. This assumes 
 that the basis accepts a number or short vector as input and produces an output 
 that is a vector. It also assumes that batched operations are implemented, 
 as well as some other functionality. 
 """
-function lux(basis::AbstractPoly4MLBasis; meta = Dict{String, Any}())
+function lux(basis::AbstractPoly4MLBasis; 
+               name = String(nameof(typeof(basis))), 
+               meta = Dict{String, Any}("name" => name), 
+            )
+   @assert haskey(meta, "name")
    return PolyLuxLayer(basis, meta)
 end
 
@@ -30,10 +36,17 @@ _init_default_luxstate() = ( tmp = ArrayPool(FlexArray),
 # ---------- PolyLuxLayer
 # the simplest lux layer implementation 
 
+
+
 struct PolyLuxLayer{TB} <: AbstractExplicitLayer
    basis::TB
    meta::Dict{String, Any}
 end
+
+function Base.show(io::IO, l::PolyLuxLayer)
+   print(io, "PolyLuxLayer($(l.meta["name"]))")
+end
+
 
 Base.length(l::PolyLuxLayer) = length(l.basis)
 
@@ -43,16 +56,11 @@ initialstates(rng::AbstractRNG, l::PolyLuxLayer) = _init_luxstate(rng, l.basis)
 
 (l::PolyLuxLayer)(args...) = evaluate(l, args...)
 
-function evaluate(l::PolyLuxLayer, x::SINGLE, ps, st)
-   B = acquire!(st.cache, :B, (length(l.basis), ), _valtype(l.basis, x))
-   evaluate!(parent(B), l.basis, x)
-   return B 
+function evaluate(l::PolyLuxLayer, X, ps, st) 
+   B = ChainRulesCore.ignore_derivatives() do 
+      evaluate(l.basis, X)
+   end
+   return B, st 
 end 
-
-function evaluate(l::PolyLuxLayer, X::AbstractArray{<: SINGLE}, ps, st)
-   B = acquire!(st.cache[:Bbatch], (length(l.basis), length(X)), _valtype(l.basis, X[1]))
-   evaluate!(parent(B), l.basis, X)
-   return B 
-end
 
 
