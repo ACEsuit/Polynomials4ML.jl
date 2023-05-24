@@ -17,13 +17,12 @@ function evaluate(basis::ProductBasis, X::AbstractVector{<: AbstractVector})
    T = promote_type(eltype(X[1]))
    
    # create all the shifted configurations 
-   xx = zeros(eltype(T), Nel)
-   for i = 1:Nel
-      xx[i] = norm(X[i])
-   end
-
+   # for i = 1:Nel
+   #    xx[i] = norm(X[i])
+   # end
+   
    # evaluate the radial and angular components on all the shifted particles 
-   Rnl = reshape(evaluate(basis.bRnl, xx[:]), (Nel, length(basis.bRnl)))
+   Rnl = reshape(evaluate(basis.bRnl, (norm.(X))[:]), (Nel, length(basis.bRnl)))
    Ylm = reshape(evaluate(basis.bYlm, X[:]), (Nel, length(basis.bYlm)))
 
    # evaluate all the atomic orbitals as ϕ_nlm = Rnl * Ylm 
@@ -31,4 +30,5 @@ function evaluate(basis::ProductBasis, X::AbstractVector{<: AbstractVector})
 
    return ϕnlm
 end
+
 
