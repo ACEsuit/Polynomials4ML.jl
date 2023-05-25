@@ -123,3 +123,5 @@ evaluate_ed(basis::ExponentialType, ζ::Vector, r::Number) = evaluate_ed(basis, 
 evaluate_ed2(basis::ExponentialType, ζ::Number, r::Number) = evaluate_ed2(basis, [ζ,], [r,])[:]
 evaluate_ed2(basis::ExponentialType, ζ::Number, r::Vector) = evaluate_ed2(basis, [ζ,], r)
 evaluate_ed2(basis::ExponentialType, ζ::Vector, r::Number) = evaluate_ed2(basis, ζ, [r,])
+
+natural_indices(basis::AtomicOrbitalsRadials) = copy(basis.spec)
