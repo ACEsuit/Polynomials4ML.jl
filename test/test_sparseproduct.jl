@@ -6,6 +6,7 @@ using LinearAlgebra: norm
 using Polynomials4ML
 using ACEbase.Testing: fdtest
 using Zygote
+using HyperDualNumbers: Hyper
 
 test_evaluate(basis::SparseProduct, BB::Tuple{Vararg{<: AbstractVector}}) = 
        [ prod(BB[j][basis.spec[i][j]] for j = 1:length(BB)) 
@@ -23,6 +24,9 @@ NB = 3 # For _rrule_evaluate test we need NB = 3, fix later by generalizing the 
 N = [i * 4 for i = 1:NB]
 
 B = [randn(N[i]) for i = 1:NB]
+
+hB = [Hyper.(bb, 1.0, 1.0, 0) for bb in B]
+
 
 spec = sort([ Tuple([rand(1:N[i]) for i = 1:NB]) for _ = 1:6])
 
@@ -110,14 +114,18 @@ end
 @info("Test serial evaluation")
 
 BB = Tuple(B)
+hBB = Tuple(hB)
 
 A1 = test_evaluate(basis, BB)
 A2 = evaluate(basis, BB)
+hA2 = evaluate(basis, hBB)
+hA2_val = [x.value for x in hA2]
 
 println_slim(@test A1 ≈ A2 )
+println_slim(@test A2 ≈ hA2_val )
+
 
 @info("Test serial evaluation_ed")
-BB = Tuple(B)
 
 test_evaluate_ed(basis, BB)
 
@@ -243,6 +251,8 @@ println()
 
 # try with rrule
 u, pb = Zygote.pullback(evaluate, basis, bBB)
+ll = pb(u)
+
 # u1, pb1 = Polynomials4ML._rrule_evaluate(basis, bBB)
 
 

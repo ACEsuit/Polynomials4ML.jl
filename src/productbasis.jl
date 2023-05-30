@@ -22,9 +22,9 @@ function evaluate(basis::ProductBasis, X::AbstractVector{<: AbstractVector})
    # end
    
    # evaluate the radial and angular components on all the shifted particles 
-   Rnl = reshape(evaluate(basis.bRnl, (norm.(X))[:]), (Nel, length(basis.bRnl)))
-   Ylm = reshape(evaluate(basis.bYlm, X[:]), (Nel, length(basis.bYlm)))
-
+   Rnl = evaluate(basis.bRnl, (norm.(X))[:])
+   Ylm = evaluate(basis.bYlm, X[:])
+   
    # evaluate all the atomic orbitals as ϕ_nlm = Rnl * Ylm 
    ϕnlm = evaluate(basis.sparsebasis, (Rnl, Ylm))
 

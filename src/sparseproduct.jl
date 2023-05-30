@@ -75,14 +75,23 @@ const TupMat = Tuple{Vararg{<: AbstractMatrix}}
 const TupVecMat = Union{TupVec, TupMat}
 
 # specifically for SparseProduct/PooledSparseProduct
-_outsym(x::NTuple{NB, AbstractVector{T}}) where {NB, T} = :out
-_outsym(X::NTuple{NB, AbstractMatrix{T}}) where {NB, T} = :outb
+_outsym(x::NTuple{NB, TupVec}) where {NB} = :out
+_outsym(X::NTuple{NB, TupMat}) where {NB} = :outb
 
-_alloc(basis::SparseProduct, BB::TupVec) = 
-      acquire!(basis.pool, :out, (length(basis), ), _valtype(basis, BB) )
+_outsym(x::Tuple{AbstractVector, AbstractVector}) = :out
+_outsym(X::Tuple{AbstractMatrix, AbstractMatrix}) = :outb
 
-_alloc(basis::SparseProduct, BB::TupMat) = 
-      acquire!(basis.pool, :outb, (size(BB[1], 1), length(basis) ), _valtype(basis, BB) )
+# _alloc(basis::SparseProduct, BB::TupVec) = 
+#       acquire!(basis.pool, :out, (length(basis), ), _valtype(basis, BB) )
+
+# _alloc(basis::SparseProduct, BB::TupMat) = 
+#       acquire!(basis.pool, :outb, (size(BB[1], 1), length(basis) ), _valtype(basis, BB) )
+
+_out_size(basis::SparseProduct, BB::TupVec) = (length(basis), )
+_out_size(basis::SparseProduct, BB::TupMat) = (size(BB[1],1), length(basis))
+
+_out_size(basis::SparseProduct, BB::Tuple{AbstractVector, AbstractVector}) = (length(basis), )
+_out_size(basis::SparseProduct, BB::Tuple{AbstractMatrix, AbstractMatrix}) = (size(BB[1],1), length(basis))
 
 function _alloc_d(basis::SparseProduct, BBs::NTuple{NB, AbstractVecOrMat{T}}) where {NB, T}
       BBs_size = [size(bb) for bb in BBs]

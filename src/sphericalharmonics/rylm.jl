@@ -1,4 +1,5 @@
 using ChainRulesCore
+using HyperDualNumbers: Hyper
 
 export RYlmBasis 
 
@@ -26,6 +27,9 @@ RYlmBasis(alp::ALPolynomials{T}) where {T} =
 _valtype(sh::RYlmBasis{T}, ::Type{<: StaticVector{3, S}}) where {T <: Real, S <: Real} = 
 		promote_type(T, S)
 
+_valtype(sh::RYlmBasis{T}, ::Type{<: StaticVector{3, Hyper{S}}}) where {T <: Real, S <: Real} = 
+		promote_type(T, S)
+
 Base.show(io::IO, basis::RYlmBasis) = 
       print(io, "RYlmBasis(L=$(maxL(basis)))")		
 
@@ -33,7 +37,7 @@ Base.show(io::IO, basis::RYlmBasis) =
 
 function evaluate!(Y::AbstractArray, basis::RYlmBasis, X)
 	L = maxL(basis)
-   S = cart2spher(basis, X)
+    S = cart2spher(basis, X)
 	_P = _acqu_P!(basis, S)
 	P = evaluate!(_P, basis.alp, S)
 	rYlm!(Y, maxL(basis), S, parent(P), basis)
