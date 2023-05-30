@@ -1,3 +1,5 @@
+using ChainRulesCore
+using ChainRulesCore: NoTangent
 
 
 struct PooledSparseProduct{NB} <: AbstractPoly4MLBasis
@@ -272,7 +274,7 @@ end
 #       a cruder code generation strategy. This specialized code 
 #       confirms this. 
 
-function _pullback_evaluate!(∂BB, ∂A, basis::PooledSparseProduct{2}, BB::Tuple)
+function _pullback_evaluate!(∂BB, ∂A, basis::PooledSparseProduct{2}, BB::TupMat)
    nX = size(BB[1], 1)
    NB = 2 
    @assert length(∂A) == length(basis)
@@ -334,7 +336,7 @@ end
 # --------------------- connect with ChainRules 
 # todo ... 
 
-function rrule(::typeof(evaluate), basis::PooledSparseProduct{NB}, BB::TupMat) where {NB}
+function ChainRulesCore.rrule(::typeof(evaluate), basis::PooledSparseProduct{NB}, BB::TupMat) where {NB}
    A = evaluate(basis, BB)
 
    function pb(Δ)

@@ -1,7 +1,7 @@
 # Jerry: This is just a specific case of a general ProductBasis
 # I will do that later expanding this to a general case, but it is unclear
 # to me how to allow the basis to distinguish whether to use norm(x) or x efficiently
-struct ProductBasis{NB, TR, TY, TS}
+struct ProductBasis{NB, TR, TY, TS} <: AbstractPoly4MLBasis
    spec1::Vector{TS}
    bRnl::TR
    bYlm::TY
@@ -9,6 +9,9 @@ struct ProductBasis{NB, TR, TY, TS}
    sparsebasis::SparseProduct{NB}
    @reqfields
 end
+
+ProductBasis(spec1, bRnl, bYlm) = 
+      ProductBasis(spec1, bRnl, bYlm, SparseProduct(spec1), _make_reqfields()...)
 
 (pbasis::ProductBasis)(args...) = evaluate(pbasis, args...)
 
