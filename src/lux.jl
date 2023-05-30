@@ -57,9 +57,7 @@ initialstates(rng::AbstractRNG, l::PolyLuxLayer) = _init_luxstate(rng, l.basis)
 (l::PolyLuxLayer)(args...) = evaluate(l, args...)
 
 function evaluate(l::PolyLuxLayer, X, ps, st) 
-   B = ChainRulesCore.ignore_derivatives() do 
-      evaluate(l.basis, X)
-   end
+   B = evaluate(l.basis, X)
    return B, st 
 end 
 

@@ -1,5 +1,6 @@
 using LoopVectorization
-
+using ChainRulesCore
+using ChainRulesCore: NoTangent
 
 @doc raw"""
 `OrthPolyBasis1D3T:` defines a basis of polynomials in terms of a 3-term recursion, 
@@ -219,16 +220,16 @@ end
 
 
 # ------------------   rrules 
-
 # 
 # ∂_xa ( ∂P : P ) = ∑_ij ∂_xa ( ∂P_ij * P_ij ) 
 #                 = ∑_ij ∂P_ij * ∂_xa ( P_ij )
 #                 = ∑_ij ∂P_ij * dP_ij δ_ia
 #
-function rrule_evaluate!(P::AbstractArray, basis::OrthPolyBasis1D3T, X::AbstractVector)
-   nX = length(X) 
+function ChainRulesCore.rrule(::typeof(evaluate), basis::OrthPolyBasis1D3T, x::AbstractVector)
+   P = _alloc(basis, x)
+   nX = length(x) 
    dP = similar(P)
-   evaluate_ed!(P, dP, basis, X)
+   evaluate_ed!(P, dP, basis, x)
 
    function pb(∂P)
       ∂X = zeros(nX)
@@ -237,8 +238,8 @@ function rrule_evaluate!(P::AbstractArray, basis::OrthPolyBasis1D3T, X::Abstract
             ∂X[i] += ∂P[i, j] * dP[i, j]
          end
       end
-      return ∂X 
+      return NoTangent(), NoTangent(), ∂X 
    end
 
-   return P, pb 
+   return P, pb
 end

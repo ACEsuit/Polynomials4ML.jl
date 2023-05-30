@@ -65,7 +65,7 @@ l_xnx = Lux.Parallel(nothing; normx = WrappedFunction(_norm), x = WrappedFunctio
 l_embed = Lux.Parallel(nothing; Rn = l_Rn, Ylm = l_Ylm)
 
 
-simpleacemodel = Chain(xnx = l_xnx, embed = l_embed, A = l_bA, AA = l_bAA, out = M1.DotL(length(bAA)))
+simpleacemodel = Chain(xnx = l_xnx, embed = l_embed)#, A = l_bA, AA = l_bAA, out = M1.DotL(length(bAA)))
 ps, st = Lux.setup(rng, simpleacemodel)
 
 bX = [ rand_sphere() for _ = 1:32 ] 
