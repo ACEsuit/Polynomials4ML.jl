@@ -28,7 +28,7 @@ _valtype(sh::RYlmBasis{T}, ::Type{<: StaticVector{3, S}}) where {T <: Real, S <:
 		promote_type(T, S)
 
 _valtype(sh::RYlmBasis{T}, ::Type{<: StaticVector{3, Hyper{S}}}) where {T <: Real, S <: Real} = 
-		promote_type(T, S)
+		promote_type(T, Hyper{S})
 
 Base.show(io::IO, basis::RYlmBasis) = 
       print(io, "RYlmBasis(L=$(maxL(basis)))")		
@@ -40,6 +40,7 @@ function evaluate!(Y::AbstractArray, basis::RYlmBasis, X)
     S = cart2spher(basis, X)
 	_P = _acqu_P!(basis, S)
 	P = evaluate!(_P, basis.alp, S)
+	@show typeof(parent(P))
 	rYlm!(Y, maxL(basis), S, parent(P), basis)
 	return Y
 end
@@ -141,10 +142,10 @@ end
 function rYlm!(Y::AbstractMatrix, L, S::AbstractVector{SphericalCoords{T}}, 
 				   P::AbstractMatrix, basis::RYlmBasis) where {T} 
    nX = length(S) 
-	@assert size(P, 1) >= nX
+   @assert size(P, 1) >= nX
    @assert size(P, 2) >= sizeP(L)
    @assert size(Y, 1) >= nX
-	@assert size(Y, 2) >= sizeY(L)
+   @assert size(Y, 2) >= sizeY(L)
 
    sinφ = acquire!(basis.tmp, :sin, (nX,), T)
    cosφ = acquire!(basis.tmp, :cos, (nX,), T)
@@ -153,19 +154,19 @@ function rYlm!(Y::AbstractMatrix, L, S::AbstractVector{SphericalCoords{T}},
 
    @inbounds begin 
       for i = 1:nX 
-         sinφ[i] = S[i].sinφ
-         cosφ[i] = S[i].cosφ
-         sinmφ[i] = 0.0
-         cosmφ[i] = 1.0
+        sinφ[i] = S[i].sinφ
+        cosφ[i] = S[i].cosφ
+        sinmφ[i] = 0.0
+        cosmφ[i] = 1.0
       end
 
       oort2 = 1 / sqrt(2)
       for l = 0:L
-         i_yl0 = index_y(l, 0)
-         i_pl0 = index_p(l, 0)
-         @avx for i = 1:nX
-            Y[i, i_yl0] = P[i, i_pl0] * oort2
-         end
+        i_yl0 = index_y(l, 0)
+        i_pl0 = index_p(l, 0)
+        @avx for i = 1:nX
+           Y[i, i_yl0] = P[i, i_pl0] * oort2
+        end
       end
 
       for m in 1:L
