@@ -40,7 +40,6 @@ function evaluate!(Y::AbstractArray, basis::RYlmBasis, X)
     S = cart2spher(basis, X)
 	_P = _acqu_P!(basis, S)
 	P = evaluate!(_P, basis.alp, S)
-	@show typeof(parent(P))
 	rYlm!(Y, maxL(basis), S, parent(P), basis)
 	return Y
 end
