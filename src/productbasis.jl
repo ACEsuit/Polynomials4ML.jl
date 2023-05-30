@@ -10,8 +10,32 @@ struct ProductBasis{NB, TR, TY, TS} <: AbstractPoly4MLBasis
    @reqfields
 end
 
-ProductBasis(spec1, bRnl, bYlm) = 
-      ProductBasis(spec1, bRnl, bYlm, SparseProduct(spec1), _make_reqfields()...)
+function _invmap(a::AbstractVector)
+   inva = Dict{eltype(a), Int}()
+   for i = 1:length(a) 
+      inva[a[i]] = i 
+   end
+   return inva 
+end
+
+function dropnames(namedtuple::NamedTuple, names::Tuple{Vararg{Symbol}}) 
+   keepnames = Base.diff_names(Base._nt_names(namedtuple), names)
+   return NamedTuple{keepnames}(namedtuple)
+end
+
+function ProductBasis(spec1, bRnl, bYlm)
+   spec1idx = Vector{Tuple{Int, Int}}(undef, length(spec1)) 
+   spec_Rnl = bRnl.spec; inv_Rnl = _invmap(spec_Rnl)
+   spec_Ylm = natural_indices(bYlm); inv_Ylm = _invmap(spec_Ylm)
+
+   spec1idx = Vector{Tuple{Int, Int}}(undef, length(spec1))
+   for (i, b) in enumerate(spec1)
+      spec1idx[i] = (inv_Rnl[dropnames(b,(:m,))], inv_Ylm[(l=b.l, m=b.m)])
+   end
+   sparsebasis = SparseProduct(spec1idx)
+   return ProductBasis(spec1, bRnl, bYlm, sparsebasis, _make_reqfields()...)
+end
+
 
 (pbasis::ProductBasis)(args...) = evaluate(pbasis, args...)
 
