@@ -13,7 +13,7 @@ export CYlmBasis, RYlmBasis, CRlmBasis, RRlmBasis
 spher2cart(S::SphericalCoords) = S.r * SVector(S.cosφ*S.sinθ, S.sinφ*S.sinθ, S.cosθ)
 
 ## ---------- HyperDualNumbers utils ---------
-Base.atan(y::Hyper{T}, x::Hyper{T}) where {T} = atan(y / x)
+Base.atan(y::Hyper{T}, x::Hyper{T}) where {T} = atan(y/x)*(x != 0) + (1-2*(y<0))*(pi*(x<0) + 1/2*pi*(x==0))
 
 function cart2spher(R::AbstractVector) # ; SH = true)
 	@assert length(R) == 3
@@ -154,5 +154,3 @@ function rand_sphere()
 	r = @SVector randn(3)
 	return r / norm(r)
 end
-
-

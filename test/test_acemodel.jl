@@ -7,7 +7,6 @@ using ForwardDiff
 using ACEbase.Testing: fdtest
 using Zygote
 using Lux
-using Lux
 using Random
 
 
