@@ -6,6 +6,7 @@ using Polynomials4ML: SphericalCoords,
                       dspher_to_dcart, cart2spher, spher2cart
 using Polynomials4ML: evaluate, evaluate_d, evaluate_ed 
 using Polynomials4ML.Testing: print_tf, println_slim 
+using ACEbase.Testing: fdtest
 
 verbose = false
 
@@ -230,3 +231,27 @@ Y1 = evaluate(bYlm, X1)
 X2 = X1[1:10]
 Y2 = evaluate(bYlm, X2)
 
+using Zygote
+@info("Test rrule")
+using LinearAlgebra: dot 
+rSH = CYlmBasis(10)
+for ntest = 1:30
+   local X
+   local Y
+   local Rnl
+   local u
+    
+   X = [ rand_sphere() for i = 1:21 ]
+   Y = X = [ rand_sphere() for i = 1:21 ]
+   _x(t) = X + t * Y
+   A = evaluate(rSH, X)
+   u = randn(size(A))
+   F(t) = dot(u, evaluate(rSH, _x(t)))
+   dF(t) = begin
+       val, pb = Zygote.pullback(rSH, _x(t))
+       ∂BB = pb(u)[1] # pb(u)[1] returns NoTangent() for basis argument
+       return sum( dot(∂BB[i], Y[i]) for i = 1:length(Y) )
+   end
+   print_tf(@test fdtest(F, dF, 0.0; verbose = false))
+end
+println()
