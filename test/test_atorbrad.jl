@@ -85,11 +85,11 @@ println_slim(@test  ddRnl2 ≈ fddRnl )
 @info("Test rrule")
 using LinearAlgebra: dot 
 
-#for ntest = 1:30
-#    local rr
-#    local uu
-#    local Rnl
-#    local u
+for ntest = 1:30
+    local rr
+    local uu
+    local Rnl
+    local u
     
     rr = 2 .* randn(10) .- 1
     uu = 2 .* randn(10) .- 1
@@ -103,5 +103,5 @@ using LinearAlgebra: dot
         return sum( dot(∂BB[i], uu[i]) for i = 1:length(uu) )
     end
     print_tf(@test fdtest(F, dF, 0.0; verbose = false))
-# end
+end
 println()
