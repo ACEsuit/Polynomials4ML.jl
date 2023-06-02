@@ -10,6 +10,7 @@ Polynomials4ML.CTrigBasis
 Polynomials4ML.RTrigBasis
 Polynomials4ML.CYlmBasis
 Polynomials4ML.RYlmBasis
+Polynomials4ML.ChebBasis
 ```
 
 

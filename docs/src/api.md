@@ -16,6 +16,9 @@ This page documents the public API, i.e. the list of bases and functions that ar
    - Real spherical harmonics [`RYlmBasis`](@ref)
    - Complex solid harmonics [`CRlmBasis`](@ref)
    - Real solid harmonics [`RRlmBasis`](@ref)
+* Chebyshev polynomials of the first kind [`ChebBasis`](@ref)
+   - this approach computes the basis on the go when it is compiled
+   - it does not store the recursion coefficients like what is done in the orthogonal polynomials
 * Various quantum chemistry related radial basis functions. (experimental)
    
 ## In-place Evaluation  
