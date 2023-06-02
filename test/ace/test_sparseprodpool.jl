@@ -31,12 +31,24 @@ basis = PooledSparseProduct(spec)
 
 @info("Test evaluation with a single input (no pooling)")
 
-BB = (B1, B2, B3)
+for _ = 1:30
+   local B1
+   local B2
+   local B3
+   local BB
+   local A1
+   local A2
+   
+   B1 = randn(N1)
+   B2 = randn(N2)
+   B3 = randn(N3)
+   BB = (B1, B2, B3)
 
-A1 = test_evaluate(basis, BB)
-A2 = evaluate(basis, BB)
-
-println_slim(@test A1 ≈ A2 )
+   A1 = test_evaluate(basis, BB)
+   A2 = evaluate(basis, BB)
+   print_tf(@test A1 ≈ A2 )
+end
+println()
 
 ## 
 
