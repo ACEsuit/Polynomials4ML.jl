@@ -1,6 +1,11 @@
 using StaticArrays: StaticArray, SVector, StaticVector, similar_type
+using ChainRulesCore
 
 abstract type AbstractPoly4MLBasis end
+
+abstract type ScalarPoly4MLBasis <: AbstractPoly4MLBasis end
+
+abstract type SVecPoly4MLBasis <: AbstractPoly4MLBasis end
 
 # ---------------------------------------
 # some helpers to deal with the three required arrays: 
@@ -51,6 +56,9 @@ end
 const SINGLE = Union{Number, StaticArray, SphericalCoords}
 const BATCH = AbstractVector{<: SINGLE}
 
+const TupVec = Tuple{Vararg{<: AbstractVector}}
+const TupMat = Tuple{Vararg{<: AbstractMatrix}}
+const TupVecMat = Union{TupVec, TupMat}
 # ---------------------------------------
 # managing defaults for input-output types
 
@@ -225,4 +233,19 @@ function evaluate_ed2!(flex_B::FlexArray,
    B, dB, ddB = _alloc_ed2(flex_B, flex_dB, flex_ddB, basis, x)
    evaluate_ed2!(B, dB, ddB, basis, x)
    return B, dB, ddB
+end
+
+# --------------------------------------- 
+# general rrule and frule interface for ChainRulesCore
+function ChainRulesCore.rrule(::typeof(evaluate), basis::ScalarPoly4MLBasis, R::AbstractVector{<: Real})
+   A, dR = evaluate_ed(basis, R)
+   ∂R = similar(R)
+   function pb(∂A)
+        @assert size(∂A) == (length(R), length(basis))
+        for i = 1:length(R)
+            ∂R[i] = dot(@view(∂A[i, :]), @view(dR[i, :]))
+        end
+        return NoTangent(), NoTangent(), ∂R
+   end
+   return A, pb
 end

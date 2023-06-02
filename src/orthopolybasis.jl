@@ -17,7 +17,7 @@ can be either continuous or discrete but must have a density function. See also
 * `chebyshev_basis`
 * `jacobi_basis`
 """
-struct OrthPolyBasis1D3T{T} <: AbstractPoly4MLBasis
+struct OrthPolyBasis1D3T{T} <: ScalarPoly4MLBasis
    # ----------------- the recursion coefficients
    A::Vector{T}
    B::Vector{T}
@@ -225,21 +225,21 @@ end
 #                 = ∑_ij ∂P_ij * ∂_xa ( P_ij )
 #                 = ∑_ij ∂P_ij * dP_ij δ_ia
 #
-function ChainRulesCore.rrule(::typeof(evaluate), basis::OrthPolyBasis1D3T, x::AbstractVector)
-   P = _alloc(basis, x)
-   nX = length(x) 
-   dP = similar(P)
-   evaluate_ed!(P, dP, basis, x)
+# function ChainRulesCore.rrule(::typeof(evaluate), basis::OrthPolyBasis1D3T, x::AbstractVector)
+#    #P = _alloc(basis, x)
+#    nX = length(x) 
+#    #dP = similar(P)
+#    P, dP = evaluate_ed(basis, x)
 
-   function pb(∂P)
-      ∂X = zeros(nX)
-      for j = 1:length(basis) 
-         for i = 1:nX 
-            ∂X[i] += ∂P[i, j] * dP[i, j]
-         end
-      end
-      return NoTangent(), NoTangent(), ∂X 
-   end
+#    function pb(∂P)
+#       ∂X = zeros(eltype(x), nX)
+#       for j = 1:length(basis) 
+#          for i = 1:nX 
+#             ∂X[i] += ∂P[i, j] * dP[i, j]
+#          end
+#       end
+#       return NoTangent(), NoTangent(), ∂X 
+#    end
 
-   return P, pb
-end
+#    return P, pb
+# end

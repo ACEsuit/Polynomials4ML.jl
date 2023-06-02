@@ -11,7 +11,7 @@ Sₗ⁰ = √(4π/2l+1) rˡP̄ₗ⁰/√2
 Sₗᵐ = (-1)ᵐ√(8π/2l+1) rˡ Re(P̄ₗᵐ(cosθ)/√2 exp(imφ))
 Sₗ⁻ᵐ = (-1)ᵐ√(8π/2l+1) rˡIm(P̄ₗᵐ(cosθ)/√2 exp(imφ))
 """
-struct RRlmBasis{T} <: AbstractPoly4MLBasis
+struct RRlmBasis{T} <: SVecPoly4MLBasis
     alp::ALPolynomials{T}
 	 @reqfields
 end

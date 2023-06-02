@@ -32,9 +32,9 @@ end
 
 # ----------------------- evaluation interfaces 
 
-const TupVec = Tuple{Vararg{<: AbstractVector}}
-const TupMat = Tuple{Vararg{<: AbstractMatrix}}
-const TupVecMat = Union{TupVec, TupMat}
+# const TupVec = Tuple{Vararg{<: AbstractVector}}
+# const TupMat = Tuple{Vararg{<: AbstractMatrix}}
+# const TupVecMat = Union{TupVec, TupMat}
 
 _valtype(basis::AbstractPoly4MLBasis, BB::Tuple) = 
       mapreduce(eltype, promote_type, BB)

@@ -1,9 +1,12 @@
 
 using Polynomials4ML, Test
 using Polynomials4ML: evaluate, evaluate_d, evaluate_dd
-using Polynomials4ML.Testing: println_slim, test_derivatives
+using Polynomials4ML.Testing: println_slim, test_derivatives, print_tf
 using LinearAlgebra: I, norm 
 using QuadGK
+using ACEbase.Testing: fdtest
+using Printf
+using Zygote
 
 @info("Testing OrthPolyBasis1D3T")
 
@@ -86,3 +89,21 @@ println_slim(@test all([
 @info("     derivatives")
 test_derivatives(cheb, () -> 2*rand()-1)
 
+@info("Testing rrule")
+using LinearAlgebra: dot 
+N = 10
+for ntest = 1:30
+   bBB = randn(N)
+   bUU = randn(N)
+   _BB(t) = bBB + t * bUU
+   bA2 = cheb(bBB)
+   u = randn(size(bA2))
+   F(t) = dot(u, Polynomials4ML.evaluate(cheb, _BB(t)))
+   dF(t) = begin
+       val, pb = Zygote.pullback(evaluate, cheb, _BB(t))
+       ∂BB = pb(u)[2] # pb(u)[1] returns NoTangent() for basis argument
+       return sum( dot(∂BB[i], bUU[i]) for i = 1:length(bUU) )
+   end
+   print_tf(@test fdtest(F, dF, 0.0; verbose=false))
+end
+println()

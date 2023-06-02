@@ -223,6 +223,8 @@ end
 
 Δ1 = laplacian(g_ch3, xx)
 
+@btime $g_ch3($xx)
+@btime $laplacian($g_ch3, $xx)
 # test the correctness of the implementation 
 
 using LinearAlgebra
@@ -249,7 +251,7 @@ end
 using ForwardDiff: hessian
 
 laplace_fwd(gfun, xx) = 
-         [ tr( hessian(xx -> g_ch3(xx).dot.W[i], xx) ) 
+         [ tr( hessian(xx -> gfun(xx).dot.W[i], xx) ) 
             for i = 1:length(Δ1.dot.W) ]
 
 Δ3 = laplace_fwd(g_ch3, xx)

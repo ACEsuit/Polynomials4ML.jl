@@ -5,7 +5,7 @@ using ChainRulesCore: NoTangent
 const NLM{T} = NamedTuple{(:n1, :n2, :l, :m), Tuple{T, T, T, T}}
 const NL{T} = NamedTuple{(:n1, :n2, :l), Tuple{T, T, T}}
 
-struct AtomicOrbitalsRadials{TP, TD, TI, TZ}  <: AbstractPoly4MLBasis
+struct AtomicOrbitalsRadials{TP, TD, TI, TZ}  <: ScalarPoly4MLBasis
    Pn::TP
    Dn::TD
    spec::Vector{NL{TI}}
@@ -94,19 +94,21 @@ function evaluate_ed2!(Rnl, dRnl, ddRnl, basis::AtomicOrbitalsRadials, R)
 end
 
 # not test
-function ChainRulesCore.rrule(::typeof(evaluate), basis::AtomicOrbitalsRadials, R::AbstractVector{<: Real})
-   A  = evaluate(basis, R)
-   ∂R = similar(R)
-   dR = evaluate_ed(basis, R)[2]
-   function pb(∂A)
-        @assert size(∂A) == (length(R), length(basis))
-        for i = 1:length(R)
-            ∂R[i] = dot(@view(∂A[i, :]), @view(dR[i, :]))
-        end
-        return NoTangent(), NoTangent(), ∂R
-   end
-   return A, pb
-end
+# function ChainRulesCore.rrule(::typeof(evaluate), basis::AtomicOrbitalsRadials, R::AbstractVector{<: Real})
+#    # A  = evaluate(basis, R)
+#    # ∂R = similar(R)
+#    # dR = evaluate_ed(basis, R)[2]
+#    A, dR = evaluate_ed(basis, R)
+#    ∂R = similar(R)
+#    function pb(∂A)
+#         @assert size(∂A) == (length(R), length(basis))
+#         for i = 1:length(R)
+#             ∂R[i] = dot(@view(∂A[i, :]), @view(dR[i, :]))
+#         end
+#         return NoTangent(), NoTangent(), ∂R
+#    end
+#    return A, pb
+# end
 
 include("gaussian.jl")
 include("slater.jl")
