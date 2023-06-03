@@ -166,7 +166,7 @@ for ntest = 1:30
     local u
     
     X = [ rand_sphere() for i = 1:21 ]
-    Y = X = [ rand_sphere() for i = 1:21 ]
+    Y = [ rand_sphere() for i = 1:21 ]
     _x(t) = X + t * Y
     A = evaluate(rSH, X)
     u = randn(size(A))

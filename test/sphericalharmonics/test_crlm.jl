@@ -190,21 +190,20 @@ println_slim(@test dYb1 ≈ dYs2)
 using Zygote
 @info("Test rrule")
 using LinearAlgebra: dot 
-rSH = CRlmBasis(10)
-#for ntest = 1:30
+basis = CRlmBasis(5)
+for ntest = 1:30
    local X
    local Y
-   local Rnl
    local u
     
    X = [ rand_sphere() for i = 1:21 ]
-   Y = X = [ rand_sphere() for i = 1:21 ]
+   Y = [ rand_sphere() for i = 1:21 ]
    _x(t) = X + t * Y
-   A = evaluate(rSH, X)
+   A = evaluate(basis, X)
    u = randn(size(A))
-   F(t) = dot(u, evaluate(rSH, _x(t)))
+   F(t) = dot(u, evaluate(basis, _x(t)))
    dF(t) = begin
-       val, pb = Zygote.pullback(rSH, _x(t))
+       val, pb = Zygote.pullback(basis, _x(t))
        ∂BB = pb(u)[1] # pb(u)[1] returns NoTangent() for basis argument
        return sum( dot(∂BB[i], Y[i]) for i = 1:length(Y) )
    end
