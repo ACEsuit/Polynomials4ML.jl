@@ -25,6 +25,9 @@ RRlmBasis(alp::ALPolynomials{T}) where {T} =
 _valtype(sh::RRlmBasis{T}, ::Type{<: StaticVector{3, S}}) where {T <: Real, S <: Real} = 
 		promote_type(T, S)
 
+_valtype(sh::RRlmBasis{T}, ::Type{<: StaticVector{3, Hyper{S}}}) where {T <: Real, S <: Real} = 
+		promote_type(T, Hyper{S})
+
 Base.show(io::IO, basis::RRlmBasis) = 
       print(io, "RRlmBasis(L=$(maxL(basis)))")
 
