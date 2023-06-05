@@ -51,6 +51,9 @@ end
 const SINGLE = Union{Number, StaticArray, SphericalCoords}
 const BATCH = AbstractVector{<: SINGLE}
 
+const TupVec = Tuple{Vararg{<: AbstractVector}}
+const TupMat = Tuple{Vararg{<: AbstractMatrix}}
+const TupVecMat = Union{TupVec, TupMat}
 # ---------------------------------------
 # managing defaults for input-output types
 

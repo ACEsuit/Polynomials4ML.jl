@@ -3,11 +3,15 @@ export ChebBasis
 """
 `ChebBasis(N)`: 
 
-Chebyshev polynomials up to degree `N-1` (inclusive). i.e  basis with length N. The basis is ordered as 
-```
-[1, x, 2x^2-1, 4x^3-3x....2xTn-1(x)-Tn-2(x)]
+Chebyshev polynomials up to degree `N-1` (inclusive). i.e  basis with length `N`. The basis is ordered as 
+```math
+[1, x, 2x^2-1, 4x^3-3x, ..., 2xT_{N-1}(x)-T_{N-2}(x)]
 ```
 where `x` is input variable. 
+
+The differences between `ChebBasis` and `chebyshev_basis` is that `ChebBasis` computes the basis on the go when it is compiled and it does not store the recursion coefficients as in `chebyshev_basis`.
+
+Warning: `ChebBasis` and `chebyshev_basis` have different normalization.
 """
 struct ChebBasis <: AbstractPoly4MLBasis
    N::Int

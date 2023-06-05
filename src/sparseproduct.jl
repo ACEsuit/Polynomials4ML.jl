@@ -70,22 +70,17 @@ function _frule_frule_evaluate(basis::SparseProduct, BB::Tuple{Vararg{AbstractMa
 end
 
 # ----------------------- overiding alloc functions
-const TupVec = Tuple{Vararg{<: AbstractVector}}
-const TupMat = Tuple{Vararg{<: AbstractMatrix}}
-const TupVecMat = Union{TupVec, TupMat}
+# const TupVec = Tuple{Vararg{<: AbstractVector}}
+# const TupMat = Tuple{Vararg{<: AbstractMatrix}}
+# const TupVecMat = Union{TupVec, TupMat}
 
 # specifically for SparseProduct/PooledSparseProduct
-_outsym(x::NTuple{NB, TupVec}) where {NB} = :out
-_outsym(X::NTuple{NB, TupMat}) where {NB} = :outb
+_outsym(x::TupVec) = :out
+_outsym(X::TupMat) = :outb
 
-_outsym(x::Tuple{AbstractVector, AbstractVector}) = :out
-_outsym(X::Tuple{AbstractMatrix, AbstractMatrix}) = :outb
-
-# _alloc(basis::SparseProduct, BB::TupVec) = 
-#       acquire!(basis.pool, :out, (length(basis), ), _valtype(basis, BB) )
-
-# _alloc(basis::SparseProduct, BB::TupMat) = 
-#       acquire!(basis.pool, :outb, (size(BB[1], 1), length(basis) ), _valtype(basis, BB) )
+# TODO: generalize it
+#_outsym(x::Tuple{AbstractVector, AbstractVector}) = :out
+#_outsym(X::Tuple{AbstractMatrix, AbstractMatrix}) = :outb
 
 _out_size(basis::SparseProduct, BB::TupVec) = (length(basis), )
 _out_size(basis::SparseProduct, BB::TupMat) = (size(BB[1],1), length(basis))

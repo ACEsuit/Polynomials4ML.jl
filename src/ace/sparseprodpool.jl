@@ -32,9 +32,9 @@ end
 
 # ----------------------- evaluation interfaces 
 
-const TupVec = Tuple{Vararg{<: AbstractVector}}
-const TupMat = Tuple{Vararg{<: AbstractMatrix}}
-const TupVecMat = Union{TupVec, TupMat}
+# const TupVec = Tuple{Vararg{<: AbstractVector}}
+# const TupMat = Tuple{Vararg{<: AbstractMatrix}}
+# const TupVecMat = Union{TupVec, TupMat}
 
 _valtype(basis::AbstractPoly4MLBasis, BB::Tuple) = 
       mapreduce(eltype, promote_type, BB)
@@ -89,6 +89,7 @@ function evaluate!(A, basis::PooledSparseProduct{NB}, BB::TupVec) where {NB}
    @assert length(BB) == NB
    # evaluate the 1p product basis functions and add/write into _A
    spec = basis.spec
+   fill!(A, 0)
    for (iA, ϕ) in enumerate(spec)
       @inbounds A[iA] += BB_prod(ϕ, BB)
    end
@@ -120,7 +121,7 @@ function evaluate!(A, basis::PooledSparseProduct{NB}, BB::TupMat,
                    nX = size(BB[1], 1)) where {NB}
    @assert all(B->size(B, 1) >= nX, BB)
    spec = basis.spec
-
+   fill!(A, 0)
    @inbounds for (iA, ϕ) in enumerate(spec)
       a = zero(eltype(A))
       @simd ivdep for j = 1:nX
