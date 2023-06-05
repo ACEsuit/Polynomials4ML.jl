@@ -14,6 +14,7 @@ This package implements a few polynomial basis types, convenient methods for eva
 * `RYlmBasis` : real spherical  harmonics 
 * `CRlmBasis` : complex solid harmonics 
 * `RRlmBasis` : real solid harmonics 
+* `ChebBasis` : chebyshev polynomials of the first kind
 * several radial bases for atomic orbitals: Slater, STO, STO-NG
 
 

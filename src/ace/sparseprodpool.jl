@@ -122,7 +122,6 @@ function evaluate!(A, basis::PooledSparseProduct{NB}, BB::TupMat,
    @assert all(B->size(B, 1) >= nX, BB)
    spec = basis.spec
    fill!(A, 0)
-   
    @inbounds for (iA, ϕ) in enumerate(spec)
       a = zero(eltype(A))
       @simd ivdep for j = 1:nX
