@@ -143,6 +143,22 @@ _acqu_dP!( basis::XlmBasis, S) = _acqu_alp!(:alpdP,  basis, S)
 _acqu_ddP!(basis::XlmBasis, S) = _acqu_alp!(:alpddP, basis, S)
 
 
+# ---------------------------- Connection with ChainRulesCore
+function ChainRulesCore.rrule(::typeof(evaluate), basis::XlmBasis, X)
+	∂X = similar(X, SVector{3, _valtype(basis, X)})
+   	A, dX = evaluate_ed(basis, X)
+	function pb(∂A)
+		@assert size(∂A) == (length(X), length(basis))
+		for i = 1:length(X)
+            ∂X[i] = sum([∂A[i,j] * dX[i,j] for j = 1:length(dX[i,:])])
+        end
+		return NoTangent(), NoTangent(), ∂X
+	end
+	return A, pb
+end
+
+
+
 # ---------------------------- Auxiliary functions 
 
 function rand_sphere() 

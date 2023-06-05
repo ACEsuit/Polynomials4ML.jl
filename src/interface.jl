@@ -1,6 +1,11 @@
 using StaticArrays: StaticArray, SVector, StaticVector, similar_type
+using ChainRulesCore
 
 abstract type AbstractPoly4MLBasis end
+
+abstract type ScalarPoly4MLBasis <: AbstractPoly4MLBasis end
+
+abstract type SVecPoly4MLBasis <: AbstractPoly4MLBasis end
 
 # ---------------------------------------
 # some helpers to deal with the three required arrays: 
@@ -129,33 +134,6 @@ _alloc_ed(basis::AbstractPoly4MLBasis, x) =
 _alloc_ed2(basis::AbstractPoly4MLBasis, x) = 
       _alloc(basis, x), _alloc_d(basis, x), _alloc_dd(basis, x)
 
-
-# special functions for SparseProduct
-# function _alloc_d(basis::AbstractPoly4MLBasis, BBs::NTuple{NB, AbstractVecOrMat{T}}) where {NB, T}
-#       BBs_size = [size(bb) for bb in BBs]
-#       return [Tuple([acquire!(basis.pool, _outsym(BBs), (BBsize), _valtype(basis, BBs)) for BBsize in BBs_size]) for _ = 1:length(basis)]
-# end
-
-# function _alloc_dd(basis::AbstractPoly4MLBasis, BBs::NTuple{NB, AbstractVecOrMat{T}}) where {NB, T}
-#       BBs_size = [size(bb) for bb in BBs]
-#       return [Tuple([acquire!(basis.pool, _outsym(BBs), (BBsize), _valtype(basis, BBs)) for BBsize in BBs_size]) for _ = 1:length(basis)]
-# end
-
-# _alloc_ed(basis::AbstractPoly4MLBasis, x::NTuple{NB, AbstractVecOrMat{T}}) where {NB, T} = _alloc(basis, x), _alloc_d(basis, x)
-# _alloc_ed2(basis::AbstractPoly4MLBasis, x::NTuple{NB, AbstractVecOrMat{T}}) where {NB, T} = _alloc(basis, x), _alloc_d(basis, x), _alloc_dd(basis, x)
-
-
-# OLD ARRAY BASED INTERFACE 
-
-# _alloc(basis::AbstractPoly4MLBasis, X) = 
-#       Array{ _valtype(basis, X) }(undef, _out_size(basis, X))
-
-# _alloc_d(basis::AbstractPoly4MLBasis, X) = 
-#       Array{ _gradtype(basis, X) }(undef, _out_size(basis, X))
-
-# _alloc_dd(basis::AbstractPoly4MLBasis, X) = 
-#       Array{ _hesstype(basis, X) }(undef, _out_size(basis, X))
-
 # --------------------------------------- 
 # evaluation interface 
 
@@ -228,4 +206,23 @@ function evaluate_ed2!(flex_B::FlexArray,
    B, dB, ddB = _alloc_ed2(flex_B, flex_dB, flex_ddB, basis, x)
    evaluate_ed2!(B, dB, ddB, basis, x)
    return B, dB, ddB
+end
+
+# --------------------------------------- 
+# general rrules and frules interface for ChainRulesCore
+
+# ∂_xa ( ∂P : P ) = ∑_ij ∂_xa ( ∂P_ij * P_ij ) 
+#                 = ∑_ij ∂P_ij * ∂_xa ( P_ij )
+#                 = ∑_ij ∂P_ij * dP_ij δ_ia
+function ChainRulesCore.rrule(::typeof(evaluate), basis::ScalarPoly4MLBasis, R::AbstractVector{<: Real})
+   A, dR = evaluate_ed(basis, R)
+   ∂R = similar(R)
+   function pb(∂A)
+        @assert size(∂A) == (length(R), length(basis))
+        for i = 1:length(R)
+            ∂R[i] = dot(@view(∂A[i, :]), @view(dR[i, :]))
+        end
+        return NoTangent(), NoTangent(), ∂R
+   end
+   return A, pb
 end

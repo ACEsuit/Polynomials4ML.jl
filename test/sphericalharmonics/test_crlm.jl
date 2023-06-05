@@ -4,6 +4,7 @@ using Polynomials4ML: SphericalCoords,
                       dspher_to_dcart, cart2spher, spher2cart, index_y
 using Polynomials4ML: evaluate, evaluate_d, evaluate_ed 
 using Polynomials4ML.Testing: print_tf, println_slim 
+using ACEbase.Testing: fdtest
 
 verbose = false
 

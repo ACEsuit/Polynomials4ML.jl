@@ -4,7 +4,7 @@ using ChainRulesCore: NoTangent
 struct SparseProduct{NB} <: AbstractPoly4MLBasis
    spec::Vector{NTuple{NB, Int}}
    # ---- temporaries & caches
-   @reqfields()   
+   @reqfields()
 end
 
 function SparseProduct()

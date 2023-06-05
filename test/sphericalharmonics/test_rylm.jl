@@ -7,6 +7,9 @@ using Polynomials4ML: SphericalCoords, index_y,
 using Polynomials4ML: evaluate, evaluate_d, evaluate_ed 
 using Polynomials4ML.Testing: print_tf, println_slim 
 using ACEbase.Testing: fdtest
+using HyperDualNumbers: Hyper
+
+
 verbose = false
 
 ##
@@ -96,6 +99,12 @@ println()
 
 rSH = RYlmBasis(10)
 X = [ rand_sphere() for i = 1:21 ]
+
+x2dualwrtj(x, j) = SVector{3}([Hyper(x[i], i == j, i == j, 0) for i = 1:3])
+
+hX = [x2dualwrtj(x, 1) for x in X]
+
+
 Y0 = evaluate(rSH, X)
 Y1, dY1 = evaluate_ed(rSH, X)
 Y2 = similar(Y1); dY2 = similar(dY1)
@@ -157,7 +166,7 @@ for ntest = 1:30
     local u
     
     X = [ rand_sphere() for i = 1:21 ]
-    Y = X = [ rand_sphere() for i = 1:21 ]
+    Y = [ rand_sphere() for i = 1:21 ]
     _x(t) = X + t * Y
     A = evaluate(rSH, X)
     u = randn(size(A))

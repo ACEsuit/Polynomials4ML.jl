@@ -72,9 +72,6 @@ simpleacemodel(bX, ps, st)
 
 F(X) = simpleacemodel(X, ps, st)[1]
 dF(X) = Zygote.gradient(x -> Lux.apply(simpleacemodel, x, ps, st)[1], X)[1]
-#(l, st_), pb = pullback(x -> Lux.apply(simpleacemodel, x, ps, st), bX)
-# gs = pb((l, nothing))[1]
 
-
+@info("Testing ∇U w.r.t X")
 fdtest(F, dF, bX, verbose = true)
-

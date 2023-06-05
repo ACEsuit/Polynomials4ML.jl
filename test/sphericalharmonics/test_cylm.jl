@@ -6,6 +6,7 @@ using Polynomials4ML: SphericalCoords,
                       dspher_to_dcart, cart2spher, spher2cart
 using Polynomials4ML: evaluate, evaluate_d, evaluate_ed 
 using Polynomials4ML.Testing: print_tf, println_slim 
+using ACEbase.Testing: fdtest
 
 verbose = false
 
@@ -67,7 +68,7 @@ println()
 ##
 
 using Polynomials4ML: SphericalCoords, ALPolynomials
-verbose=false
+verbose = false
 @info("Test: check derivatives of associated legendre polynomials")
 for nsamples = 1:30
    θ = rand() * π
@@ -229,4 +230,3 @@ X1 = randn(SVector{3, Float64}, 100)
 Y1 = evaluate(bYlm, X1)
 X2 = X1[1:10]
 Y2 = evaluate(bYlm, X2)
-

@@ -13,7 +13,7 @@ The input variable is normally an `rr::SVector{3, T}`. This `rr` need not be nor
 * `maxL` : maximum degree of the spherical harmonics
 * `T` : type used to store the coefficients for the associated legendre functions
 """
-struct RYlmBasis{T} <: AbstractPoly4MLBasis
+struct RYlmBasis{T} <: SVecPoly4MLBasis
 	alp::ALPolynomials{T}
 	@reqfields
 end
@@ -163,13 +163,13 @@ function rYlm!(Y::AbstractMatrix, L, S::AbstractVector{SphericalCoords{T}},
       for l = 0:L
         i_yl0 = index_y(l, 0)
         i_pl0 = index_p(l, 0)
-        @avx for i = 1:nX
+        @simd ivdep for i = 1:nX
            Y[i, i_yl0] = P[i, i_pl0] * oort2
         end
       end
 
       for m in 1:L
-         @avx for i = 1:nX
+         @simd ivdep for i = 1:nX
             cmi = cosmφ[i]
             smi = sinmφ[i]
             cosmφ[i] = cmi * cosφ[i] - smi * sinφ[i]
@@ -180,7 +180,7 @@ function rYlm!(Y::AbstractMatrix, L, S::AbstractVector{SphericalCoords{T}},
             i_plm = index_p(l, m)
             i_ylm⁺ = index_y(l, m)
             i_ylm⁻ = index_y(l, -m)
-            @avx for i = 1:nX
+            @simd ivdep for i = 1:nX
                p = P[i, i_plm]
                Y[i, i_ylm⁺] =  p * cosmφ[i]
                Y[i, i_ylm⁻] = -p * sinmφ[i]
@@ -340,17 +340,17 @@ function eval_grad_laplace(basis::RYlmBasis, X)
 	return Y, dY, ΔY
 end
 
-# Placeholder for now
-function ChainRulesCore.rrule(::typeof(evaluate), basis::RYlmBasis, X)
-	A  = evaluate(basis, X)
-	∂X = similar(X)
-   	dX = evaluate_ed(basis, X)[2]
-	function pb(∂A)
-		@assert size(∂A) == (length(X), length(basis))
-		for i = 1:length(X)
-            ∂X[i] = sum([∂A[i,j] * dX[i,j] for j = 1:length(dX[i,:])])
-        end
-		return NoTangent(), NoTangent(), ∂X
-	end
-	return A, pb
-end
+# # Placeholder for now
+# function ChainRulesCore.rrule(::typeof(evaluate), basis::RYlmBasis, X)
+# 	A  = evaluate(basis, X)
+# 	∂X = similar(X)
+#    	dX = evaluate_ed(basis, X)[2]
+# 	function pb(∂A)
+# 		@assert size(∂A) == (length(X), length(basis))
+# 		for i = 1:length(X)
+#             ∂X[i] = sum([∂A[i,j] * dX[i,j] for j = 1:length(dX[i,:])])
+#         end
+# 		return NoTangent(), NoTangent(), ∂X
+# 	end
+# 	return A, pb
+# end
