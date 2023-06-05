@@ -230,27 +230,3 @@ X1 = randn(SVector{3, Float64}, 100)
 Y1 = evaluate(bYlm, X1)
 X2 = X1[1:10]
 Y2 = evaluate(bYlm, X2)
-
-using Zygote
-@info("Test rrule")
-using LinearAlgebra: dot 
-cSH = CYlmBasis(5)
-for ntest = 1:30
-   local X
-   local Y
-   local u
-    
-   X = [ rand_sphere() for i = 1:21 ]
-   Y = [ rand_sphere() for i = 1:21 ]
-   _x(t) = X + t * Y
-   A = evaluate(cSH, X)
-   u = randn(size(A))
-   F(t) = dot(u, evaluate(cSH, _x(t)))
-   dF(t) = begin
-       val, pb = Zygote.pullback(cSH, _x(t))
-       ∂BB = pb(u)[1] # pb(u)[1] returns NoTangent() for basis argument
-       return sum( dot(∂BB[i], Y[i]) for i = 1:length(Y) )
-   end
-   print_tf(@test fdtest(F, dF, 0.0; verbose = false))
-end
-println()

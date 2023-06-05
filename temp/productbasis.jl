@@ -1,6 +1,9 @@
 # Jerry: This is just a specific case of a general ProductBasis
 # I will do that later expanding this to a general case, but it is unclear
 # to me how to allow the basis to distinguish whether to use norm(x) or x efficiently
+using Lux: WrappedFunction
+using Lux
+
 struct ProductBasis{NB, TR, TY, TS} <: AbstractPoly4MLBasis
    spec1::Vector{TS}
    bRnl::TR
@@ -58,4 +61,26 @@ function evaluate(basis::ProductBasis, X::AbstractVector{<: AbstractVector})
    return ϕnlm
 end
 
+function ProductBasisLayer(spec1, bRnl, bYlm)
+   spec1idx = Vector{Tuple{Int, Int}}(undef, length(spec1))
+   spec_Rnl = natural_indices(bRnl); inv_Rnl = _invmap(spec_Rnl)
+   spec_Ylm = natural_indices(bYlm); inv_Ylm = _invmap(spec_Ylm)
 
+   spec1idx = Vector{Tuple{Int, Int}}(undef, length(spec1))
+   for (i, b) in enumerate(spec1)
+      spec1idx[i] = (inv_Rnl[dropnames(b,(:m,))], inv_Ylm[(l=b.l, m=b.m)])
+   end
+   sparsebasis = SparseProduct(spec1idx)
+
+   # wrap into lux layers
+   l_Rn = Polynomials4ML.lux(bRnl)
+   l_Ylm = Polynomials4ML.lux(bYlm)
+   l_ϕnlm = Polynomials4ML.lux(sparsebasis)
+   
+   # formming model with Lux Chain
+   _norm(x) = norm.(x)
+
+   l_xnx = Lux.Parallel(nothing; normx = WrappedFunction(_norm), x = WrappedFunction(identity))
+   l_embed = Lux.Parallel(nothing; Rn = l_Rn, Ylm = l_Ylm)
+   return Chain(; xnx = l_xnx, embed = l_embed, ϕnlms = l_ϕnlm)
+end

@@ -217,29 +217,3 @@ function evaluate_ed2!(P::AbstractArray, dP::AbstractArray, ddP::AbstractArray, 
    end
    return P, dP, ddP 
 end
-
-
-# ------------------   rrules 
-# 
-# ∂_xa ( ∂P : P ) = ∑_ij ∂_xa ( ∂P_ij * P_ij ) 
-#                 = ∑_ij ∂P_ij * ∂_xa ( P_ij )
-#                 = ∑_ij ∂P_ij * dP_ij δ_ia
-#
-# function ChainRulesCore.rrule(::typeof(evaluate), basis::OrthPolyBasis1D3T, x::AbstractVector)
-#    #P = _alloc(basis, x)
-#    nX = length(x) 
-#    #dP = similar(P)
-#    P, dP = evaluate_ed(basis, x)
-
-#    function pb(∂P)
-#       ∂X = zeros(eltype(x), nX)
-#       for j = 1:length(basis) 
-#          for i = 1:nX 
-#             ∂X[i] += ∂P[i, j] * dP[i, j]
-#          end
-#       end
-#       return NoTangent(), NoTangent(), ∂X 
-#    end
-
-#    return P, pb
-# end
