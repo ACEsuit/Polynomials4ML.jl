@@ -1,22 +1,23 @@
-struct GaussianBasis <: AbstractPoly4MLBasis
+struct GaussianBasis <: ScalarPoly4MLBasis
+    ζ::AbstractVector
     # ----------------- metadata 
     @reqfields
 end
  
-GaussianBasis() = GaussianBasis(_make_reqfields()...)
+GaussianBasis(ζ) = GaussianBasis(ζ, _make_reqfields()...)
+
+Base.length(basis::GaussianBasis) = length(basis.ζ)
 
 _valtype(::GaussianBasis, T::Type{<: Real}) = T
 
-function evaluate(basis::GaussianBasis, ζ::AbstractVector{<: Number}, x::AbstractVector{<: Number}) 
-    N = length(ζ)
+function evaluate!(P, basis::GaussianBasis, x::AbstractVector{<: Real}) 
+    N = size(P, 2)
     nX = length(x)
-    P = acquire!(basis.pool, :P, (nX, N), eltype(x))
-    fill!(P, 0)
 
     @inbounds begin 
         for n = 1:N
             @simd ivdep for i = 1:nX 
-                P[i,n] = exp(-ζ[n] * x[i]^2)
+                P[i,n] = exp(-basis.ζ[n] * x[i]^2)
             end
         end
     end
@@ -24,42 +25,31 @@ function evaluate(basis::GaussianBasis, ζ::AbstractVector{<: Number}, x::Abstra
     return P 
 end
 
-function evaluate_ed(basis::GaussianBasis, ζ::AbstractVector{<: Number}, x::AbstractVector{<: Number})
-    N = length(ζ)
+function evaluate_ed!(P, dP, basis::GaussianBasis, x)
+    N = length(basis.ζ)
     nX = length(x)
-    P = acquire!(basis.pool, :P, (nX, N), eltype(x))
-    dP = acquire!(basis.pool, :dP, (nX, N), eltype(x))
-    fill!(P, 0)
-    fill!(dP, 0)
 
     @inbounds begin 
         for n = 1:N
             @simd ivdep for i = 1:nX 
-                P[i,n] = exp(-ζ[n] * x[i]^2)
-                dP[i,n] = -2 * ζ[n] * x[i] * P[i, n]
+                P[i,n] = exp(-basis.ζ[n] * x[i]^2)
+                dP[i,n] = -2 * basis.ζ[n] * x[i] * P[i, n]
             end
         end
     end
     return P, dP 
 end 
 
-function evaluate_ed2(basis::GaussianBasis, ζ::AbstractVector{<: Number}, x::AbstractVector{<: Number})
-    N = length(ζ)
+function evaluate_ed2!(P, dP, ddP, basis::GaussianBasis, x)
+    N = length(basis.ζ)
     nX = length(x)
-
-    P = acquire!(basis.pool, :P, (nX, N), eltype(x))
-    dP = acquire!(basis.pool, :dP, (nX, N), eltype(x))
-    ddP = acquire!(basis.pool, :ddP, (nX, N), eltype(x))
-    fill!(P, 0)
-    fill!(dP, 0)
-    fill!(ddP, 0)
 
     @inbounds begin 
         for n = 1:N
             @simd ivdep for i = 1:nX 
-                P[i, n] = exp(-ζ[n] * x[i]^2)
-                dP[i, n] = -2 * ζ[n] * x[i] * P[i, n]
-                ddP[i, n] = -2 * ζ[n] * P[i, n] -2 * ζ[n] * x[i] * dP[i, n]
+                P[i, n] = exp(-basis.ζ[n] * x[i]^2)
+                dP[i, n] = -2 * basis.ζ[n] * x[i] * P[i, n]
+                ddP[i, n] = -2 * basis.ζ[n] * P[i, n] -2 * basis.ζ[n] * x[i] * dP[i, n]
             end
         end
     end

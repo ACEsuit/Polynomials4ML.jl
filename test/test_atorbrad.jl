@@ -13,11 +13,11 @@ P4ML = Polynomials4ML
 @info("Testing GaussianBasis")
 n1 = 5 # degree
 n2 = 3 
-Pn = Polynomials4ML.legendre_basis(n1+1)
+Pn = P4ML.legendre_basis(n1+1)
 spec = [(n1 = n1, n2 = n2, l = l) for n1 = 1:n1 for n2 = 1:n2 for l = 0:n1-1] 
-Dn = GaussianBasis()
 ζ = rand(length(spec))
-bRnl = AtomicOrbitalsRadials(Pn, Dn, spec, ζ) 
+Dn = GaussianBasis(ζ)
+bRnl = AtomicOrbitalsRadials(Pn, Dn, spec) 
 rr = 2 * rand(10) .- 1
 Rnl = evaluate(bRnl, rr)
 Rnl1, dRnl1 = evaluate_ed(bRnl, rr)
@@ -32,9 +32,8 @@ fddRnl = vcat([ ForwardDiff.derivative(r -> evaluate_ed(bRnl, [r,])[2], r)
 println_slim(@test  Rnl ≈ Rnl1 ≈ Rnl2 )
 println_slim(@test  dRnl1 ≈ dRnl2 ≈ fdRnl )
 println_slim(@test  ddRnl2 ≈ fddRnl )
-
-# why does this fail? 
-# P4ML.Testing.test_derivatives(bRnl, () -> 2 * rand() - 1)
+ 
+P4ML.Testing.test_derivatives(bRnl, () -> 2 * rand() - 1)
 
 ##
 
@@ -43,9 +42,10 @@ n1 = 5 # degree
 n2 = 3 
 Pn = Polynomials4ML.legendre_basis(n1+1)
 spec = [(n1 = n1, n2 = n2, l = l) for n1 = 1:n1 for n2 = 1:n2 for l = 0:n1-1] 
-Dn = SlaterBasis()
 ζ = rand(length(spec))
-bRnl = AtomicOrbitalsRadials(Pn, Dn, spec, ζ) 
+
+Dn = SlaterBasis(ζ)
+bRnl = AtomicOrbitalsRadials(Pn, Dn, spec) 
 rr = 2 * rand(10) .- 1
 Rnl = evaluate(bRnl, rr)
 Rnl1, dRnl1 = evaluate_ed(bRnl, rr)
@@ -61,8 +61,7 @@ println_slim(@test  Rnl ≈ Rnl1 ≈ Rnl2  )
 println_slim(@test  dRnl1 ≈ dRnl2 ≈ fdRnl )
 println_slim(@test  ddRnl2 ≈ fddRnl )
 
-# why does this fail? 
-# P4ML.Testing.test_derivatives(bRnl, () -> 2 * rand() - 1)
+P4ML.Testing.test_derivatives(bRnl, () -> 2 * rand() - 1)
 
 ##
 
