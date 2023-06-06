@@ -70,7 +70,7 @@ for _ = 1:30
    bA3 = copy(bA2)
    evaluate!(bA3, basis, bBB)
 
-   println_slim(@test bA1 ≈ bA2 ≈ bA3)
+   print_tf(@test bA1 ≈ bA2 ≈ bA3)
 end
 
 

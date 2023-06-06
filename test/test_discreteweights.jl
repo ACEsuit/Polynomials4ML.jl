@@ -29,12 +29,3 @@ for ntest = 1:30
    print_tf( @test G ≈ I )
 end
 println() 
-
-## 
-
-@info("check that they are really polynomials")
-@info("  ... TODO ... ")
-
-
-
-

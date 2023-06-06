@@ -6,6 +6,8 @@ using ForwardDiff
 using ACEbase.Testing: fdtest
 using Zygote
 
+P4ML = Polynomials4ML
+
 ##
 
 @info("Testing GaussianBasis")
@@ -30,6 +32,9 @@ fddRnl = vcat([ ForwardDiff.derivative(r -> evaluate_ed(bRnl, [r,])[2], r)
 println_slim(@test  Rnl ≈ Rnl1 ≈ Rnl2 )
 println_slim(@test  dRnl1 ≈ dRnl2 ≈ fdRnl )
 println_slim(@test  ddRnl2 ≈ fddRnl )
+
+# why does this fail? 
+# P4ML.Testing.test_derivatives(bRnl, () -> 2 * rand() - 1)
 
 ##
 
@@ -56,6 +61,9 @@ println_slim(@test  Rnl ≈ Rnl1 ≈ Rnl2  )
 println_slim(@test  dRnl1 ≈ dRnl2 ≈ fdRnl )
 println_slim(@test  ddRnl2 ≈ fddRnl )
 
+# why does this fail? 
+# P4ML.Testing.test_derivatives(bRnl, () -> 2 * rand() - 1)
+
 ##
 
 @info("Testing STOBasis")
@@ -81,6 +89,11 @@ println_slim(@test  Rnl ≈ Rnl1 ≈ Rnl2  )
 println_slim(@test  dRnl1 ≈ dRnl2 ≈ fdRnl )
 println_slim(@test  ddRnl2 ≈ fddRnl )
 
+# why does this fail? 
+# P4ML.Testing.test_derivatives(bRnl, () -> 2 * rand() - 1)
+
+
+##
 
 @info("Test rrule")
 using LinearAlgebra: dot 
