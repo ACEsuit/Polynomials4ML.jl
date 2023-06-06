@@ -71,9 +71,9 @@ n2 = 1
 Pn = Polynomials4ML.legendre_basis(n1+1)
 spec = [(n1 = n1, n2 = n2, l = l) for n1 = 1:n1 for n2 = 1:1 for l = 0:n1-1] 
 M = 3
-ζ = [rand(length(spec), M),rand(length(spec), M)]
-Dn = STO_NG()
-bRnl = AtomicOrbitalsRadials(Pn, Dn, spec, ζ) 
+ζ = (rand(length(spec), M),rand(length(spec), M))
+Dn = STO_NG(ζ)
+bRnl = AtomicOrbitalsRadials(Pn, Dn, spec) 
 rr = 2 * rand(10) .- 1
 Rnl = evaluate(bRnl, rr)
 Rnl1, dRnl1 = evaluate_ed(bRnl, rr)
@@ -88,8 +88,7 @@ println_slim(@test  Rnl ≈ Rnl1 ≈ Rnl2  )
 println_slim(@test  dRnl1 ≈ dRnl2 ≈ fdRnl )
 println_slim(@test  ddRnl2 ≈ fddRnl )
 
-# why does this fail? 
-# P4ML.Testing.test_derivatives(bRnl, () -> 2 * rand() - 1)
+P4ML.Testing.test_derivatives(bRnl, () -> 2 * rand() - 1)
 
 
 ##
