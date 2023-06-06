@@ -70,10 +70,6 @@ function _frule_frule_evaluate(basis::SparseProduct, BB::Tuple{Vararg{AbstractMa
 end
 
 # ----------------------- overiding alloc functions
-# const TupVec = Tuple{Vararg{<: AbstractVector}}
-# const TupMat = Tuple{Vararg{<: AbstractMatrix}}
-# const TupVecMat = Union{TupVec, TupMat}
-
 # specifically for SparseProduct/PooledSparseProduct
 _outsym(x::TupVec) = :out
 _outsym(X::TupMat) = :outb

@@ -3,11 +3,11 @@ using BenchmarkTools, Test, Polynomials4ML
 using Polynomials4ML: PooledSparseProduct, evaluate, evaluate!
 using ACEbase.Testing: fdtest, println_slim, print_tf
 
-test_evaluate(basis::PooledSparseProduct, BB::Tuple{Vararg{<:AbstractVector}}) =
+test_evaluate(basis::PooledSparseProduct, BB::Tuple{Vararg{AbstractVector}}) =
    [prod(BB[j][basis.spec[i][j]] for j = 1:length(BB))
     for i = 1:length(basis)]
 
-test_evaluate(basis::PooledSparseProduct, BB::Tuple{Vararg{<:AbstractMatrix}}) =
+test_evaluate(basis::PooledSparseProduct, BB::Tuple{Vararg{AbstractMatrix}}) =
    sum(test_evaluate(basis, ntuple(i -> BB[i][j, :], length(BB)))
        for j = 1:size(BB[1], 1))
 
