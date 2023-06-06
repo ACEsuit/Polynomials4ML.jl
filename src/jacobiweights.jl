@@ -68,8 +68,25 @@ Constructs an `OrthPolyBasis1D3T` object representing a possibly rescaled versio
 
 Careful: the normalisation may be non-standard. 
 """
-chebyshev_basis(N::Integer; normalize=false) = 
-      orthpolybasis(N, chebyshev_weights(normalize))
+function chebyshev_basis(N::Integer; normalize=false) 
+   cheb = orthpolybasis(N, chebyshev_weights(normalize))
+   if normalize 
+      cheb.A[1] = sqrt(1/π)
+      cheb.A[2] = sqrt(2/π)
+      cheb.C[3] = - sqrt(2) 
+      cheb.A[3:end] .= 2 
+      cheb.B[:] .= 0 
+      cheb.C[4:end] .= -1 
+   else 
+      cheb.A[1] = 1
+      cheb.A[2] = 1
+      cheb.A[3:end] .= 2 
+      cheb.B[:] .= 0 
+      cheb.C[3:end] .= -1 
+   end
+   return cheb 
+end 
+      
 
 """
 `legendre_basis(N::Integer)`: 
