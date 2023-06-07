@@ -6,6 +6,7 @@ using Test
     # 1D Polynomials 
     @testset "OrthPolyBasis1D3T" begin include("test_op1d3t.jl"); end
     @testset "DiscreteWeights" begin include("test_discreteweights.jl"); end
+    @testset "Chebyshev" begin include("test_cheb.jl"); end 
 
     # 2D Harmonics 
     @testset "TrigonometricPolynomials" begin include("test_trig.jl"); end

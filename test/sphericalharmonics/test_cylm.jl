@@ -36,6 +36,7 @@ end
 @info("Test: check complex spherical harmonics against explicit expressions")
 nsamples = 30
 for n = 1:nsamples
+   local θ, r 
    θ = rand() * π
    φ = (rand()-0.5) * 2*π
    r = 0.1+rand()
@@ -51,6 +52,7 @@ println()
 @info("      ... same near pole")
 nsamples = 30
 for n = 1:nsamples
+   local θ, r
    θ = rand() * 1e-9
    if θ < 1e-10
       θ = 0.0
@@ -71,6 +73,7 @@ using Polynomials4ML: SphericalCoords, ALPolynomials
 verbose = false
 @info("Test: check derivatives of associated legendre polynomials")
 for nsamples = 1:30
+   local θ
    θ = rand() * π
    φ = (rand()-0.5) * 2*π
    S = SphericalCoords(φ, θ)

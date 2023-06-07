@@ -44,7 +44,7 @@ end
 @info("Test: check real solid harmonics against explicit expressions")
 nsamples = 30
 for n = 1:nsamples
-   local X
+   local X, θ, r
    θ = rand() * π
    φ = (rand()-0.5) * 2*π
    r = 0.1+rand()

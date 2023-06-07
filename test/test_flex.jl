@@ -15,7 +15,7 @@ tests = [
 
 for (basis, rnd) in tests   
    for ntest = 1:5 
-      local B1, B2 
+      local B1, B2, x
       x = rnd()
       B0 = zeros(Polynomials4ML._valtype(basis, x), length(basis))
       evaluate!(B0, basis, x)

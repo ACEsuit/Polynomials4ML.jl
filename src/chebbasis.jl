@@ -13,7 +13,7 @@ The differences between `ChebBasis` and `chebyshev_basis` is that `ChebBasis` co
 
 Warning: `ChebBasis` and `chebyshev_basis` have different normalization.
 """
-struct ChebBasis <: AbstractPoly4MLBasis
+struct ChebBasis <: ScalarPoly4MLBasis
    N::Int
    @reqfields
 end
