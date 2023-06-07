@@ -1,6 +1,11 @@
 using StaticArrays: StaticArray, SVector, StaticVector, similar_type
+using ChainRulesCore
 
 abstract type AbstractPoly4MLBasis end
+
+abstract type ScalarPoly4MLBasis <: AbstractPoly4MLBasis end
+
+abstract type SVecPoly4MLBasis <: AbstractPoly4MLBasis end
 
 # ---------------------------------------
 # some helpers to deal with the three required arrays: 
@@ -51,6 +56,9 @@ end
 const SINGLE = Union{Number, StaticArray, SphericalCoords}
 const BATCH = AbstractVector{<: SINGLE}
 
+const TupVec = Tuple{Vararg{AbstractVector}}
+const TupMat = Tuple{Vararg{AbstractMatrix}}
+const TupVecMat = Union{TupVec, TupMat}
 # ---------------------------------------
 # managing defaults for input-output types
 
@@ -107,6 +115,7 @@ _laplacetype(basis::AbstractPoly4MLBasis, X::BATCH) =
 
 _out_size(basis::AbstractPoly4MLBasis, x::SINGLE) = (length(basis),)
 _out_size(basis::AbstractPoly4MLBasis, X::BATCH) = (length(X), length(basis))
+
 _outsym(x::SINGLE) = :out 
 _outsym(X::BATCH) = :outb
 
@@ -124,18 +133,6 @@ _alloc_ed(basis::AbstractPoly4MLBasis, x) =
 
 _alloc_ed2(basis::AbstractPoly4MLBasis, x) = 
       _alloc(basis, x), _alloc_d(basis, x), _alloc_dd(basis, x)
-
-
-# OLD ARRAY BASED INTERFACE 
-
-# _alloc(basis::AbstractPoly4MLBasis, X) = 
-#       Array{ _valtype(basis, X) }(undef, _out_size(basis, X))
-
-# _alloc_d(basis::AbstractPoly4MLBasis, X) = 
-#       Array{ _gradtype(basis, X) }(undef, _out_size(basis, X))
-
-# _alloc_dd(basis::AbstractPoly4MLBasis, X) = 
-#       Array{ _hesstype(basis, X) }(undef, _out_size(basis, X))
 
 # --------------------------------------- 
 # evaluation interface 
@@ -209,4 +206,23 @@ function evaluate_ed2!(flex_B::FlexArray,
    B, dB, ddB = _alloc_ed2(flex_B, flex_dB, flex_ddB, basis, x)
    evaluate_ed2!(B, dB, ddB, basis, x)
    return B, dB, ddB
+end
+
+# --------------------------------------- 
+# general rrules and frules interface for ChainRulesCore
+
+# ∂_xa ( ∂P : P ) = ∑_ij ∂_xa ( ∂P_ij * P_ij ) 
+#                 = ∑_ij ∂P_ij * ∂_xa ( P_ij )
+#                 = ∑_ij ∂P_ij * dP_ij δ_ia
+function ChainRulesCore.rrule(::typeof(evaluate), basis::ScalarPoly4MLBasis, R::AbstractVector{<: Real})
+   A, dR = evaluate_ed(basis, R)
+   ∂R = similar(R)
+   function pb(∂A)
+        @assert size(∂A) == (length(R), length(basis))
+        for i = 1:length(R)
+            ∂R[i] = dot(@view(∂A[i, :]), @view(dR[i, :]))
+        end
+        return NoTangent(), NoTangent(), ∂R
+   end
+   return A, pb
 end

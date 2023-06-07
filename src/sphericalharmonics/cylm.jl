@@ -10,7 +10,7 @@ The input variable is normally an `rr::SVector{3, T}`. This `rr` need not be nor
 * `maxL` : maximum degree of the spherical harmonics
 * `T` : type used to store the coefficients for the associated legendre functions
 """
-struct CYlmBasis{T} <: AbstractPoly4MLBasis
+struct CYlmBasis{T} <: SVecPoly4MLBasis
 	alp::ALPolynomials{T}
    @reqfields
 end

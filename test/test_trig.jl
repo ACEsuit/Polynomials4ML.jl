@@ -14,6 +14,7 @@ basis = CTrigBasis(N)
 @info("      correctness")
 mm = natural_indices(basis)
 for ntest = 1:10
+   local x 
    x = 2*π * rand()
    P = basis(x)
    print_tf(@test all( 

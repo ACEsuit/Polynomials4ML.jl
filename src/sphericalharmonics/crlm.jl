@@ -9,7 +9,7 @@ solid harmonics:
 
 γₗᵐ(r, θ, φ) = rˡYₗᵐ(θ, φ)
 """
-struct CRlmBasis{T} <: AbstractPoly4MLBasis
+struct CRlmBasis{T} <: SVecPoly4MLBasis
     alp::ALPolynomials{T}
 	 @reqfields
 end

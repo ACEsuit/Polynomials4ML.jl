@@ -1,36 +1,38 @@
-struct SlaterBasis
+struct SlaterBasis <: ScalarPoly4MLBasis
+    ζ::AbstractVector
     # ----------------- metadata 
-    meta::Dict{String, Any}
+    @reqfields
 end
 
-SlaterBasis(; meta = Dict{String, Any}()) = SlaterBasis(meta)
+SlaterBasis(ζ) = SlaterBasis(ζ, _make_reqfields()...)
 
-function evaluate(basis::SlaterBasis, ζ::AbstractVector{<: Number}, x::AbstractVector{<: Number}) 
-    N = length(ζ)
+Base.length(basis::SlaterBasis) = length(basis.ζ)
+
+_valtype(::SlaterBasis, T::Type{<: Real}) = T
+
+function evaluate!(P, basis::SlaterBasis, x::AbstractVector{<: Real}) 
+    N = size(P, 2)
     nX = length(x)
-    P = zeros(eltype(x), nX, N)
 
     @inbounds begin 
         for n = 1:N
             @simd ivdep for i = 1:nX 
-                P[i,n] = exp(-ζ[n] * x[i])
+                P[i,n] = exp(-basis.ζ[n] * x[i])
             end
         end
     end
     return P 
 end
 
-function evaluate_ed(basis::SlaterBasis, ζ::AbstractVector{<: Number}, x::AbstractVector{<: Number})
-    N = length(ζ)
+function evaluate_ed!(P, dP, basis::SlaterBasis, x)
+    N = size(P, 2)
     nX = length(x)
-    P = zeros(eltype(x), nX, N)
-    dP = zeros(eltype(x), nX, N)
 
     @inbounds begin 
         for n = 1:N
             @simd ivdep for i = 1:nX 
-                P[i, n] = exp(-ζ[n] * x[i])
-                dP[i, n] = -ζ[n] * P[i,n]
+                P[i, n] = exp(-basis.ζ[n] * x[i])
+                dP[i, n] = -basis.ζ[n] * P[i,n]
             end
         end
     end
@@ -38,19 +40,16 @@ function evaluate_ed(basis::SlaterBasis, ζ::AbstractVector{<: Number}, x::Abstr
    return P, dP 
 end 
 
-function evaluate_ed2(basis::SlaterBasis, ζ::AbstractVector{<: Number}, x::AbstractVector{<: Number})
-    N = length(ζ)
+function evaluate_ed2!(P, dP, ddP, basis::SlaterBasis, x)
+    N = size(P, 2)
     nX = length(x)
-    P = zeros(eltype(x), nX, N)
-    dP = zeros(eltype(x), nX, N)
-    ddP = zeros(eltype(x), nX, N)
     
     @inbounds begin 
         for n = 1:N
             @simd ivdep for i = 1:nX 
-                P[i, n] = exp(-ζ[n] * x[i])
-                dP[i, n] = -ζ[n] * P[i, n]
-                ddP[i, n] = -ζ[n] * dP[i, n]
+                P[i, n] = exp(-basis.ζ[n] * x[i])
+                dP[i, n] = -basis.ζ[n] * P[i, n]
+                ddP[i, n] = -basis.ζ[n] * dP[i, n]
             end
         end
     end

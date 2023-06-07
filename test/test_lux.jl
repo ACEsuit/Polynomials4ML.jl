@@ -17,11 +17,11 @@ test_bases = [ (chebyshev_basis(10), () -> rand()),
           (RYlmBasis(5), () -> randn(SVector{3, Float64})) ]
 
 for (basis, rnd) in test_bases 
-   local B1, B2 
+   local B1, B2, x
    x = rnd() 
    B1 = evaluate(basis, x)
    l = lux(basis)
    ps, st = Lux.setup(rng, l)
-   B2 = l(x, ps, st)
+   B2, _ = l(x, ps, st)
    println_slim(@test B1 == parent(B2))
 end

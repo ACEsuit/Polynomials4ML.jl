@@ -4,6 +4,7 @@ using Polynomials4ML: SphericalCoords, index_y,
                       dspher_to_dcart, cart2spher, spher2cart, rand_sphere
 using Polynomials4ML: evaluate, evaluate_d, evaluate_ed 
 using Polynomials4ML.Testing: print_tf, println_slim 
+using ACEbase.Testing: fdtest
 
 verbose = false
 
@@ -43,7 +44,7 @@ end
 @info("Test: check real solid harmonics against explicit expressions")
 nsamples = 30
 for n = 1:nsamples
-   local X
+   local X, θ, r
    θ = rand() * π
    φ = (rand()-0.5) * 2*π
    r = 0.1+rand()
@@ -189,7 +190,29 @@ println_slim(@test Y1 ≈ Y2)
 println_slim(@test dY1 ≈ dY2)
 println_slim(@test ΔY1 ≈ ΔY2)
 
-
+using Zygote
+@info("Test rrule")
+using LinearAlgebra: dot 
+rSH = RRlmBasis(10)
+for ntest = 1:30
+   local X
+   local Y
+   local u
+   
+   X = [ rand_sphere() for i = 1:21 ]
+   Y = [ rand_sphere() for i = 1:21 ]
+   _x(t) = X + t * Y
+   A = evaluate(rSH, X)
+   u = randn(size(A))
+   F(t) = dot(u, evaluate(rSH, _x(t)))
+   dF(t) = begin
+       val, pb = Zygote.pullback(rSH, _x(t))
+       ∂BB = pb(u)[1] # pb(u)[1] returns NoTangent() for basis argument
+       return sum( dot(∂BB[i], Y[i]) for i = 1:length(Y) )
+   end
+   print_tf(@test fdtest(F, dF, 0.0; verbose = false))
+end
+println()
 # ## quick performance test 
 # this needs to move to a benchmarksuite 
 

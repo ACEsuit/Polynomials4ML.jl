@@ -6,6 +6,7 @@ using Polynomials4ML: SphericalCoords,
                       dspher_to_dcart, cart2spher, spher2cart
 using Polynomials4ML: evaluate, evaluate_d, evaluate_ed 
 using Polynomials4ML.Testing: print_tf, println_slim 
+using ACEbase.Testing: fdtest
 
 verbose = false
 
@@ -35,6 +36,7 @@ end
 @info("Test: check complex spherical harmonics against explicit expressions")
 nsamples = 30
 for n = 1:nsamples
+   local θ, r 
    θ = rand() * π
    φ = (rand()-0.5) * 2*π
    r = 0.1+rand()
@@ -50,6 +52,7 @@ println()
 @info("      ... same near pole")
 nsamples = 30
 for n = 1:nsamples
+   local θ, r
    θ = rand() * 1e-9
    if θ < 1e-10
       θ = 0.0
@@ -67,9 +70,10 @@ println()
 ##
 
 using Polynomials4ML: SphericalCoords, ALPolynomials
-verbose=false
+verbose = false
 @info("Test: check derivatives of associated legendre polynomials")
 for nsamples = 1:30
+   local θ
    θ = rand() * π
    φ = (rand()-0.5) * 2*π
    S = SphericalCoords(φ, θ)
@@ -229,4 +233,3 @@ X1 = randn(SVector{3, Float64}, 100)
 Y1 = evaluate(bYlm, X1)
 X2 = X1[1:10]
 Y2 = evaluate(bYlm, X2)
-

@@ -4,6 +4,7 @@ using Polynomials4ML: SphericalCoords,
                       dspher_to_dcart, cart2spher, spher2cart, index_y
 using Polynomials4ML: evaluate, evaluate_d, evaluate_ed 
 using Polynomials4ML.Testing: print_tf, println_slim 
+using ACEbase.Testing: fdtest
 
 verbose = false
 
@@ -34,7 +35,7 @@ end
 @info("Test: check complex solid harmonics against explicit expressions")
 nsamples = 30
 for n = 1:nsamples
-    local X
+    local X, θ, r
     l = rand(collect(1:10))
     m = rand(collect(1:l))
     θ = rand() * π
@@ -52,7 +53,7 @@ println()
 @info("      ... same near pole")
 nsamples = 30
 for n = 1:nsamples
-    local X
+    local X, θ, r
     l = rand(collect(1:10))
     m = rand(collect(1:l))
     θ = rand() * 1e-9
@@ -72,8 +73,7 @@ println()
 @info("Test: check complex solid harmonics against spherical harmonics times r^l")
 nsamples = 30
 for n = 1:nsamples
-    local X
-    local Y2
+    local X, Y2, θ, r 
     l = rand(collect(1:10))
     m = rand(collect(1:l))
     θ = rand() * π
@@ -92,8 +92,7 @@ println()
 @info("      ... same near pole")
 nsamples = 30
 for n = 1:nsamples
-    local X
-    local Y2
+    local X, Y2, θ, r
     l = rand(collect(1:10))
     m = rand(collect(1:l))
     θ = rand() * 1e-9

@@ -6,6 +6,7 @@ using Test
     # 1D Polynomials 
     @testset "OrthPolyBasis1D3T" begin include("test_op1d3t.jl"); end
     @testset "DiscreteWeights" begin include("test_discreteweights.jl"); end
+    @testset "Chebyshev" begin include("test_cheb.jl"); end 
 
     # 2D Harmonics 
     @testset "TrigonometricPolynomials" begin include("test_trig.jl"); end
@@ -21,7 +22,7 @@ using Test
     @testset "Atomic Orbitals Radials" begin include("test_atorbrad.jl"); end
 
     # ACE 
-    @testset "SparsePooledProduct" begin include("ace/test_1pbasis.jl"); end 
+    @testset "SparsePooledProduct" begin include("ace/test_sparseprodpool.jl"); end 
     @testset "Sparse Symmetric Product" begin include("ace/test_prodbasis1.jl"); end 
 
     # Misc
