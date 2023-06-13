@@ -135,5 +135,91 @@ initialparameters(rng::AbstractRNG, l::AORLayer) = ( ζ = l.basis.Dn.ζ, )
 initialstates(rng::AbstractRNG, l::AORLayer) = NamedTuple()
  
 # This should be removed later and replace by ObejctPools
-(l::AORLayer)(X, ps, st) = 
-       evaluate(l.basis, X), st
+function evaluate(l::AORLayer, X, ps, st)
+    B = evaluate(l.basis, X)
+    return B, st 
+end 
+
+(l::AORLayer)(X, ps, st) = evaluate(l, X, ps, st)
+
+
+# The following code is used to compute the derivative with respect to zeta by Hyperduals.
+
+_alloc_dp(basis::ExponentialType, X) = 
+      acquire!(basis.pool, _outsym(X), _out_size(basis, X), promote_type(eltype(basis.ζ)) )
+
+_alloc_dp(basis::AtomicOrbitalsRadials, X) = 
+      acquire!(basis.pool, _outsym(X), _out_size(basis, X), promote_type(eltype(basis.Dn.ζ)) )
+
+function eval_dp!(Rnl, basis::AtomicOrbitalsRadials, R::AbstractVector)
+    nR = length(R)
+    Pn = evaluate(basis.Pn, R)   
+    D = Polynomials4ML._alloc_dp(basis.Dn, R)
+    Dn = evaluate!(D, basis.Dn, R) 
+
+    fill!(Rnl, 0)
+    
+    for (i, b) in enumerate(basis.spec)
+        for j = 1:nR
+            Rnl[j, i] = Pn[j, b.n1] * Dn[j, i]
+        end
+    end
+
+    release!(Pn); release!(Dn)
+
+    return Rnl 
+end
+
+function expontype(Dn::GaussianBasis, ζ)
+    hζ = [ Hyper(ζ[i], 1, 1, 0) for i = 1:length(ζ) ] 
+    return GaussianBasis(hζ)
+end
+
+function expontype(Dn::SlaterBasis, ζ)
+    hζ = [ Hyper(ζ[i], 1, 1, 0) for i = 1:length(ζ) ] 
+    return SlaterBasis(hζ)
+end
+
+eps1(h::Hyper{<:Real}) = h.epsilon1
+
+function pb_params(∂ζ, ζ, basis::AtomicOrbitalsRadials, R::AbstractVector{<: Real})
+    Dn = expontype(basis.Dn, ζ)
+    bRnl = AtomicOrbitalsRadials(basis.Pn, Dn, basis.spec) 
+    Rnl = _alloc_dp(bRnl, R)
+    eval_dp!(Rnl, bRnl, R)
+    ∂ζ = eps1.(Rnl)
+    return ∂ζ
+end
+
+function ChainRulesCore.rrule(::typeof(evaluate), basis::AtomicOrbitalsRadials, R::AbstractVector{<: Real})
+    A, dR = evaluate_ed(basis, R)
+    dζ = pb_params(similar(A), basis.Dn.ζ, basis, R)
+
+    ∂R = similar(R)
+    ∂ζ = similar(basis.Dn.ζ)
+    function pb(∂A)
+         @assert size(∂A) == (length(R), length(basis))
+         for i = 1:length(R)
+            ∂R[i] = dot(@view(∂A[i, :]), @view(dR[i, :]))
+         end
+         for i = 1:length(basis.Dn.ζ)
+            ∂ζ[i] = dot(@view(∂A[:, i]), @view(dζ[:, i]))
+         end
+         return NoTangent(), ∂ζ, ∂R
+    end
+    return A, pb
+end
+
+function ChainRulesCore.rrule(::typeof(evaluate), l::AORLayer, R::AbstractVector{<: Real}, ps, st)
+    A = l(R, ps, st)
+    dζ = pb_params(similar(A[1]), l.basis.Dn.ζ, l.basis, R)
+    ∂ζ = similar(l.basis.Dn.ζ)
+    function pb(∂A)
+        @assert size(∂A[1]) == (length(R), length(l.basis))
+        for i = 1:length(l.basis.Dn.ζ)
+            ∂ζ[i] = dot(@view(∂A[1][:, i]), @view(dζ[:, i]))
+         end
+        return NoTangent(), NoTangent(), NoTangent(), (ζ = ∂ζ,), NoTangent()
+    end
+    return A, pb
+end 
