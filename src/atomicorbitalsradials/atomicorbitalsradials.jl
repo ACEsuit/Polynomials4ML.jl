@@ -182,7 +182,7 @@ end
 
 eps1(h::Hyper{<:Real}) = h.epsilon1
 
-function pb_params(∂ζ, ζ, basis::AtomicOrbitalsRadials, R::AbstractVector{<: Real})
+function pb_params(ζ, basis::AtomicOrbitalsRadials, R::AbstractVector{<: Real})
     Dn = expontype(basis.Dn, ζ)
     bRnl = AtomicOrbitalsRadials(basis.Pn, Dn, basis.spec) 
     Rnl = _alloc_dp(bRnl, R)
@@ -193,7 +193,7 @@ end
 
 function ChainRulesCore.rrule(::typeof(evaluate), basis::AtomicOrbitalsRadials, R::AbstractVector{<: Real})
     A, dR = evaluate_ed(basis, R)
-    dζ = pb_params(similar(A), basis.Dn.ζ, basis, R)
+    dζ = pb_params(basis.Dn.ζ, basis, R)
 
     ∂R = similar(R)
     ∂ζ = similar(basis.Dn.ζ)
@@ -212,7 +212,7 @@ end
 
 function ChainRulesCore.rrule(::typeof(evaluate), l::AORLayer, R::AbstractVector{<: Real}, ps, st)
     A = l(R, ps, st)
-    dζ = pb_params(similar(A[1]), l.basis.Dn.ζ, l.basis, R)
+    dζ = pb_params(l.basis.Dn.ζ, l.basis, R)
     ∂ζ = similar(l.basis.Dn.ζ)
     function pb(∂A)
         @assert size(∂A[1]) == (length(R), length(l.basis))
