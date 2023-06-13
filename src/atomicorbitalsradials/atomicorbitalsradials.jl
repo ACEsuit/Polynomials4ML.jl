@@ -2,8 +2,6 @@ export AtomicOrbitalsRadials, GaussianBasis, SlaterBasis, STO_NG
 using ChainRulesCore
 using ChainRulesCore: NoTangent
 using HyperDualNumbers: Hyper
-import LuxCore 
-import LuxCore: initialparameters, initialstates, AbstractExplicitLayer
 
 const NLM{T} = NamedTuple{(:n1, :n2, :l, :m), Tuple{T, T, T, T}}
 const NL{T} = NamedTuple{(:n1, :n2, :l), Tuple{T, T, T}}
@@ -119,18 +117,3 @@ function evaluate_ed2!(Rnl, dRnl, ddRnl, basis::Union{AtomicOrbitalsRadials, Exp
     evaluate_ed2!(Rnl_, dRnl_, ddRnl_, basis, [r,])
     return Rnl 
 end
-
-# --------------------- connect with Lux 
-struct AORLayer <: AbstractExplicitLayer 
-   basis::AtomicOrbitalsRadials
-end
-
-lux(basis::AtomicOrbitalsRadials) = AORLayer(basis)
- 
-initialparameters(rng::AbstractRNG, l::AORLayer) = NamedTuple() #( ζ = l.basis.Dn.ζ, )
- 
-initialstates(rng::AbstractRNG, l::AORLayer) = NamedTuple()
- 
-# This should be removed later and replace by ObejctPools
-(l::AORLayer)(X, ps, st) = 
-       evaluate(l.basis, X), st
