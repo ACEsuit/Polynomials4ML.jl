@@ -119,16 +119,16 @@ function evaluate_ed2!(Rnl, dRnl, ddRnl, basis::Union{AtomicOrbitalsRadials, Exp
 end
 
 # --------------------- connect with Lux 
-#struct AORLayer <: AbstractExplicitLayer 
-#   basis::AtomicOrbitalsRadials
-#end
+struct AORLayer <: AbstractExplicitLayer 
+   basis::AtomicOrbitalsRadials
+end
 
-#lux(basis::AtomicOrbitalsRadials) = AORLayer(basis)
+lux(basis::AtomicOrbitalsRadials) = AORLayer(basis)
  
-#initialparameters(rng::AbstractRNG, l::AORLayer) = NamedTuple() #( ζ = l.basis.Dn.ζ, )
+initialparameters(rng::AbstractRNG, l::AORLayer) = NamedTuple() #( ζ = l.basis.Dn.ζ, )
  
-#initialstates(rng::AbstractRNG, l::AORLayer) = NamedTuple()
+initialstates(rng::AbstractRNG, l::AORLayer) = NamedTuple()
  
 # This should be removed later and replace by ObejctPools
-#(l::AORLayer)(X, ps, st) = 
-#       evaluate(l.basis, X), st
+(l::AORLayer)(X, ps, st) = 
+       evaluate(l.basis, X), st
