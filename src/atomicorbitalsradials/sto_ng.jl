@@ -8,9 +8,8 @@ STO_NG(ζ) = STO_NG(ζ, _make_reqfields()...)
 
 Base.length(basis::STO_NG) = length(basis.ζ[1])
 
-_valtype(::STO_NG, T::Type{<: Real}) = T
-
-function evaluate!(P, basis::STO_NG, x::AbstractVector{<: Real}) 
+_valtype(::STO_NG, T::Type{<: Hyper{<:Real}}) = T
+function evaluate!(P, basis::STO_NG, x::AbstractVector) 
     ζ, D = basis.ζ[1], basis.ζ[2]
     N, M = size(ζ)
     nX = length(x)

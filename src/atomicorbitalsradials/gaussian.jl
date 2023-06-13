@@ -9,8 +9,8 @@ GaussianBasis(ζ) = GaussianBasis(ζ, _make_reqfields()...)
 Base.length(basis::GaussianBasis) = length(basis.ζ)
 
 _valtype(::GaussianBasis, T::Type{<: Real}) = T
-
-function evaluate!(P, basis::GaussianBasis, x::AbstractVector{<: Real}) 
+_valtype(::GaussianBasis, T::Type{<: Hyper{<:Real}}) = T
+function evaluate!(P, basis::GaussianBasis, x::AbstractVector) 
     N = size(P, 2)
     nX = length(x)
 

@@ -8,9 +8,8 @@ SlaterBasis(ζ) = SlaterBasis(ζ, _make_reqfields()...)
 
 Base.length(basis::SlaterBasis) = length(basis.ζ)
 
-_valtype(::SlaterBasis, T::Type{<: Real}) = T
-
-function evaluate!(P, basis::SlaterBasis, x::AbstractVector{<: Real}) 
+_valtype(::SlaterBasis, T::Type{<: Hyper{<:Real}}) = T
+function evaluate!(P, basis::SlaterBasis, x::AbstractVector) 
     N = size(P, 2)
     nX = length(x)
 

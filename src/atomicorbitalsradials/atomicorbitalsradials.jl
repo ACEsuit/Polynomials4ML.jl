@@ -1,6 +1,7 @@
 export AtomicOrbitalsRadials, GaussianBasis, SlaterBasis, STO_NG
 using ChainRulesCore
 using ChainRulesCore: NoTangent
+using HyperDualNumbers: Hyper
 
 const NLM{T} = NamedTuple{(:n1, :n2, :l, :m), Tuple{T, T, T, T}}
 const NL{T} = NamedTuple{(:n1, :n2, :l), Tuple{T, T, T}}
@@ -19,13 +20,14 @@ AtomicOrbitalsRadials(Pn, Dn, spec) =
 Base.length(basis::AtomicOrbitalsRadials) = length(basis.spec)
 
 _valtype(basis::AtomicOrbitalsRadials, T::Type{<: Real}) = T
+_valtype(basis::AtomicOrbitalsRadials, T::Type{<: Hyper{<:Real}}) = T
 
 # -------- Evaluation Code 
 
 # TODO: (Jerry?) this kind of construction could be used for all  bases? 
 #       file an issue on this.
 
-function evaluate!(Rnl, basis::AtomicOrbitalsRadials, R::AbstractVector{<: Real})
+function evaluate!(Rnl, basis::AtomicOrbitalsRadials, R::AbstractVector)
     nR = length(R)
     Pn = evaluate(basis.Pn, R)           # Pn(r)
     Dn = evaluate(basis.Dn, R)           # Dn(r)  (ζ are the parameters -> reorganize the Lux way)
@@ -43,7 +45,7 @@ function evaluate!(Rnl, basis::AtomicOrbitalsRadials, R::AbstractVector{<: Real}
     return Rnl 
 end
 
-function evaluate_ed!(Rnl, dRnl, basis::AtomicOrbitalsRadials, R::AbstractVector{<: Real})
+function evaluate_ed!(Rnl, dRnl, basis::AtomicOrbitalsRadials, R::AbstractVector)
     nR = length(R)
     Pn, dPn = evaluate_ed(basis.Pn, R)
     Dn, dDn = evaluate_ed(basis.Dn, R)
@@ -64,7 +66,7 @@ function evaluate_ed!(Rnl, dRnl, basis::AtomicOrbitalsRadials, R::AbstractVector
 end
 
 
-function evaluate_ed2!(Rnl, dRnl, ddRnl, basis::AtomicOrbitalsRadials, R::AbstractVector{<: Real})
+function evaluate_ed2!(Rnl, dRnl, ddRnl, basis::AtomicOrbitalsRadials, R::AbstractVector)
     nR = length(R)
     Pn, dPn, ddPn = evaluate_ed2(basis.Pn, R)
     Dn, dDn, ddDn = evaluate_ed2(basis.Dn, R)
@@ -116,3 +118,17 @@ function evaluate_ed2!(Rnl, dRnl, ddRnl, basis::Union{AtomicOrbitalsRadials, Exp
     return Rnl 
 end
 
+# --------------------- connect with Lux 
+struct AORLayer <: AbstractExplicitLayer 
+    basis::AtomicOrbitalsRadials
+end
+
+lux(basis::AtomicOrbitalsRadials) = AORLayer(basis)
+ 
+initialparameters(rng::AbstractRNG, l::AORLayer) = NamedTuple() #( ζ = l.basis.Dn.ζ, )
+ 
+initialstates(rng::AbstractRNG, l::AORLayer) = NamedTuple()
+ 
+# This should be removed later and replace by ObejctPools
+(l::AORLayer)(X, ps, st) = 
+       evaluate(l.basis, X), st
