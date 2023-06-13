@@ -211,15 +211,19 @@ function ChainRulesCore.rrule(::typeof(evaluate), basis::AtomicOrbitalsRadials, 
 end
 
 function ChainRulesCore.rrule(::typeof(evaluate), l::AORLayer, R::AbstractVector{<: Real}, ps, st)
-    A = l(R, ps, st)
+    A, dR = evaluate_ed(l.basis, R)
+    ∂R = similar(R)
     dζ = pb_params(l.basis.Dn.ζ, l.basis, R)
     ∂ζ = similar(l.basis.Dn.ζ)
     function pb(∂A)
         @assert size(∂A[1]) == (length(R), length(l.basis))
+        for i = 1:length(R)
+            ∂R[i] = dot(@view(∂A[1][i, :]), @view(dR[i, :]))
+        end
         for i = 1:length(l.basis.Dn.ζ)
             ∂ζ[i] = dot(@view(∂A[1][:, i]), @view(dζ[:, i]))
-         end
-        return NoTangent(), NoTangent(), NoTangent(), (ζ = ∂ζ,), NoTangent()
+        end
+        return NoTangent(), NoTangent(), ∂R, (ζ = ∂ζ,), NoTangent()
     end
-    return A, pb
+    return (A, NamedTuple()), pb
 end 

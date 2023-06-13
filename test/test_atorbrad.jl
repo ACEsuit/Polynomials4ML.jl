@@ -47,26 +47,59 @@ using Zygote
 rng = Random.default_rng()
 G = Polynomials4ML.AORLayer(bRnl)
 ps, st = LuxCore.setup(rng, G)
+for ntest = 1:30
+    local rr
+    local uu
+    local Rnl
+    local u
+    rr = ζ
+    uu = ζ
+    _rr(t) = rr + t * uu
+    x = 2 * rand(10) .- 1
+    Rnl = evaluate(bRnl, x)
+    u = randn(size(Rnl))
+    F(t) = begin
+        Dn = GaussianBasis(_rr(t))
+        bRnl = AtomicOrbitalsRadials(Pn, Dn, spec)
+        dot(u, evaluate(bRnl, x))
+    end
+    dF(t) = begin
+        Dn = GaussianBasis(_rr(t))
+        bRnl = AtomicOrbitalsRadials(Pn, Dn, spec)
+        val, pb = Zygote.pullback(bRnl -> evaluate(bRnl, x), bRnl)
+        ∂BB = pb(u)[1] 
+        return sum( dot(∂BB[i], uu[i]) for i = 1:length(uu) )
+    end
+    print_tf(@test fdtest(F, dF, 0.0; verbose = false))
+end
+println()
 
-rr = ζ
-uu = ζ
-_rr(t) = rr + t * uu
-x = 2 * rand(10) .- 1
-Rnl = evaluate(bRnl, x)
-u = randn(size(Rnl))
-F(t) = begin
-    Dn = GaussianBasis(_rr(t))
-    bRnl = AtomicOrbitalsRadials(Pn, Dn, spec)
-    dot(u, evaluate(bRnl, x))
+@info("Test rrule")
+using LinearAlgebra: dot 
+
+for ntest = 1:30
+    local rr
+    local uu
+    local Rnl
+    local u
+    
+    rr = 2 .* randn(10) .- 1
+    uu = 2 .* randn(10) .- 1
+    _rr(t) = rr + t * uu
+    Rnl = evaluate(bRnl, rr)
+    G = Polynomials4ML.AORLayer(bRnl)
+    u = G(rr,ps,st)
+    F(t) = dot(u[1], evaluate(bRnl, _rr(t)))
+    dF(t) = begin
+        val, pb = Zygote.pullback(x->G(x,ps,st), _rr(t))
+        ∂BB = pb(u)[1]
+        return sum( dot(∂BB[i], uu[i]) for i = 1:length(uu) )
+    end
+    print_tf(@test fdtest(F, dF, 0.0; verbose = false))
 end
-dF(t) = begin
-    Dn = GaussianBasis(_rr(t))
-    bRnl = AtomicOrbitalsRadials(Pn, Dn, spec)
-    val, pb = Zygote.pullback(bRnl -> evaluate(bRnl, x), bRnl)
-    ∂BB = pb(u)[1] # pb(u)[1] returns NoTangent() for basis argument
-    return sum( dot(∂BB[i], uu[i]) for i = 1:length(uu) )
-end
-print_tf(@test fdtest(F, dF, 0.0; verbose = false))
+println()
+
+
 
 a,b = Zygote.pullback(p->G(rr,p,st)[1], ps)
 b(a)
@@ -170,27 +203,3 @@ println_slim(@test  ddRnl2 ≈ fddRnl )
 
 P4ML.Testing.test_derivatives(bRnl, () -> 2 * rand() - 1)
 ##
-
-@info("Test rrule")
-using LinearAlgebra: dot 
-
-for ntest = 1:30
-    local rr
-    local uu
-    local Rnl
-    local u
-    
-    rr = 2 .* randn(10) .- 1
-    uu = 2 .* randn(10) .- 1
-    _rr(t) = rr + t * uu
-    Rnl = evaluate(bRnl, rr)
-    u = randn(size(Rnl))
-    F(t) = dot(u, evaluate(bRnl, _rr(t)))
-    dF(t) = begin
-        val, pb = Zygote.pullback(evaluate, bRnl, _rr(t))
-        ∂BB = pb(u)[2] # pb(u)[1] returns NoTangent() for basis argument
-        return sum( dot(∂BB[i], uu[i]) for i = 1:length(uu) )
-    end
-    print_tf(@test fdtest(F, dF, 0.0; verbose = false))
-end
-println()
