@@ -2,6 +2,8 @@ export AtomicOrbitalsRadials, GaussianBasis, SlaterBasis, STO_NG
 using ChainRulesCore
 using ChainRulesCore: NoTangent
 using HyperDualNumbers: Hyper
+import LuxCore 
+import LuxCore: initialparameters, initialstates, AbstractExplicitLayer
 
 const NLM{T} = NamedTuple{(:n1, :n2, :l, :m), Tuple{T, T, T, T}}
 const NL{T} = NamedTuple{(:n1, :n2, :l), Tuple{T, T, T}}
