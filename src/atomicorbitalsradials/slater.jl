@@ -1,4 +1,4 @@
-struct SlaterBasis <: ScalarPoly4MLBasis
+mutable struct SlaterBasis <: ScalarPoly4MLBasis
     ζ::AbstractVector
     # ----------------- metadata 
     @reqfields

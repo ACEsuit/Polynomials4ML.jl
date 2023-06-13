@@ -57,22 +57,56 @@ for ntest = 1:30
     _rr(t) = rr + t * uu
     x = 2 * rand(10) .- 1
     Rnl = evaluate(bRnl, x)
-    u = randn(size(Rnl))
+    u = G(x,ps,st)
     F(t) = begin
         Dn = GaussianBasis(_rr(t))
         bRnl = AtomicOrbitalsRadials(Pn, Dn, spec)
-        dot(u, evaluate(bRnl, x))
+        dot(u[1], evaluate(bRnl, x))
     end
     dF(t) = begin
         Dn = GaussianBasis(_rr(t))
         bRnl = AtomicOrbitalsRadials(Pn, Dn, spec)
-        val, pb = Zygote.pullback(bRnl -> evaluate(bRnl, x), bRnl)
-        ∂BB = pb(u)[1] 
+        G = Polynomials4ML.AORLayer(bRnl)
+        ps, st = LuxCore.setup(rng, G)
+        val, pb = Zygote.pullback(p -> G(x,p,st), ps)
+        ∂BB = pb(u)[1][1] 
         return sum( dot(∂BB[i], uu[i]) for i = 1:length(uu) )
     end
     print_tf(@test fdtest(F, dF, 0.0; verbose = false))
 end
 println()
+
+X = rr
+using Optimisers
+W0, re = destructure(ps)
+Fp = w -> sum(G(X, re(w), st)[1])
+
+#Fp(w) = begin Dn = GaussianBasis(w);
+#    bRnl = AtomicOrbitalsRadials(Pn, Dn, spec)
+#    G = Polynomials4ML.AORLayer(bRnl)
+#    return sum(G(X, re(w), st)[1])
+#end
+
+dFp = w -> ( gl = Zygote.gradient(p -> sum(G(X, p, st)[1]), ps)[1]; destructure(gl)[1])
+
+function grad_test2(f, df, X::AbstractVector)
+    F = f(X) 
+    ∇F = df(X)
+    nX = length(X)
+    EE = Matrix(I, (nX, nX))
+    
+    for h in 0.1.^(3:12)
+       gh = [ (f(X + h * EE[:, i]) - F) / h for i = 1:nX ]
+       @printf(" %.1e | %.2e \n", h, norm(gh - ∇F, Inf))
+    end
+ end
+ 
+grad_test2(Fp, dFp, W0)
+
+
+
+
+
 
 @info("Test rrule")
 using LinearAlgebra: dot 
