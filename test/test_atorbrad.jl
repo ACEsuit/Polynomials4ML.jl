@@ -19,6 +19,32 @@ spec = [(n1 = n1, n2 = n2, l = l) for n1 = 1:n1 for n2 = 1:n2 for l = 0:n1-1]
 Dn = GaussianBasis(ζ)
 bRnl = AtomicOrbitalsRadials(Pn, Dn, spec) 
 rr = 2 * rand(10) .- 1
+
+using LuxCore
+using Random
+using Zygote
+rng = Random.default_rng()
+G = Polynomials4ML.AORLayer(bRnl)
+ps, st = LuxCore.setup(rng, G)
+
+a, b = Zygote.pullback(p -> sum(G(rr, ps, st)[1]), ps)
+
+
+
+# # # # # #
+
+
+
+
+
+
+
+
+
+
+
+
+
 Rnl = evaluate(bRnl, rr)
 Rnl1, dRnl1 = evaluate_ed(bRnl, rr)
 Rnl2, dRnl2, ddRnl2 = evaluate_ed2(bRnl, rr)
