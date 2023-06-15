@@ -18,6 +18,7 @@ test_bases = [ (chebyshev_basis(10), () -> rand()),
 
 for (basis, rnd) in test_bases 
    local B1, B2, x
+   local ps, st
    x = rnd() 
    B1 = evaluate(basis, x)
    l = lux(basis)

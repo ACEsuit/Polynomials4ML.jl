@@ -73,6 +73,7 @@ for _ = 1:30
    print_tf(@test bA1 ≈ bA2 ≈ bA3)
 end
 
+println()
 
 ##
 
@@ -84,7 +85,7 @@ prodgrad = P4ML._prod_grad
 
 for N = 1:5
    for ntest = 1:10
-      local v1, g
+      local v1, g, b
       b = rand(SVector{N,Float64})
       g = prodgrad(b.data, Val(N))
       g1 = ForwardDiff.gradient(prod, b)

@@ -1,5 +1,5 @@
-struct STO_NG <: ScalarPoly4MLBasis
-    ζ::Tuple
+struct STO_NG{T} <: ScalarPoly4MLBasis
+    ζ::Tuple{Matrix{T}, Matrix{T}}
     # ----------------- metadata 
     @reqfields
 end
@@ -10,6 +10,7 @@ Base.length(basis::STO_NG) = length(basis.ζ[1])
 
 _valtype(::STO_NG, T::Type{<: Real}) = T
 _valtype(::STO_NG, T::Type{<: Hyper{<:Real}}) = T
+
 function evaluate!(P, basis::STO_NG, x::AbstractVector) 
     ζ, D = basis.ζ[1], basis.ζ[2]
     N, M = size(ζ)

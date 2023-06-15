@@ -52,6 +52,8 @@ for ntest = 1:30
     local uu
     local Rnl
     local u
+    local x
+
     rr = ζ
     uu = ζ
     _rr(t) = rr + t * uu
@@ -116,7 +118,8 @@ for ntest = 1:30
     local uu
     local Rnl
     local u
-    
+    local G
+
     rr = 2 .* randn(10) .- 1
     uu = 2 .* randn(10) .- 1
     _rr(t) = rr + t * uu
@@ -195,6 +198,8 @@ dF(t) = begin
 end
 print_tf(@test fdtest(F, dF, 0.0; verbose = false))
 
+println()
+
 a,b = Zygote.pullback(p->G(rr,p,st)[1], ps)
 b(a)
 
@@ -202,23 +207,13 @@ p = Zygote.gradient(p->sum(G(rr,p,st)[1]), ps)[1]
 
 ##
 
-using LinearAlgebra, StaticArrays, Test, Printf
-using Polynomials4ML, Polynomials4ML.Testing
-using Polynomials4ML: evaluate, evaluate_d, evaluate_ed 
-using Polynomials4ML.Testing: print_tf, println_slim 
-using ForwardDiff
-using ACEbase.Testing: fdtest
-using Zygote
-
-P4ML = Polynomials4ML
-
 @info("Testing STOBasis")
 n1 = 5 # degree
 n2 = 1
 Pn = Polynomials4ML.legendre_basis(n1+1)
 spec = [(n1 = n1, n2 = n2, l = l) for n1 = 1:n1 for n2 = 1:1 for l = 0:n1-1] 
 M = 3
-ζ = rand(2 * length(spec), M)
+ζ = (rand(2 * length(spec), M), rand(2 * length(spec), M))
 Dn = STO_NG(ζ)
 bRnl = AtomicOrbitalsRadials(Pn, Dn, spec) 
 rr = 2 * rand(10) .- 1

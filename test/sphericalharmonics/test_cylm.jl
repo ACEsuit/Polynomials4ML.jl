@@ -109,6 +109,7 @@ println()
 
 @info("      ... same near pole")
 for nsamples = 1:30
+   local θ
    θ = rand() * 1e-8
    S = SphericalCoords(0.0, θ)
    L = 5

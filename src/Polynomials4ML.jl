@@ -76,5 +76,7 @@ include("utils/utils.jl")
 # submodule with some useful utilities for writing unit tests 
 include("testing.jl")
 
+# submodule with some useful utilities for writing unit tests 
+include("ext/HyperDualNumbersExt.jl")
 
 end
