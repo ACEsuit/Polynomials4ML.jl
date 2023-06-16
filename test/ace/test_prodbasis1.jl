@@ -2,7 +2,7 @@
 using Test, BenchmarkTools, Polynomials4ML
 using Polynomials4ML: SimpleProdBasis, release!, SparseSymmProd
 using Polynomials4ML.Testing: println_slim, print_tf, generate_SO2_spec
-using LoopVectorization, Polyester, StrideArrays
+using LoopVectorization, Polyester, StrideArrays, Tullio
 using ACEbase.Testing: fdtest, dirfdtest
 
 P4ML = Polynomials4ML
@@ -26,6 +26,18 @@ struct AASpec
    spec2::Vector{Tuple{Int, Int}}
    spec3::Vector{Tuple{Int, Int, Int}}
 end 
+
+struct AASpecTullio
+   spec1::Vector{Int} 
+   spec2::Matrix{Int}
+   spec3::Matrix{Int}
+end 
+
+function AASpecTullio(spec::AASpec)
+   spec2 = reshape(reinterpret(Int, spec.spec2), 2, :)
+   spec3 = reshape(reinterpret(Int, spec.spec3), 3, :)
+   return AASpecTullio(spec.spec1, Matrix(spec2), Matrix(spec3))
+end
 
 function eval_simd!(AA, spec::AASpec, A)
    n1 = length(spec.spec1)
@@ -54,7 +66,7 @@ function eval_simd!(AA, spec::AASpec, A)
    return nothing 
 end
 
-function eval_mt1!(AA, spec::AASpec, A)
+function eval_poly!(AA, spec::AASpec, A)
    n1 = length(spec.spec1)
    n2 = length(spec.spec2)
    n3 = length(spec.spec3)
@@ -81,6 +93,26 @@ function eval_mt1!(AA, spec::AASpec, A)
    return nothing 
 end
 
+function eval_tullio!(AA, spec::AASpec, A)
+   n1 = length(spec.spec1)
+   n2 = length(spec.spec2)
+   n3 = length(spec.spec3)
+   n12 = n1+n2
+   nX = size(A, 1)
+   AA1 = view(AA, :, 1:n1)
+   AA2 = view(AA, :, n1+1:n2)
+   AA3 = view(AA, :, n2+1:n3)
+   b2 = spec.spec2
+   b3 = spec.spec3
+
+   @inbounds begin 
+      @tullio AA1[j, i] = A[j, i]
+      @tullio AA2[j, i] = A[j, b2[1, n1+i]] * A[j, b2[2, n1+i]]
+      @tullio AA3[j, i] = A[j, b3[1, n12 + i]] * A[j, b3[2, n12 + i]] * A[j, b3[3, n12 + i]]
+   end 
+   return nothing 
+end
+
 
 ##
 
@@ -92,6 +124,7 @@ spec1 = [ n[1] for n in spec[ length.(spec) .== 1 ] ]
 spec2 = map(bb -> tuple(bb...), spec[ length.(spec) .== 2 ])
 spec3 = map(bb -> tuple(bb...), spec[ length.(spec) .== 3 ])
 aaspec = AASpec(spec1, spec2, spec3)
+tlspec = AASpecTullio(aaspec)
 
 basis = SparseSymmProd(spec)
 
@@ -103,14 +136,21 @@ AA0 = basis(A)
 AA1 = copy(AA0)
 
 eval_simd!(AA1, aaspec, A)
-eval_mt1!(AA1, aaspec, A)
+eval_poly!(AA1, aaspec, A)
+# eval_tullio!(AA1, aaspec, A)
 
 ##
 
+@info("Performance of order-3 AA basis, 32 inputs")
+@info("P4ML (serial, simd across inputs)")
+@btime evaluate!($AA0, $basis, $A) 
+@info("Slightly optimized (serial, simd across inputs)")
+@btime eval_simd!($AA1, $aaspec, $A)
+@info("Polyester Threads (simd across inputs, @batch across outputs)")
+@btime eval_poly!($AA1, $aaspec, $A)
 
-@info("P4ML")
-@btime evaluate!(AA0, basis, A) 
-@info("simd")
-@btime eval_simd!(AA1, aaspec, A)
-@info("polyester")
-@btime eval_mt1!(AA1, aaspec, A)
+@info("Compare this against $nX x single eval:")
+println("318 * nX / nthreads = ", 318 * nX / Threads.nthreads() / 1000, "ms")
+A_ = A[1,:] 
+AA0_ = AA0[1,:]
+@btime evaluate!($AA0_, $basis, $A_)
