@@ -2,131 +2,115 @@
 using Test, BenchmarkTools, Polynomials4ML
 using Polynomials4ML: SimpleProdBasis, release!, SparseSymmProd
 using Polynomials4ML.Testing: println_slim, print_tf, generate_SO2_spec
-
+using LoopVectorization, Polyester, StrideArrays
 using ACEbase.Testing: fdtest, dirfdtest
 
 P4ML = Polynomials4ML
 ##
 
-M = 5 
-spec = generate_SO2_spec(5, 2*M)
-A = randn(ComplexF64, 2*M+1)
 
-## 
+function generate_spec(nA, order) 
+   spec = Vector{Int}[] 
+   # order - 1
+   append!(spec, [ [n,] for n = 1:nA ])
+   # order - 2
+   append!(spec, [ [n, m] for n = 1:nA for m = n:nA ])
+   # order - 3
+   append!(spec, [ [n, m, l] for n = 1:nA for m = n:nA for l = m:nA ])
+   #
+   return return filter(bb -> sum(bb) <= nA, spec)
+end
 
-@info("Test consistency of SparseSymmetricProduct with SimpleProdBasis")
-basis1 = SimpleProdBasis(spec)
-AA1 = basis1(A)
+struct AASpec 
+   spec1::Vector{Int} 
+   spec2::Vector{Tuple{Int, Int}}
+   spec3::Vector{Tuple{Int, Int, Int}}
+end 
 
-basis2 = SparseSymmProd(spec)
-AA2 = basis2(A)
+function eval_simd!(AA, spec::AASpec, A)
+   n1 = length(spec.spec1)
+   n2 = length(spec.spec2)
+   n3 = length(spec.spec3)
+   nX = size(A, 1)
+   @inbounds begin 
+   for i = 1:n1
+      @simd ivdep for j = 1:nX
+         AA[j, i] = A[j, i]
+      end
+   end
+   @inbounds for i = n1+1:n2
+      b = spec.spec2[i]
+      @simd ivdep for j = 1:nX
+         AA[j, i] = A[j, b[1]] * A[j, b[2]]
+      end
+   end
+   @inbounds for i = n2+1:n3
+      b = spec.spec3[i]
+      @simd ivdep for j = 1:nX
+         AA[j, i] = A[j, b[1]] * A[j, b[2]] * A[j, b[3]]
+      end
+   end
+   end 
+   return nothing 
+end
 
-@info("check against simple implementation")
-println_slim(@test AA1 ≈ AA2)
+function eval_mt1!(AA, spec::AASpec, A)
+   n1 = length(spec.spec1)
+   n2 = length(spec.spec2)
+   n3 = length(spec.spec3)
+   nX = size(A, 1)
+   @inbounds begin 
+   @batch for i = 1:n1
+      @simd ivdep for j = 1:nX
+         AA[j, i] = A[j, i]
+      end
+   end
+   @batch for i = n1+1:n2
+      b = spec.spec2[i]
+      @simd ivdep for j = 1:nX
+         AA[j, i] = A[j, b[1]] * A[j, b[2]]
+      end
+   end
+   @batch for i = n2+1:n3
+      b = spec.spec3[i]
+      @simd ivdep for j = 1:nX
+         AA[j, i] = A[j, b[1]] * A[j, b[2]] * A[j, b[3]]
+      end
+   end
+   end 
+   return nothing 
+end
 
-@info("reconstruct spec")
-spec_ = P4ML.reconstruct_spec(basis2)
-println_slim(@test spec_ == spec)
 
 ##
 
-@info("Test with a constant")
-spec_c = [ [Int[],]; spec]
-basis1_c = SimpleProdBasis(spec_c)
-basis2_c = SparseSymmProd(spec_c)
+nA = 150
+order = 3 
+spec = generate_spec(nA, order)
 
-spec_c_ = P4ML.reconstruct_spec(basis2_c)
-println_slim(@test spec_c_ == spec_c)
+spec1 = [ n[1] for n in spec[ length.(spec) .== 1 ] ]
+spec2 = map(bb -> tuple(bb...), spec[ length.(spec) .== 2 ])
+spec3 = map(bb -> tuple(bb...), spec[ length.(spec) .== 3 ])
+aaspec = AASpec(spec1, spec2, spec3)
 
-AA1_c = basis1_c(A)
-println_slim(@test AA1 ≈ AA1_c[2:end])
-println_slim(@test AA1_c[1] ≈ 1.0)
+basis = SparseSymmProd(spec)
 
-AA2_c = basis2_c(A)
-println_slim(@test AA2_c[1] ≈ 1.0)
-println_slim(@test AA2_c ≈ AA1_c)
-
-
-## 
-
-@info("Test gradient of SparseSymmetricProduct") 
-
-using LinearAlgebra: dot
-using Printf
-
-A = randn(2*M+1)
-AA = basis2(A)
-Δ = randn(length(AA)) ./ (1+length(AA))
-
-f(A) = dot(basis2(A), Δ)
-f(A)
-
-δA = randn(length(A)) ./ (1+length(A))
-g(t) = f(A + t * δA)
-
-AA, pb = P4ML.rrule(evaluate, basis2, A)
-g0 = dot(Δ, AA)
-dg0 = dot(pb(Δ)[3], δA)
-
-errs = Float64[]
-for h = (0.1).^(0:10)
-   push!(errs, abs((g(h) - g0)/h - dg0))
-   @printf(" %.2e | %.2e \n", h, errs[end])
-end
-/(extrema(errs)...)
-println_slim(@test /(extrema(errs)...) < 1e-4)
-
-
-## 
-
-@info("Test consistency of serial and batched evaluation")
+##
 
 nX = 32
-bA = randn(ComplexF64, nX, 2*M+1)
-bAA1 = zeros(ComplexF64, nX, length(spec))
-for i = 1:nX
-   bAA1[i, :] = basis1(bA[i, :])
-end
-bAA2 = basis2(bA)
+A = randn(Float64, nX, nA)
+AA0 = basis(A)
+AA1 = copy(AA0)
 
-println_slim(@test bAA1 ≈ bAA2)
+eval_simd!(AA1, aaspec, A)
+eval_mt1!(AA1, aaspec, A)
 
-## 
-
-@info("Test consistency of serial and batched evaluation with constant")
-
-nX = 32
-bA = randn(ComplexF64, nX, 2*M+1)
-bAA1 = zeros(ComplexF64, nX, length(basis1_c))
-for i = 1:nX
-   bAA1[i, :] = basis1_c(bA[i, :])
-end
-bAA2 = basis2_c(bA)
-
-println_slim(@test bAA1 ≈ bAA2)
-
-## 
-
-@info("Test batched pullback DAG")
-
-for ntest = 1:20 
-   local nX, bA 
-   nX = 32
-   bA = randn(nX, 2*M+1)
-   bAA = zeros(nX, length(basis2.dag))
-   evaluate!(bAA, basis2.dag, bA)
-   b∂A = zero(bA)
-   b∂AA = randn(nX, length(basis2.dag))
-   P4ML.pullback_arg!(b∂A, copy(b∂AA), basis2.dag, bAA)
-
-   b∂A1 = zero(bA)
-   for j = 1:nX 
-      P4ML.pullback_arg!( (@view b∂A1[j, :]), 
-                        b∂AA[j, :], basis2.dag, bAA[j, :])
-   end 
-
-   print_tf(@test b∂A1 ≈ b∂A)
-end
-println() 
+##
 
 
+@info("P4ML")
+@btime evaluate!(AA0, basis, A) 
+@info("simd")
+@btime eval_simd!(AA1, aaspec, A)
+@info("polyester")
+@btime eval_mt1!(AA1, aaspec, A)

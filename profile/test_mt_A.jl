@@ -27,7 +27,8 @@ function eval_mt1!(A, basis::PooledSparseProduct, BB)
       @inbounds begin 
          b = basis.spec[iA]
          @simd ivdep for iX = 1:nX 
-            a += B1[iX, b[1]] * B2[iX, b[2]] * B3[iX, b[3]]
+            a += _bb_prod(b, BB, iX)
+            # a += B1[iX, b[1]] * B2[iX, b[2]] * B3[iX, b[3]]
          end
          A[iA] = a 
       end
@@ -64,8 +65,8 @@ function eval_mt3!(A, basis::PooledSparseProduct, BB)
       a = 0.0 
       b = basis.spec[iA]
       @avx for iX = 1:nX 
-         # a += _bb_prod(b, BB, iX)
-         a += B1[iX, b[1]] * B2[iX, b[2]] * B3[iX, b[3]]
+         a += _bb_prod(b, BB, iX)
+         # a += B1[iX, b[1]] * B2[iX, b[2]] * B3[iX, b[3]]
       end
       A[iA] = a 
    end
