@@ -1,10 +1,10 @@
-mutable struct SlaterBasis <: ScalarPoly4MLBasis
-    ζ::AbstractVector
+mutable struct SlaterBasis{T} <: ScalarPoly4MLBasis
+    ζ::Vector{T}
     # ----------------- metadata 
     @reqfields
 end
 
-SlaterBasis(ζ) = SlaterBasis(ζ, _make_reqfields()...)
+SlaterBasis(ζ::Vector{T}) where {T} = SlaterBasis(ζ, _make_reqfields()...)
 
 Base.length(basis::SlaterBasis) = length(basis.ζ)
 

@@ -37,7 +37,7 @@ function evaluate!(Rnl, basis::AtomicOrbitalsRadials, R::AbstractVector)
     Pn = evaluate(basis.Pn, R)           # Pn(r)
     Dn = evaluate(basis.Dn, R)           # Dn(r)  (ζ are the parameters -> reorganize the Lux way)
 
-    fill!(Rnl, 0)
+    fill!(Rnl, zero(eltype(Rnl)))
     
     for (i, b) in enumerate(basis.spec)
         for j = 1:nR
@@ -55,7 +55,7 @@ function evaluate_ed!(Rnl, dRnl, basis::AtomicOrbitalsRadials, R::AbstractVector
     Pn, dPn = evaluate_ed(basis.Pn, R)
     Dn, dDn = evaluate_ed(basis.Dn, R)
 
-    fill!(Rnl, 0); fill!(dRnl, 0); 
+    fill!(Rnl, zero(eltype(Rnl))); fill!(dRnl, zero(eltype(Rnl))); 
 
     for (i, b) in enumerate(basis.spec)
         for j = 1:nR
@@ -76,7 +76,7 @@ function evaluate_ed2!(Rnl, dRnl, ddRnl, basis::AtomicOrbitalsRadials, R::Abstra
     Pn, dPn, ddPn = evaluate_ed2(basis.Pn, R)
     Dn, dDn, ddDn = evaluate_ed2(basis.Dn, R)
 
-    fill!(Rnl, 0); fill!(dRnl, 0); fill!(ddRnl, 0)
+    fill!(Rnl, zero(eltype(Rnl))); fill!(dRnl, zero(eltype(dRnl))); fill!(ddRnl, zero(eltype(ddRnl)))
 
     for (i, b) in enumerate(basis.spec)
         for j = 1:nR
@@ -154,11 +154,11 @@ _alloc_dp(basis::AtomicOrbitalsRadials, X) =
 
 function eval_dp!(Rnl, basis::AtomicOrbitalsRadials, R::AbstractVector)
     nR = length(R)
-    Pn = evaluate(basis.Pn, R)   
+    Pn = evaluate(basis.Pn, R)
     D = Polynomials4ML._alloc_dp(basis.Dn, R)
     Dn = evaluate!(D, basis.Dn, R) 
 
-    fill!(Rnl, 0)
+    fill!(Rnl, zero(eltype(Rnl)))
     
     for (i, b) in enumerate(basis.spec)
         for j = 1:nR
