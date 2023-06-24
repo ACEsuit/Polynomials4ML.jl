@@ -101,7 +101,7 @@ using LinearAlgebra: dot
 
 for ntest = 1:30
    local bBB, bA2
-   local u
+   local bUU, u
    bBB = (randn(nX, N1), randn(nX, N2), randn(nX, N3))
    bUU = (randn(nX, N1), randn(nX, N2), randn(nX, N3))
    _BB(t) = (bBB[1] + t * bUU[1], bBB[2] + t * bUU[2], bBB[3] + t * bUU[3])
@@ -109,10 +109,11 @@ for ntest = 1:30
    u = randn(size(bA2))
    F(t) = dot(u, evaluate(basis, _BB(t)))
    dF(t) = begin
-      val, pb = P4ML._rrule_evaluate(basis, _BB(t))
-      ∂BB = pb(u)
+      val, pb = Zygote.pullback(evaluate, basis, _BB(t))
+      ∂BB = pb(u)[2]
       return sum(dot(∂BB[i], bUU[i]) for i = 1:length(bUU))
    end
    print_tf(@test fdtest(F, dF, 0.0; verbose=false))
 end
 println()
+

@@ -1,6 +1,9 @@
 
 using LoopVectorization
 
+using ChainRulesCore
+using ChainRulesCore: NoTangent
+
 struct SparseSymmProd <: AbstractPoly4MLBasis
    dag::SparseSymmProdDAG
    proj::Vector{Int}
@@ -90,7 +93,7 @@ function _pullback(Δ, basis::SparseSymmProd, A::AbstractMatrix, AA, AAdag)
 end
 
 
-function rrule(::typeof(evaluate), basis::SparseSymmProd, A::AbstractVector)
+function ChainRulesCore.rrule(::typeof(evaluate), basis::SparseSymmProd, A::AbstractVector)
    AAdag = evaluate(basis.dag, A)
    AA = AAdag[basis.proj]
 
@@ -105,7 +108,7 @@ function rrule(::typeof(evaluate), basis::SparseSymmProd, A::AbstractVector)
    return AA, Δ -> (NoTangent(), NoTangent(), _pullback(Δ, basis, A, AA, AAdag))
 end
 
-function rrule(::typeof(evaluate), basis::SparseSymmProd, A::AbstractMatrix)
+function ChainRulesCore.rrule(::typeof(evaluate), basis::SparseSymmProd, A::AbstractMatrix)
    AAdag = evaluate(basis.dag, A)
    AA = AAdag[:, basis.proj]
    return AA, Δ -> (NoTangent(), NoTangent(), _pullback(Δ, basis, A, AA, AAdag))
