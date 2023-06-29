@@ -116,23 +116,8 @@ end
 
 # -------------- Lux integration 
 
-# struct SparseSymmProdLayer{T} <: AbstractExplicitLayer
-#    basis::SparseSymmProd{T}
-# end
-
-# function lux(basis::SparseSymmProd) 
-#    return SparseSymmProdLayer(basis)
-# end
-
-# Base.length(l::SparseSymmProdLayer) = length(l.basis)
-
-# initialparameters(rng::AbstractRNG, l::SparseSymmProdLayer) = NamedTuple() 
-
-# initialstates(rng::AbstractRNG, l::SparseSymmProdLayer) = NamedTuple()
-
-
 # try non-allocating lux
-#(l::PolyLuxLayer{SparseSymmProd})(A, ps, st) = LuxCore.apply(l, A, ps, st)
+# (l::PolyLuxLayer{SparseSymmProd})(A, ps, st) = LuxCore.apply(l, A, ps, st)
 
 function evaluate(l::PolyLuxLayer{SparseSymmProd}, A::AbstractVector{T}, ps, st) where {T}
    AA = acquire!(l.basis.tmp, :AA, (length(l),), T)
@@ -148,7 +133,6 @@ function evaluate(l::PolyLuxLayer{SparseSymmProd}, A::AbstractMatrix{T}, ps, st)
 end
 
 function ChainRulesCore.rrule(::typeof(LuxCore.apply), l::PolyLuxLayer{SparseSymmProd}, A, ps, st)
-   @show "calling correct rrule"
    AAdag = evaluate(l.basis.dag, A)
    AA = AAdag[:, l.basis.proj]
    return (AA, st), Δ -> (NoTangent(), NoTangent(), _pullback(Δ[1], l.basis, A, AA, AAdag), NoTangent(), NoTangent())
