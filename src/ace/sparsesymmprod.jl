@@ -130,9 +130,27 @@ end
 
 # initialstates(rng::AbstractRNG, l::SparseSymmProdLayer) = NamedTuple()
 
-# (l::SparseSymmProdLayer)(A, ps, st) = evaluate(l.basis, A), st 
 
+# try non-allocating lux
+#(l::PolyLuxLayer{SparseSymmProd})(A, ps, st) = LuxCore.apply(l, A, ps, st)
 
+function evaluate(l::PolyLuxLayer{SparseSymmProd}, A::AbstractVector{T}, ps, st) where {T}
+   AA = acquire!(l.basis.tmp, :AA, (length(l),), T)
+   evaluate!(AA, l.basis, A)
+   return AA, st
+end
 
+function evaluate(l::PolyLuxLayer{SparseSymmProd}, A::AbstractMatrix{T}, ps, st) where {T}
+   nX = size(A, 1)
+   AA = acquire!(l.basis.tmp, :AAbatch, (nX, length(l)), T)
+   evaluate!(AA, l.basis, A)
+   return AA, st
+end
 
+function ChainRulesCore.rrule(::typeof(LuxCore.apply), l::PolyLuxLayer{SparseSymmProd}, A, ps, st)
+   @show "calling correct rrule"
+   AAdag = evaluate(l.basis.dag, A)
+   AA = AAdag[:, l.basis.proj]
+   return (AA, st), Δ -> (NoTangent(), NoTangent(), _pullback(Δ[1], l.basis, A, AA, AAdag), NoTangent(), NoTangent())
+end
 
