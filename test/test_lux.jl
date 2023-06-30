@@ -26,3 +26,19 @@ for (basis, rnd) in test_bases
    B2, _ = l(x, ps, st)
    println_slim(@test B1 == parent(B2))
 end
+
+using Zygote
+using LuxCore
+
+x = [rand()]
+basis = legendre_basis(10)
+B1 = evaluate(basis, x)
+l = lux(basis)
+ps, st = Lux.setup(rng, l)
+val, pb = Zygote.pullback(LuxCore.apply, l, x, ps, st)
+val2, pb2 = Zygote.pullback(evaluate, basis, x)
+
+@assert val[1] ≈ val2
+
+pb(val)
+pb2(val2)

@@ -120,15 +120,17 @@ end
 # (l::PolyLuxLayer{SparseSymmProd})(A, ps, st) = LuxCore.apply(l, A, ps, st)
 
 function evaluate(l::PolyLuxLayer{SparseSymmProd}, A::AbstractVector{T}, ps, st) where {T}
-   AA = acquire!(l.basis.tmp, :AA, (length(l),), T)
+   AA = acquire!(st.pool, :AA, (length(l),), T)
    evaluate!(AA, l.basis, A)
+   release!(A)
    return AA, st
 end
 
 function evaluate(l::PolyLuxLayer{SparseSymmProd}, A::AbstractMatrix{T}, ps, st) where {T}
    nX = size(A, 1)
-   AA = acquire!(l.basis.tmp, :AAbatch, (nX, length(l)), T)
+   AA = acquire!(st.pool, :AAbatch, (nX, length(l)), T)
    evaluate!(AA, l.basis, A)
+   release!(A)
    return AA, st
 end
 
