@@ -33,7 +33,11 @@ _init_default_luxstate(use_cache) = ( use_cache ?  (pool =  ArrayPool(FlexArrayC
 
 
 # ---------- PolyLuxLayer
-# the simplest lux layer implementation 
+# the simplest lux layer implementation
+
+# WARNING: All PolyLuxLayer are assumed to be not containing trainable parameters, so that they fallback to rrule 
+# interface without ps and st, all trainable PolyLayers should overload Polynomials4ML.lux with wanted function 
+# and return another non-PolyLuxLayer type
 struct PolyLuxLayer{TB} <: AbstractExplicitLayer
    basis::TB
    meta::Dict{String, Any}
@@ -54,7 +58,6 @@ initialstates(rng::AbstractRNG, l::PolyLuxLayer) = _init_luxstate(rng, l)
 
 # general fallback of evaluate and pullback interface
 evaluate!(out, basis::AbstractPoly4MLBasis, X, ps, st) = evaluate!(out, basis, X)
-ChainRulesCore.rrule(evaluate, basis::AbstractPoly4MLBasis, X, ps, st) = ChainRulesCore.rrule(evaluate, basis, X)
 
 # lux evaluation interface
 function evaluate(l::PolyLuxLayer, X, ps, st)
@@ -65,7 +68,7 @@ end
 
 # Discuss: This only uses the usual eval interface with ArrayCache. Can we use tmp array in pb too?
 function ChainRulesCore.rrule(::typeof(LuxCore.apply), l::PolyLuxLayer, X, ps, st)
-   val, inner_pb = ChainRulesCore.rrule(evaluate, l.basis, X, ps, st)
+   val, inner_pb = ChainRulesCore.rrule(evaluate, l.basis, X)
    return (val, st), Δ -> (inner_pb(Δ[1])..., NoTangent(), NoTangent())
 end
 
