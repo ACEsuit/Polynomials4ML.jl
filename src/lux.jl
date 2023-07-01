@@ -34,9 +34,6 @@ _init_default_luxstate(use_cache) = ( use_cache ?  (pool =  ArrayPool(FlexArrayC
 
 # ---------- PolyLuxLayer
 # the simplest lux layer implementation 
-
-
-
 struct PolyLuxLayer{TB} <: AbstractExplicitLayer
    basis::TB
    meta::Dict{String, Any}
@@ -55,6 +52,27 @@ initialstates(rng::AbstractRNG, l::PolyLuxLayer) = _init_luxstate(rng, l)
 
 (l::PolyLuxLayer)(args...) = evaluate(l, args...)
 
+# general fallback of evaluate and pullback interface
+evaluate!(out, basis::AbstractPoly4MLBasis, X, ps, st) = evaluate!(out, basis, X)
+ChainRulesCore.rrule(evaluate, basis::AbstractPoly4MLBasis, X, ps, st) = ChainRulesCore.rrule(evaluate, basis, X)
+
+# lux evaluation interface
+function evaluate(l::PolyLuxLayer, X, ps, st)
+   out = acquire!(st.pool, _outsym(X), _out_size(l.basis, X), _valtype(l.basis, X))
+   evaluate!(out, l.basis, X, ps, st)
+   return out, st
+end
+
+# Discuss: This only uses the usual eval interface with ArrayCache. Can we use tmp array in pb too?
+function ChainRulesCore.rrule(::typeof(LuxCore.apply), l::PolyLuxLayer, X, ps, st)
+   val, inner_pb = ChainRulesCore.rrule(evaluate, l.basis, X, ps, st)
+   return (val, st), Δ -> (inner_pb(Δ[1])..., NoTangent(), NoTangent())
+end
+
+## === 
+
+## Backup: interface before we migrate to non-allocating lux layers
+
 # function evaluate(l::PolyLuxLayer, X, ps, st)
    
 #    # TODO: after we make sure we want to migrate to HyperDualNumbers in any cases we can ignore_derivatives from ChainRulesCore
@@ -64,15 +82,3 @@ initialstates(rng::AbstractRNG, l::PolyLuxLayer) = _init_luxstate(rng, l)
 #    B = evaluate(l.basis, X)
 #    return B, st 
 # end 
-
-function evaluate(l::PolyLuxLayer, X, ps, st)
-   out = acquire!(st.pool, _outsym(X), _out_size(l.basis, X), _valtype(l.basis, X))
-   evaluate!(out, l.basis, X)
-   return out, st
-end
-
-# Discuss: This only uses the usual eval interface with ArrayCache. Can we use tmp array in pb too?
-function ChainRulesCore.rrule(::typeof(LuxCore.apply), l::PolyLuxLayer, X, ps, st)
-   val, inner_pb = ChainRulesCore.rrule(evaluate, l.basis, X)
-   return (val, st), Δ -> (inner_pb(Δ[1])..., NoTangent(), NoTangent())
-end
