@@ -116,13 +116,10 @@ end
 
 # -------------- Lux integration 
 
-# try non-allocating lux
-# (l::PolyLuxLayer{SparseSymmProd})(A, ps, st) = LuxCore.apply(l, A, ps, st)
-
+# it needs an extra lux interface reason as in the case of the `basis` 
 function evaluate(l::PolyLuxLayer{SparseSymmProd}, A::AbstractVector{T}, ps, st) where {T}
    AA = acquire!(st.pool, :AA, (length(l),), T)
    evaluate!(AA, l.basis, A)
-   release!(A)
    return AA, st
 end
 
@@ -130,13 +127,5 @@ function evaluate(l::PolyLuxLayer{SparseSymmProd}, A::AbstractMatrix{T}, ps, st)
    nX = size(A, 1)
    AA = acquire!(st.pool, :AAbatch, (nX, length(l)), T)
    evaluate!(AA, l.basis, A)
-   release!(A)
    return AA, st
 end
-
-function ChainRulesCore.rrule(::typeof(LuxCore.apply), l::PolyLuxLayer{SparseSymmProd}, A, ps, st)
-   AAdag = evaluate(l.basis.dag, A)
-   AA = AAdag[:, l.basis.proj]
-   return (AA, st), Δ -> (NoTangent(), NoTangent(), _pullback(Δ[1], l.basis, A, AA, AAdag), NoTangent(), NoTangent())
-end
-
