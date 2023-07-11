@@ -293,6 +293,39 @@ function _pullback_evaluate!(∂BB, ∂A, basis::PooledSparseProduct{2}, BB::Tup
    return nothing 
 end
 
+# _pb_pb_evaluate(basis, Δ2, Δ, BB, ∂BB)
+
+function _pb_pb_evaluate(basis::PooledSparseProduct{2}, ∂2, 
+                         ∂A, BB::TupMat)
+
+   # ∂2 should be a tuple of length 2
+   @assert ∂2 isa Tuple{<: AbstractMatrix, <: AbstractMatrix}
+   @assert BB isa Tuple{<: AbstractMatrix, <: AbstractMatrix}
+   @assert ∂A isa AbstractVector
+   
+   nX = size(BB[1], 1)
+
+   ∂2_∂A = zeros(length(∂A))
+   ∂2_BB = ntuple(i -> zeros(size(BB[i])...), 2)
+   
+   for (iA, ϕ) in enumerate(basis.spec)
+      @simd ivdep for j = 1:nX 
+         ϕ1 = ϕ[1]
+         ϕ2 = ϕ[2]
+         b1 = BB[1][j, ϕ1]
+         b2 = BB[2][j, ϕ2]
+         # A[iA] += b1 * b2 
+         # ∂BB[1][j, ϕ1] += ∂A[iA] * b2
+         # ∂BB[2][j, ϕ2] += ∂A[iA] * b1
+         ∂2_∂A[iA] += ∂2[1][j, ϕ1] * b2 + ∂2[2][j, ϕ2] * b1
+         ∂2_BB[1][j, ϕ1] += ∂2[2][j, ϕ2] * ∂A[iA]
+         ∂2_BB[2][j, ϕ2] += ∂2[1][j, ϕ1] * ∂A[iA]
+      end 
+   end
+   return ∂2_∂A, ∂2_BB 
+end
+
+
 
 
 # function _pullback_evaluate!(∂BB, ∂A, basis::PooledSparseProduct{NB}, 
@@ -332,7 +365,9 @@ end
 # --------------------- connect with ChainRules 
 # todo ... 
 
-function ChainRulesCore.rrule(::typeof(evaluate), basis::PooledSparseProduct{NB}, BB::TupMat) where {NB}
+import ChainRulesCore: rrule, NoTangent
+
+function rrule(::typeof(evaluate), basis::PooledSparseProduct{NB}, BB::TupMat) where {NB}
    A = evaluate(basis, BB)
 
    function pb(Δ)
@@ -342,6 +377,19 @@ function ChainRulesCore.rrule(::typeof(evaluate), basis::PooledSparseProduct{NB}
 
    return A, pb 
 end
+
+function rrule(::typeof(_pullback_evaluate), Δ, basis::PooledSparseProduct, BB)
+   ∂BB = _pullback_evaluate(Δ, basis, BB)
+
+   function pb(Δ2)
+      ∂2_Δ, ∂2_BB = _pb_pb_evaluate(basis, Δ2, Δ, BB)
+      return NoTangent(), ∂2_Δ, NoTangent(), ∂2_BB
+   end
+
+   return ∂BB, pb
+end
+
+
 
 
 # --------------------- connect with Lux 
