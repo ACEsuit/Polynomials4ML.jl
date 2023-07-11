@@ -36,7 +36,7 @@ end
 @info("Test evaluation with a single input (no pooling)")
 
 for ntest = 1:30
-   local BB, A1, A2
+   local BB, A1, A2, basis
 
    order = mod1(ntest, 4)
    basis = _generate_basis(; order=order)
@@ -53,7 +53,7 @@ println()
 nX = 64
 
 for ntest = 1:30 
-   local bBB, bA1, bA2, bA3 
+   local bBB, bA1, bA2, bA3, basis 
 
    order = mod1(ntest, 4)
    basis = _generate_basis(; order=order)
@@ -92,7 +92,7 @@ println()
 using LinearAlgebra: dot
 
 for ntest = 1:30
-   local bBB, bA2, u
+   local bBB, bA2, u, basis, nX 
    order = mod1(ntest, 4)
    basis = _generate_basis(; order=order)
    bBB = _rand_input(basis)
@@ -118,7 +118,7 @@ println()
 import ChainRulesCore: rrule, NoTangent
 
 for ntest = 1:10 
-
+   local basis, val, pb 
    ORDER = 2
    basis = _generate_basis(;order = ORDER)
    bBB = _rand_input(basis)
@@ -155,3 +155,4 @@ for ntest = 1:10
    print_tf(@test all( fdtest(F, dF, 0.0; verbose=false) ))
 end
 println()
+
