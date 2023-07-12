@@ -88,6 +88,7 @@ println()
 
 @info("     _pb_prod_grad")
 for ORDER = 1:5
+   local val, pb, u 
    @info("order = $ORDER")
    pb_prodgrad = P4ML._pb_prod_grad
    b = rand(SVector{ORDER,Float64})
