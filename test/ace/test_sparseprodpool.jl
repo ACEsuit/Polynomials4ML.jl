@@ -86,12 +86,20 @@ for N = 1:5
 end
 println()
 
-pb_prodgrad = P4ML._pb_prod_grad
-b = rand(SVector{3,Float64})
-g = prodgrad(b.data, Val(3))
-∂ = @SVector randn(length(g))
-pb_prodgrad(∂.data, b.data, Val(3))
-# this is a Forwarddiff gradient, so should not need to be tested ... 
+@info("     _pb_prod_grad")
+for ORDER = 1:5
+   @info("order = $ORDER")
+   pb_prodgrad = P4ML._pb_prod_grad
+   b = rand(SVector{ORDER,Float64})
+   g = prodgrad(b.data, Val(ORDER))
+   ∂ = @SVector randn(length(g))
+   val, pb = pb_prodgrad(∂.data, b.data, Val(ORDER))
+   @test all(val .≈ g)
+   u = randn(SVector{ORDER,Float64}) 
+   println_slim(@test  fdtest( b -> sum(u .* prodgrad(tuple(b...), Val(ORDER))), 
+            b -> [ pb_prodgrad(u.data, tuple(b...), Val(ORDER))[2]... ],
+            [b...], verbose = false ) |> all )
+end
 
 ##
 
@@ -121,12 +129,11 @@ println()
 ## 
 
 @info("Testing _pb_pb_evaluate for PooledSparseProduct")
-@info("    order = 2 only. (todo higher order)")
 import ChainRulesCore: rrule, NoTangent
 
-# for ntest = 1:20 
+for ntest = 1:20 
    local basis, val, pb 
-   ORDER = 1 #mod1(ntest, 3)+1
+   ORDER = mod1(ntest, 3)+1
    basis = _generate_basis(;order = ORDER)
    bBB = _rand_input(basis)
    ∂A = randn(length(basis))
@@ -159,7 +166,7 @@ import ChainRulesCore: rrule, NoTangent
       return dot(∂_∂A, bV) + sum(dot(bUU[i], ∂2_BB[i]) for i = 1:ORDER)
    end
 
-   print_tf(@test all( fdtest(F, dF, 0.0; verbose=true) ))
+   print_tf(@test all( fdtest(F, dF, 0.0; verbose=false) ))
 end
 println()
 

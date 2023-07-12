@@ -55,10 +55,12 @@ end
    end
 end
 
-function _pb_prod_grad(∂::Tuple, b::Tuple, ::Val{NB}) where {NB} 
+function _pb_prod_grad(∂::Tuple, b::Tuple, vNB::Val{NB}) where {NB} 
    v∂ = SVector(∂...)
    vb = SVector(b...)
-   return _prod_grad(b, Val{NB}()), ForwardDiff.gradient(vb -> dot(vb, v∂), vb).data 
+   g = _prod_grad(b, Val{NB}())
+   ∇g = ForwardDiff.gradient(vb -> sum(∂ .* _prod_grad(vb.data, vNB)), vb).data 
+   return g, ∇g 
 end 
 
 

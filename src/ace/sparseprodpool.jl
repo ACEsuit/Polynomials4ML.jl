@@ -330,6 +330,31 @@ function _pb_pb_evaluate(basis::PooledSparseProduct{NB}, ∂2,
 end
 
 
+function _pb_pb_evaluate(basis::PooledSparseProduct{1}, ∂2, 
+                         ∂A, BB::TupMat)
+
+   # ∂2 should be a tuple of length 2
+   @assert ∂2 isa Tuple{<: AbstractMatrix}
+   @assert BB isa Tuple{<: AbstractMatrix}
+   @assert ∂A isa AbstractVector
+   
+   nX = size(BB[1], 1)
+
+   ∂2_∂A = zeros(length(∂A))
+   ∂2_BB = (zeros(size(BB[1])...), )
+   
+   for (iA, ϕ) in enumerate(basis.spec)
+      @simd ivdep for j = 1:nX 
+         ϕ1 = ϕ[1]
+         b1 = BB[1][j, ϕ1]
+         # A[iA] += b1
+         # ∂BB[1][j, ϕ1] += ∂A[iA]
+         ∂2_∂A[iA] += ∂2[1][j, ϕ1] 
+      end 
+   end
+   return ∂2_∂A, ∂2_BB 
+end
+
 
 function _pb_pb_evaluate(basis::PooledSparseProduct{2}, ∂2, 
                          ∂A, BB::TupMat)
