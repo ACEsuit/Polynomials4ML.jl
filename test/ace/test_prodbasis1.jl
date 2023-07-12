@@ -127,6 +127,7 @@ for ntest = 1:30
    end
    print_tf(@test fdtest(F, dF, 0.0; verbose=false))
 end
+println() 
 
 @info("Test consistency of batched pullback DAG")
 
