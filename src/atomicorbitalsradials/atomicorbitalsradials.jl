@@ -134,7 +134,6 @@ initialparameters(rng::AbstractRNG, l::AORLayer) = ( ζ = l.basis.Dn.ζ, )
  
 initialstates(rng::AbstractRNG, l::AORLayer) = NamedTuple()
  
-# This should be removed later and replace by ObejctPools
 function evaluate(l::AORLayer, X, ps, st)
     l.basis.Dn.ζ = ps[1]
     B = evaluate(l.basis, X)

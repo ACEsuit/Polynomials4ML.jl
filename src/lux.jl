@@ -57,17 +57,17 @@ initialstates(rng::AbstractRNG, l::PolyLuxLayer) = _init_luxstate(rng, l)
 (l::PolyLuxLayer)(args...) = evaluate(l, args...)
 
 # # general fallback of evaluate interface if we dont have trainble parameters
-evaluate!(out, basis::AbstractPoly4MLBasis, X, ps, pool) = evaluate!(out, basis, X)
+evaluate!(out, basis::AbstractPoly4MLBasis, X, ps) = evaluate!(out, basis, X)
 
 # lux evaluation interface
 function evaluate(l::PolyLuxLayer, X, ps, st)
    out = acquire!(st.pool, _outsym(X), _out_size(l.basis, X), _valtype(l.basis, X))
-   evaluate!(out, l.basis, X, ps, st.pool)
+   evaluate!(out, l.basis, X, ps)
    return out, st
 end
 
 # Fallback of all PolyLuxLayer if no specific rrule is defined
-# I use the usual rrule interface here since pb with temp array seems dangerous
+# I use the usual rrule interface here since pb with temp array seems dangerous 
 function ChainRulesCore.rrule(::typeof(LuxCore.apply), l::PolyLuxLayer, X, ps, st)
    val, inner_pb = ChainRulesCore.rrule(evaluate, l.basis, X)
    return (val, st), Δ -> (inner_pb(Δ[1])..., NoTangent(), NoTangent())
