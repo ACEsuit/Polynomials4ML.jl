@@ -104,7 +104,7 @@ function rRlm_ed!(Y, dY, L, S::SphericalCoords{T}, P, dP, basis::RRlmBasis) wher
     oort2 = 1 / sqrt(2)
 	rL = acquire!(basis.tmp, :rL, (L+2,), T)
 	aL = acquire!(basis.tmp, :aL, (L+1,), T)
-	fill!(rL,1.0)
+	fill!(rL, one(eltype(rL)))
 
 	for l = 0:L
 		aL[l+1] = sqrt(4*pi/(2*l+1))
@@ -286,7 +286,7 @@ function _lap(basis::RRlmBasis, Y::AbstractVector)
 end
 
 function _lap!(ΔY, basis::RRlmBasis, Y::AbstractVector)
-	fill!(ΔY, 0)
+	fill!(ΔY, zero(eltype(ΔY)))
 	return nothing 
 end 
 
@@ -300,7 +300,7 @@ function _lap!(ΔY, basis::RRlmBasis, Y::AbstractMatrix)
 	@assert size(ΔY, 1) >= size(Y, 1)
 	@assert size(ΔY, 2) >= size(Y, 2)
 	@assert size(Y, 2) >= length(basis)
-	fill!(ΔY, 0)
+	fill!(ΔY, zero(eltype(ΔY)))
 	return nothing 
 end 
 

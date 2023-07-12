@@ -41,7 +41,7 @@ Both of those operations have pullbacks implemented, but not `evaluate_ed!` or `
 
 [WORK IN PROGRESS] We implement "manual" pullbacks w.r.t. the `X` variable. These  take the form
 ```julia
-∂X = pb_evaluate(basis, ∂B, X, args..)
+∂X = pb_evaluate(basis, ∂B, X, args...)
 pb_evaluate!(∂X, basis, ∂B, X, args...)
 ```
 and analogously for the `evaluate_***` variants. The `args...` can differ between different basis sets e.g. may rely on intermediate results in the evaluation of the basis. 
