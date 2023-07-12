@@ -2,8 +2,11 @@
 using Test, BenchmarkTools, Polynomials4ML
 using Polynomials4ML: SimpleProdBasis, release!, SparseSymmProd
 using Polynomials4ML.Testing: println_slim, print_tf, generate_SO2_spec
+using Random
 
 using ACEbase.Testing: fdtest, dirfdtest
+using Lux
+using Zygote
 
 P4ML = Polynomials4ML
 ##
@@ -106,8 +109,26 @@ bAA2 = basis2_c(bA)
 println_slim(@test bAA1 ≈ bAA2)
 
 ## 
+sbA = size(bA)
+@info("Test batched rrule with Zygote")
+for ntest = 1:30
+   local bA, bA2
+   local bUU, u
+   bA = randn(sbA)
+   bU = randn(sbA)
+   _BB(t) = bA + t * bU
+   bA2 = evaluate(basis2, bA)
+   u = randn(size(bA2))
+   F(t) = dot(u, evaluate(basis2, _BB(t)))
+   dF(t) = begin
+      val, pb = Zygote.pullback(evaluate, basis2, _BB(t))
+      ∂BB = pb(u)[2]
+      return sum(dot(∂BB[i], bU[i]) for i = 1:length(bU))
+   end
+   print_tf(@test fdtest(F, dF, 0.0; verbose=false))
+end
 
-@info("Test batched pullback DAG")
+@info("Test consistency of batched pullback DAG")
 
 for ntest = 1:20 
    local nX, bA 
@@ -130,3 +151,13 @@ end
 println() 
 
 
+@info("Testing lux interface")
+
+@info("Test consistency of lux and basis")
+l_basis2 = P4ML.lux(basis2)
+ps, st = Lux.setup(MersenneTwister(1234), l_basis2)
+l_AA2, _ = l_basis2(bA, ps, st)
+print_tf(@test l_AA2 ≈ basis2(bA))
+
+println()
+##

@@ -1,6 +1,9 @@
 
 using LoopVectorization
 
+using ChainRulesCore
+using ChainRulesCore: NoTangent
+
 struct SparseSymmProd <: AbstractPoly4MLBasis
    dag::SparseSymmProdDAG
    proj::Vector{Int}
@@ -90,7 +93,7 @@ function _pullback(Δ, basis::SparseSymmProd, A::AbstractMatrix, AA, AAdag)
 end
 
 
-function rrule(::typeof(evaluate), basis::SparseSymmProd, A::AbstractVector)
+function ChainRulesCore.rrule(::typeof(evaluate), basis::SparseSymmProd, A::AbstractVector)
    AAdag = evaluate(basis.dag, A)
    AA = AAdag[basis.proj]
 
@@ -105,7 +108,7 @@ function rrule(::typeof(evaluate), basis::SparseSymmProd, A::AbstractVector)
    return AA, Δ -> (NoTangent(), NoTangent(), _pullback(Δ, basis, A, AA, AAdag))
 end
 
-function rrule(::typeof(evaluate), basis::SparseSymmProd, A::AbstractMatrix)
+function ChainRulesCore.rrule(::typeof(evaluate), basis::SparseSymmProd, A::AbstractMatrix)
    AAdag = evaluate(basis.dag, A)
    AA = AAdag[:, basis.proj]
    return AA, Δ -> (NoTangent(), NoTangent(), _pullback(Δ, basis, A, AA, AAdag))
@@ -113,23 +116,16 @@ end
 
 # -------------- Lux integration 
 
-# struct SparseSymmProdLayer{T} <: AbstractExplicitLayer
-#    basis::SparseSymmProd{T}
-# end
+# it needs an extra lux interface reason as in the case of the `basis` 
+function evaluate(l::PolyLuxLayer{SparseSymmProd}, A::AbstractVector{T}, ps, st) where {T}
+   AA = acquire!(st.pool, :AA, (length(l),), T)
+   evaluate!(AA, l.basis, A)
+   return AA, st
+end
 
-# function lux(basis::SparseSymmProd) 
-#    return SparseSymmProdLayer(basis)
-# end
-
-# Base.length(l::SparseSymmProdLayer) = length(l.basis)
-
-# initialparameters(rng::AbstractRNG, l::SparseSymmProdLayer) = NamedTuple() 
-
-# initialstates(rng::AbstractRNG, l::SparseSymmProdLayer) = NamedTuple()
-
-# (l::SparseSymmProdLayer)(A, ps, st) = evaluate(l.basis, A), st 
-
-
-
-
-
+function evaluate(l::PolyLuxLayer{SparseSymmProd}, A::AbstractMatrix{T}, ps, st) where {T}
+   nX = size(A, 1)
+   AA = acquire!(st.pool, :AAbatch, (nX, length(l)), T)
+   evaluate!(AA, l.basis, A)
+   return AA, st
+end

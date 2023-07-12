@@ -1,28 +1,29 @@
-struct GaussianBasis <: ScalarPoly4MLBasis
-    ζ::AbstractVector
+mutable struct GaussianBasis{T} <: ScalarPoly4MLBasis
+    ζ::Vector{T}
     # ----------------- metadata 
     @reqfields
 end
  
-GaussianBasis(ζ) = GaussianBasis(ζ, _make_reqfields()...)
+GaussianBasis(ζ::Vector{T}) where {T} = GaussianBasis(ζ, _make_reqfields()...)
 
 Base.length(basis::GaussianBasis) = length(basis.ζ)
 
 _valtype(::GaussianBasis, T::Type{<: Real}) = T
+_valtype(::GaussianBasis, T::Type{<: Hyper{<:Real}}) = T
 
-function evaluate!(P, basis::GaussianBasis, x::AbstractVector{<: Real}) 
+function evaluate!(P, basis::GaussianBasis, x::AbstractVector)
     N = size(P, 2)
     nX = length(x)
 
     @inbounds begin 
         for n = 1:N
             @simd ivdep for i = 1:nX 
-                P[i,n] = exp(-basis.ζ[n] * x[i]^2)
+                P[i, n] = exp(-basis.ζ[n] * x[i]^2)
             end
         end
     end
 
-    return P 
+    return P
 end
 
 function evaluate_ed!(P, dP, basis::GaussianBasis, x)

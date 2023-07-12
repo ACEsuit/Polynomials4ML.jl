@@ -1,5 +1,5 @@
-struct STO_NG <: ScalarPoly4MLBasis
-    ζ::Tuple
+struct STO_NG{T} <: ScalarPoly4MLBasis
+    ζ::Tuple{Matrix{T}, Matrix{T}}
     # ----------------- metadata 
     @reqfields
 end
@@ -9,12 +9,13 @@ STO_NG(ζ) = STO_NG(ζ, _make_reqfields()...)
 Base.length(basis::STO_NG) = length(basis.ζ[1])
 
 _valtype(::STO_NG, T::Type{<: Real}) = T
+_valtype(::STO_NG, T::Type{<: Hyper{<:Real}}) = T
 
-function evaluate!(P, basis::STO_NG, x::AbstractVector{<: Real}) 
+function evaluate!(P, basis::STO_NG, x::AbstractVector) 
     ζ, D = basis.ζ[1], basis.ζ[2]
     N, M = size(ζ)
     nX = length(x)
-    fill!(P, 0)
+    fill!(P, zero(eltype(P)))
     @inbounds begin 
         for n = 1:N
             for m = 1:M
@@ -32,8 +33,8 @@ function evaluate_ed!(P, dP, basis::STO_NG, x::AbstractVector{<: Real})
     ζ, D = basis.ζ[1], basis.ζ[2]
     N, M = size(ζ)
     nX = length(x)
-    fill!(P, 0)
-    fill!(dP, 0)
+    fill!(P, zero(eltype(P)))
+    fill!(dP, zero(eltype(dP)))
     @inbounds begin 
         for n = 1:N
             for m = 1:M
@@ -53,9 +54,9 @@ function evaluate_ed2!(P, dP, ddP, basis::STO_NG, x::AbstractVector{<: Real})
     ζ, D = basis.ζ[1], basis.ζ[2]
     N, M = size(ζ)
     nX = length(x)
-    fill!(P, 0)
-    fill!(dP, 0)
-    fill!(ddP, 0)
+    fill!(P, zero(eltype(P)))
+    fill!(dP, zero(eltype(dP)))
+    fill!(ddP, zero(eltype(ddP)))
     @inbounds begin 
         for n = 1:N
             for m = 1:M
