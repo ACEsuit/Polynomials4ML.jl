@@ -18,9 +18,9 @@ end
 end
 
 
-@inline function _prod_grad(b::SVector{1, T}) where {T} 
-   return b[1], SVector(one(T))
-end
+# @inline function _prod_grad(b::SVector{1, T}) where {T} 
+#    return b[1], SVector(one(T))
+# end
 
 
 function _code_prod_grad(NB)
@@ -54,6 +54,13 @@ end
       end
    end
 end
+
+function _pb_prod_grad(∂::Tuple, b::Tuple, ::Val{NB}) where {NB} 
+   v∂ = SVector(∂...)
+   vb = SVector(b...)
+   return _prod_grad(b, Val{NB}()), ForwardDiff.gradient(vb -> dot(vb, v∂), vb).data 
+end 
+
 
 @inline function _prod_ed(b, ::Val{1})
    return (one(eltype(b)),)

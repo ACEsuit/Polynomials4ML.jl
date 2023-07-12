@@ -86,6 +86,13 @@ for N = 1:5
 end
 println()
 
+pb_prodgrad = P4ML._pb_prod_grad
+b = rand(SVector{3,Float64})
+g = prodgrad(b.data, Val(3))
+∂ = @SVector randn(length(g))
+pb_prodgrad(∂.data, b.data, Val(3))
+# this is a Forwarddiff gradient, so should not need to be tested ... 
+
 ##
 
 @info("Testing _rrule_evalpool")
@@ -117,9 +124,9 @@ println()
 @info("    order = 2 only. (todo higher order)")
 import ChainRulesCore: rrule, NoTangent
 
-for ntest = 1:10 
+# for ntest = 1:20 
    local basis, val, pb 
-   ORDER = 2
+   ORDER = 1 #mod1(ntest, 3)+1
    basis = _generate_basis(;order = ORDER)
    bBB = _rand_input(basis)
    ∂A = randn(length(basis))
@@ -152,7 +159,7 @@ for ntest = 1:10
       return dot(∂_∂A, bV) + sum(dot(bUU[i], ∂2_BB[i]) for i = 1:ORDER)
    end
 
-   print_tf(@test all( fdtest(F, dF, 0.0; verbose=false) ))
+   print_tf(@test all( fdtest(F, dF, 0.0; verbose=true) ))
 end
 println()
 

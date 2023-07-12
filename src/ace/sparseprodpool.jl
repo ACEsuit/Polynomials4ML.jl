@@ -293,7 +293,43 @@ function _pullback_evaluate!(∂BB, ∂A, basis::PooledSparseProduct{2}, BB::Tup
    return nothing 
 end
 
-# _pb_pb_evaluate(basis, Δ2, Δ, BB, ∂BB)
+import ForwardDiff
+
+function _pb_pb_evaluate(basis::PooledSparseProduct{NB}, ∂2, 
+                         ∂A, BB::TupMat) where {NB}
+
+   # ∂2 should be a tuple of length 2
+   @assert ∂2 isa NTuple{NB, <: AbstractMatrix}
+   @assert BB isa NTuple{NB,  <: AbstractMatrix}
+   @assert ∂A isa AbstractVector
+
+   nX = size(BB[1], 1)
+   @assert all(nX == size(BB[i], 1) for i = 1:NB)
+
+   ∂2_∂A = zeros(length(∂A))
+   ∂2_BB = ntuple(i -> zeros(size(BB[i])...), NB)
+
+   for (iA, ϕ) in enumerate(basis.spec)
+      @simd ivdep for j = 1:nX 
+         b = ntuple(Val(NB)) do i 
+            @inbounds BB[i][j, ϕ[i]] 
+         end 
+         ∂g = ntuple(Val(NB)) do i 
+            @inbounds ∂2[i][j, ϕ[i]]
+         end
+         # g = _prod_grad(b, Val(NB))
+         g, ∂g_b = _pb_prod_grad(∂g, b, Val(NB))
+         for i = 1:NB 
+            # ∂BB[i][j, ϕ[i]] += ∂A[iA] * g[i]
+            ∂2_∂A[iA] += ∂2[i][j, ϕ[i]] * g[i]
+            ∂2_BB[i][j, ϕ[i]] += ∂A[iA] * ∂g_b[i]
+         end
+      end 
+   end
+   return ∂2_∂A, ∂2_BB 
+end
+
+
 
 function _pb_pb_evaluate(basis::PooledSparseProduct{2}, ∂2, 
                          ∂A, BB::TupMat)
