@@ -85,72 +85,56 @@ using Base.Cartesian: @nexprs
 end
 
 function _evaluate_AA!(AA, spec::Vector{NTuple{N, Int}}, A) where {N}
-   @inbounds for (i, ϕ) in enumerate(spec)
+   for (i, ϕ) in enumerate(spec)
       aa = ntuple(i -> A[ϕ[i]], N)
       AA[i] = prod(aa)
    end
-   return AA
+   return nothing 
 end
-
-
-
 
 
 # -------------- Chainrules integration 
 
-function _pullback(Δ, basis::SparseSymmProd, A::AbstractVector, AA, AAdag)
-   Δdag = zeros(eltype(Δ), length(AAdag))
-   Δdag[basis.proj] .= Δ
-   T = promote_type(eltype(Δdag), eltype(AAdag))
-   ΔA = zeros(T, length(A))
-   pullback_arg!(ΔA, Δdag, basis.dag, AAdag)
-   return ΔA
+import ChainRulesCore: rrule, NoTangent 
+
+function rrule(::typeof(evaluate), basis::SparseSymmProd, A::AbstractVector)
+   AA = evaluate(basis, A)
+   return AA, Δ -> (NoTangent(), NoTangent(), _pb_evaluate(basis, Δ, A))
 end
 
 
-function _pullback(Δ, basis::SparseSymmProd, A::AbstractMatrix, AA, AAdag)
-   Δdag = zeros(eltype(Δ), size(AAdag)...)
-   Δdag[:, basis.proj] .= Δ
-   T = promote_type(eltype(Δdag), eltype(AAdag))
-   ΔA = zeros(T, size(A)...)
-   pullback_arg!(ΔA, Δdag, basis.dag, AAdag)
-   return ΔA
+@generated function _pb_evaluate(
+                        basis::SparseSymmProd{ORD}, 
+                        Δ::AbstractVector{TΔ},  # differential
+                        _A::AbstractVector{TA}   # input 
+                        ) where {ORD, TΔ, TA}
+   TG = promote_type(TΔ, TA) 
+   quote                         
+      @assert length(Δ) == length(basis)
+      A = parent(_A)
+      gA = zeros($TG, length(A))
+
+      if basis.hasconst
+         gA[1] = 0 
+      end
+
+      @nexprs $ORD i -> _pb_evaluate_pbAA!(gA, (@view Δ[basis.ranges[i]]), basis.specs[i], A)
+
+      return gA 
+   end 
 end
 
+function _pb_evaluate_pbAA!(gA::AbstractVector, ΔN::AbstractVector, spec::Vector{NTuple{N, Int}}, A) where {N}
+   for (i, ϕ) in enumerate(spec)
+      aa = ntuple(i -> A[ϕ[i]], N)
+      pi, gi = _grad_static_prod(aa) 
+      for j = 1:N 
+         gA[ϕ[j]] += ΔN[i] * gi[j]
+      end
+   end
+   return nothing 
+end 
 
-function ChainRulesCore.rrule(::typeof(evaluate), basis::SparseSymmProd, A::AbstractVector)
-   AAdag = evaluate(basis.dag, A)
-   AA = AAdag[basis.proj]
 
-   # function evaluate_pullback(Δ)
-   #    Δdag = zeros(eltype(Δ), length(AAdag))
-   #    Δdag[basis.proj] .= Δ
-   #    T = promote_type(eltype(Δdag), eltype(AAdag))
-   #    ΔA = zeros(T, length(A))
-   #    pullback_arg!(ΔA, Δdag, basis.dag, AAdag)
-   #    return NoTangent(), NoTangent(), ΔA
-   # end
-   return AA, Δ -> (NoTangent(), NoTangent(), _pullback(Δ, basis, A, AA, AAdag))
-end
 
-function ChainRulesCore.rrule(::typeof(evaluate), basis::SparseSymmProd, A::AbstractMatrix)
-   AAdag = evaluate(basis.dag, A)
-   AA = AAdag[:, basis.proj]
-   return AA, Δ -> (NoTangent(), NoTangent(), _pullback(Δ, basis, A, AA, AAdag))
-end
 
-# -------------- Lux integration 
-
-# it needs an extra lux interface reason as in the case of the `basis` 
-function evaluate(l::PolyLuxLayer{SparseSymmProd}, A::AbstractVector{T}, ps, st) where {T}
-   AA = acquire!(st.pool, :AA, (length(l),), T)
-   evaluate!(AA, l.basis, A)
-   return AA, st
-end
-
-function evaluate(l::PolyLuxLayer{SparseSymmProd}, A::AbstractMatrix{T}, ps, st) where {T}
-   nX = size(A, 1)
-   AA = acquire!(st.pool, :AAbatch, (nX, length(l)), T)
-   evaluate!(AA, l.basis, A)
-   return AA, st
-end
