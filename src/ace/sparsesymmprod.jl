@@ -4,21 +4,50 @@ using LoopVectorization
 using ChainRulesCore
 using ChainRulesCore: NoTangent
 
-struct SparseSymmProd <: AbstractPoly4MLBasis
-   dag::SparseSymmProdDAG
-   proj::Vector{Int}
+struct SparseSymmProd{ORD, TS} <: AbstractPoly4MLBasis
+   specs::TS
+   ranges::NTuple{ORD, UnitRange{Int}}
+   hasconst::Bool 
+   # --------------
    @reqfields
 end
 
 function SparseSymmProd(spec::AbstractVector{<: Union{Tuple, AbstractVector}}; kwargs...)
-   dag = SparseSymmProdDAG(spec; kwargs...)
-   return SparseSymmProd(dag, dag.projection, _make_reqfields()... )
+   if !issorted(spec, by=length) 
+      spec = sort(spec, by=length)
+   end
+   if length(spec[1]) == 0
+      hasconst = true 
+      spec = spec[2:end]
+   else
+      hasconst = false
+   end
+
+   MAXORD = length(spec[end])
+   specs = ntuple(N -> Vector{NTuple{N, Int}}(), MAXORD)
+   for b in spec 
+      N = length(b) 
+      push!(specs[N], sort(tuple(b...)))
+   end
+   ranges = [] 
+   idx = Int(hasconst)
+   for N = 1:MAXORD
+      len = length(specs[N])
+      push!(ranges, (idx+1):(idx+len))
+      idx += len
+   end
+   return SparseSymmProd(specs, tuple(ranges...), hasconst, _make_reqfields()...)   
 end
 
-Base.length(basis::SparseSymmProd) = length(basis.proj)
+Base.length(basis::SparseSymmProd) = sum(length, basis.specs) + basis.hasconst
 
-reconstruct_spec(basis::SparseSymmProd) = reconstruct_spec(basis.dag)[basis.proj]
-
+function reconstruct_spec(basis::SparseSymmProd) 
+   spec = [ [ bb... ] for bb in vcat(basis.specs...) ]
+   if basis.hasconst
+      prepend!(spec, [Int[],])
+   end
+   return spec 
+end
 # -------------- evaluation interfaces 
 
 _valtype(basis::SparseSymmProd, ::Type{T}) where {T} = T
@@ -39,36 +68,32 @@ function evaluate(basis::SparseSymmProd, A::AbstractMatrix{T}) where {T}
 end
 
 
-# -------------- kernels  (these are really just interfaces as well...)
+# -------------- kernels  
+
+using Base.Cartesian: @nexprs 
 
 # this one does both batched and unbatched
-function evaluate!(AA, basis::SparseSymmProd, A)
-   AAdag = evaluate(basis.dag, A)
-   _project!(AA, basis.proj, AAdag)
-   release!(AAdag)
-   return AA 
+@generated function evaluate!(_AA, basis::SparseSymmProd{ORD}, A) where {ORD} 
+   quote 
+      AA = parent(_AA)
+      if basis.hasconst; AA[1] = one(eltype(AA)); end
+      @nexprs $ORD i -> _evaluate_AA!( (@view AA[basis.ranges[i]]), 
+                                       basis.specs[i], 
+                                       A)
+      return _AA 
+   end
 end
 
-# serial projection 
-function _project!(BB, proj::Vector{<: Integer}, AA::AbstractVector{<: Number})
-   @inbounds for i = 1:length(proj)
-      BB[i] = AA[proj[i]]
+function _evaluate_AA!(AA, spec::Vector{NTuple{N, Int}}, A) where {N}
+   @inbounds for (i, ϕ) in enumerate(spec)
+      aa = ntuple(i -> A[ϕ[i]], N)
+      AA[i] = prod(aa)
    end
-   return nothing
+   return AA
 end
 
-# batched projection 
-function _project!(BB, proj::Vector{<: Integer}, AA::AbstractMatrix{<: Number})
-   nX = size(AA, 1)
-   @assert size(BB, 1) >= nX
-   @inbounds for i = 1:length(proj)
-      p_i = proj[i]
-      @simd ivdep for j = 1:nX
-         BB[j, i] = AA[j, p_i]
-      end
-   end
-   return nothing
-end
+
+
 
 
 # -------------- Chainrules integration 
