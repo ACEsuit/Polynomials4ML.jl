@@ -95,20 +95,34 @@ end
 # -------------- kernels for simple evaluation 
 
 using Base.Cartesian: @nexprs 
+using ObjectPools: FlexCachedArray
+
+__view_AA(AA::FlexCachedArray, basis, N) = __view_AA(parent(AA), basis, N)
+__view_AA(AA::AbstractVector, basis, N) = (@view AA[basis.ranges[N]])
+__view_AA(AA::AbstractMatrix, basis, N) = (@view AA[:, basis.ranges[N]])
 
 # this one does both batched and unbatched
-@generated function evaluate!(_AA, basis::SparseSymmProd{ORD}, A) where {ORD} 
+@generated function evaluate!(AA, basis::SparseSymmProd{ORD}, A) where {ORD} 
    quote 
-      AA = parent(_AA)
-      if basis.hasconst; AA[1] = one(eltype(AA)); end
-      @nexprs $ORD i -> _evaluate_AA!( (@view AA[basis.ranges[i]]), 
+      if basis.hasconst; _evaluate_AA_const!(AA); end
+      @nexprs $ORD i -> _evaluate_AA!( __view_AA(AA, basis, i), 
                                        basis.specs[i], 
                                        A)
-      return _AA 
+      return AA
    end
 end
 
-function _evaluate_AA!(AA, spec::Vector{NTuple{N, Int}}, A) where {N}
+function _evaluate_AA_const!(AA::AbstractVector) 
+   AA[1] = one(eltype(AA))
+   return nothing
+end
+
+function _evaluate_AA_const!(AA::AbstractMatrix) 
+   AA[:, 1] .= one(eltype(AA))
+   return nothing
+end
+
+function _evaluate_AA!(AA, spec::Vector{NTuple{N, Int}}, A::AbstractVector) where {N}
    for (i, ϕ) in enumerate(spec)
       aa = ntuple(i -> A[ϕ[i]], N)
       AA[i] = prod(aa)
@@ -116,6 +130,19 @@ function _evaluate_AA!(AA, spec::Vector{NTuple{N, Int}}, A) where {N}
    return nothing 
 end
 
+function _evaluate_AA!(AA, spec::Vector{NTuple{N, Int}}, A::AbstractMatrix) where {N}
+   nX = size(A, 1)
+   for (i, ϕ) in enumerate(spec)
+      for j = 1:nX
+         aa = ntuple(i -> A[j, ϕ[i]], N)
+         AA[j, i] = prod(aa)
+      end
+   end
+   return nothing 
+end
+
+
+# ------- 
 
 import ChainRulesCore: rrule, NoTangent 
 
@@ -127,14 +154,13 @@ end
 
 @generated function _pb_evaluate(
                         basis::SparseSymmProd{ORD}, 
-                        Δ::AbstractVector{TΔ},  # differential
-                        _A::AbstractVector{TA}   # input 
-                        ) where {ORD, TΔ, TA}
-   TG = promote_type(TΔ, TA) 
+                        Δ::AbstractVector,  # differential
+                        A::AbstractVector   # input 
+                        ) where {ORD}
    quote                         
       @assert length(Δ) == length(basis)
-      A = parent(_A)
-      gA = zeros($TG, length(A))
+      TG = promote_type(eltype(Δ), eltype(A))
+      gA = zeros(TG, length(A))
 
       if basis.hasconst
          gA[1] = 0 
@@ -146,7 +172,9 @@ end
    end 
 end
 
-function _pb_evaluate_pbAA!(gA::AbstractVector, ΔN::AbstractVector, spec::Vector{NTuple{N, Int}}, A) where {N}
+function _pb_evaluate_pbAA!(gA::AbstractVector, ΔN::AbstractVector, 
+                            spec::Vector{NTuple{N, Int}}, 
+                            A) where {N}
    for (i, ϕ) in enumerate(spec)
       aa = ntuple(i -> A[ϕ[i]], N)
       pi, gi = _grad_static_prod(aa) 
