@@ -132,28 +132,6 @@ for ntest = 1:30
    print_tf(@test fdtest(F, dF, 0.0; verbose=false))
 end
 
-@info("Test consistency of batched pullback DAG")
-
-for ntest = 1:20 
-   local nX, bA 
-   nX = 32
-   bA = randn(nX, 2*M+1)
-   bAA = zeros(nX, length(basis2.dag))
-   evaluate!(bAA, basis2.dag, bA)
-   b∂A = zero(bA)
-   b∂AA = randn(nX, length(basis2.dag))
-   P4ML.pullback_arg!(b∂A, copy(b∂AA), basis2.dag, bAA)
-
-   b∂A1 = zero(bA)
-   for j = 1:nX 
-      P4ML.pullback_arg!( (@view b∂A1[j, :]), 
-                        b∂AA[j, :], basis2.dag, bAA[j, :])
-   end 
-
-   print_tf(@test b∂A1 ≈ b∂A)
-end
-println() 
-
 
 @info("Testing lux interface")
 

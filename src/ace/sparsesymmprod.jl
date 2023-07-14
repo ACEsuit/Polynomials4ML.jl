@@ -123,7 +123,8 @@ function _evaluate_AA_const!(AA::AbstractMatrix)
 end
 
 function _evaluate_AA!(AA, spec::Vector{NTuple{N, Int}}, A::AbstractVector) where {N}
-   for (i, ϕ) in enumerate(spec)
+   @assert length(AA) >= length(spec)
+   @inbounds for (i, ϕ) in enumerate(spec)
       aa = ntuple(i -> A[ϕ[i]], N)
       AA[i] = prod(aa)
    end
@@ -132,8 +133,10 @@ end
 
 function _evaluate_AA!(AA, spec::Vector{NTuple{N, Int}}, A::AbstractMatrix) where {N}
    nX = size(A, 1)
-   for (i, ϕ) in enumerate(spec)
-      for j = 1:nX
+   @assert size(AA, 1) >= nX 
+   @assert size(AA, 2) >= length(spec)
+   @inbounds for (i, ϕ) in enumerate(spec)
+      @simd ivdep for j = 1:nX
          aa = ntuple(i -> A[j, ϕ[i]], N)
          AA[j, i] = prod(aa)
       end
@@ -146,7 +149,7 @@ end
 
 import ChainRulesCore: rrule, NoTangent 
 
-function rrule(::typeof(evaluate), basis::SparseSymmProd, A::AbstractVector)
+function rrule(::typeof(evaluate), basis::SparseSymmProd, A)
    AA = evaluate(basis, A)
    return AA, Δ -> (NoTangent(), NoTangent(), _pb_evaluate(basis, Δ, A))
 end
@@ -154,23 +157,29 @@ end
 
 @generated function _pb_evaluate(
                         basis::SparseSymmProd{ORD}, 
-                        Δ::AbstractVector,  # differential
-                        A::AbstractVector   # input 
+                        Δ,  # differential
+                        A   # input 
                         ) where {ORD}
    quote                         
-      @assert length(Δ) == length(basis)
       TG = promote_type(eltype(Δ), eltype(A))
-      gA = zeros(TG, length(A))
+      gA = zeros(TG, size(A))
 
       if basis.hasconst
          gA[1] = 0 
       end
 
-      @nexprs $ORD i -> _pb_evaluate_pbAA!(gA, (@view Δ[basis.ranges[i]]), basis.specs[i], A)
+      @nexprs $ORD N -> _pb_evaluate_pbAA!(
+                              gA, 
+                              __view_AA(Δ, basis, N), 
+                              basis.specs[N], 
+                              A)
 
-      return gA 
+      return gA
    end 
 end
+
+_pb_evaluate_pbAA_const!(gA::AbstractVector) = (gA[1] .= 0; nothing)
+_pb_evaluate_pbAA_const!(gA::AbstractMatrix) = (gA[:, 1] .= 0; nothing)
 
 function _pb_evaluate_pbAA!(gA::AbstractVector, ΔN::AbstractVector, 
                             spec::Vector{NTuple{N, Int}}, 
@@ -184,6 +193,23 @@ function _pb_evaluate_pbAA!(gA::AbstractVector, ΔN::AbstractVector,
    end
    return nothing 
 end 
+
+
+function _pb_evaluate_pbAA!(gA, ΔN::AbstractMatrix, 
+                            spec::Vector{NTuple{N, Int}}, 
+                            A::AbstractMatrix) where {N}
+   nX = size(A, 1)                            
+   for (i, ϕ) in enumerate(spec)
+      for j = 1:nX 
+         aa = ntuple(i -> A[j, ϕ[i]], N)
+         pi, gi = _grad_static_prod(aa) 
+         for t = 1:N 
+            gA[j, ϕ[t]] += ΔN[j, i] * gi[t]
+         end
+      end
+   end
+   return nothing 
+end
 
 
 
