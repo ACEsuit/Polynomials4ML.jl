@@ -26,6 +26,7 @@ using Test
     @testset "Sparse Symmetric Product" begin include("ace/test_prodbasis1.jl"); end 
 
     # Misc
+    @testset "Static Prod" begin include("test_staticprod.jl"); end
     @testset "Flex Array Interface" begin include("test_flex.jl"); end 
     @testset "Sparse Product" begin include("test_sparseproduct.jl"); end 
     @testset "Lux" begin include("test_lux.jl"); end 
