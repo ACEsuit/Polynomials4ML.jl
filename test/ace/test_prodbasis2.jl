@@ -131,7 +131,9 @@ for ntest = 1:30
    end
    print_tf(@test fdtest(F, dF, 0.0; verbose=false))
 end
+println() 
 
+##
 
 @info("Testing lux interface")
 
@@ -139,7 +141,7 @@ end
 l_basis2 = P4ML.lux(basis2)
 ps, st = Lux.setup(MersenneTwister(1234), l_basis2)
 l_AA2, _ = l_basis2(bA, ps, st)
-print_tf(@test l_AA2 ≈ basis2(bA))
+println_slim(@test l_AA2 ≈ basis2(bA))
 
 println()
 ##

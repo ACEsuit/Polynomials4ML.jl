@@ -213,3 +213,19 @@ end
 
 
 
+
+# -------------- Lux integration 
+
+# it needs an extra lux interface reason as in the case of the `basis` 
+function evaluate(l::PolyLuxLayer{<: SparseSymmProd}, A::AbstractVector{T}, ps, st) where {T}
+   AA = acquire!(st.pool, :AA, (length(l),), T)
+   evaluate!(AA, l.basis, A)
+   return AA, st
+end
+
+function evaluate(l::PolyLuxLayer{<: SparseSymmProd}, A::AbstractMatrix{T}, ps, st) where {T}
+   nX = size(A, 1)
+   AA = acquire!(st.pool, :AAbatch, (nX, length(l)), T)
+   evaluate!(AA, l.basis, A)
+   return AA, st
+end
