@@ -4,6 +4,29 @@ using LoopVectorization
 using ChainRulesCore
 using ChainRulesCore: NoTangent
 
+@doc raw"""
+`SparseSymmProd` : sparse symmetric product with entries stored as tuples. 
+Input is a vector `A`; each entry of the output vector `AA` is of the form 
+```math
+ {\bm A}_{i_1, \dots, i_N} = \prod_{t = 1}^N A_{i_t}.
+```
+
+### Constructor 
+```julia 
+SparseSymmProd(spec)
+```
+where `spec` is a list of tuples or vectors, each of which specifies an `AA`
+basis function as described above. For example, 
+```julia 
+spec = [ (1,), (2,), (1,1), (1,2), (2,2), 
+         (1,1,1), (1,1,2), (1,2,2), (2,2,2) ]
+basis = SparseSymmProd(spec)         
+```
+defines a basis of 9 functions, 
+```math 
+[ A_1, A_2, A_1^2, A_1 A_2, A_2^2, A_1^3, A_1^2 A_2, A_1 A_2^2, A_2^3 ]
+```
+"""
 struct SparseSymmProd{ORD, TS} <: AbstractPoly4MLBasis
    specs::TS
    ranges::NTuple{ORD, UnitRange{Int}}
@@ -11,6 +34,7 @@ struct SparseSymmProd{ORD, TS} <: AbstractPoly4MLBasis
    # --------------
    @reqfields
 end
+
 
 function SparseSymmProd(spec::AbstractVector{<: Union{Tuple, AbstractVector}}; kwargs...)
    if !issorted(spec, by=length) 
@@ -68,7 +92,7 @@ function evaluate(basis::SparseSymmProd, A::AbstractMatrix{T}) where {T}
 end
 
 
-# -------------- kernels  
+# -------------- kernels for simple evaluation 
 
 using Base.Cartesian: @nexprs 
 
@@ -92,8 +116,6 @@ function _evaluate_AA!(AA, spec::Vector{NTuple{N, Int}}, A) where {N}
    return nothing 
 end
 
-
-# -------------- Chainrules integration 
 
 import ChainRulesCore: rrule, NoTangent 
 
@@ -134,7 +156,6 @@ function _pb_evaluate_pbAA!(gA::AbstractVector, ΔN::AbstractVector, spec::Vecto
    end
    return nothing 
 end 
-
 
 
 
