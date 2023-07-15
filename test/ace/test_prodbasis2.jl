@@ -154,7 +154,6 @@ dF(t) = begin
    _, _, ∇_Δ, ∇_A = pb(Δ²)
    return dot(∇_Δ, uΔ) + dot(∇_A, uA)
 end
-
 print_tf(@test fdtest(F, dF, 0.0; verbose=true))
 
 

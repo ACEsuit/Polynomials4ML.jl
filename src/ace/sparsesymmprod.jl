@@ -219,9 +219,9 @@ end
       gΔAA = zeros(TG, size(ΔAA))
       gA = zeros(TG, size(A))
       @nexprs $ORD N -> _pb_pb_evaluate_AA!(basis.specs[N], 
-                              gΔAA, gA,   # outputs (gradients)
-                              Δ²,         # differential 
-                              __view_AA(ΔAA, basis, N), A, # inputs 
+                              __view_AA(gΔAA, basis, N), gA,   # outputs (gradients)
+                              Δ²,                              # differential 
+                              __view_AA(ΔAA,  basis, N), A,    # inputs 
                               )
       return gΔAA, gA
    end 
@@ -239,10 +239,10 @@ function _pb_pb_evaluate_AA!(spec::Vector{NTuple{N, Int}},
    for (i, ϕ) in enumerate(spec)
       A_ϕ = ntuple(t -> A[ϕ[t]], N)
       Δ²_ϕ = ntuple(t -> Δ²[ϕ[t]], N)
-      pi, gi, ui = _pb_grad_static_prod(Δ²_ϕ, A_ϕ)
-      gΔAA[i] += sum(gi .* Δ²_ϕ) * pi 
+      p_i, g_i, u_i = _pb_grad_static_prod(Δ²_ϕ, A_ϕ)
+      gΔAA[i] = sum(g_i .* Δ²_ϕ) 
       for j = 1:N 
-         gA[ϕ[j]] += ui[j] * ΔN[i]
+         gA[ϕ[j]] += u_i[j] * ΔN[i]
       end
    end
    return nothing 
