@@ -6,7 +6,8 @@ using Random
 
 using ACEbase.Testing: fdtest, dirfdtest
 using Lux
-using Zygote
+using ChainRulesCore: rrule 
+# using Zygote
 
 P4ML = Polynomials4ML
 ##
@@ -113,8 +114,9 @@ bAA2 = basis2_c(bA)
 println_slim(@test bAA1 ≈ bAA2)
 
 ## 
+
 sbA = size(bA)
-@info("Test batched rrule with Zygote")
+@info("Test batched rrule")
 for ntest = 1:30
    local bA, bA2
    local bUU, u
@@ -125,13 +127,36 @@ for ntest = 1:30
    u = randn(size(bA2))
    F(t) = dot(u, evaluate(basis2, _BB(t)))
    dF(t) = begin
-      val, pb = Zygote.pullback(evaluate, basis2, _BB(t))
-      ∂BB = pb(u)[2]
+      val, pb = rrule(evaluate, basis2, _BB(t))
+      ∂BB = pb(u)[3]
       return sum(dot(∂BB[i], bU[i]) for i = 1:length(bU))
    end
    print_tf(@test fdtest(F, dF, 0.0; verbose=false))
 end
 println() 
+
+##
+
+
+@info("Test _pb_pb_evaluate")
+
+A = randn(2*M+1)
+AA = basis2(A)
+Δ = randn(length(AA)) ./ (1+length(AA))
+Δ² = randn(length(A)) ./ (1+length(A))
+uA = randn(length(A)) ./ (1+length(A))
+uΔ = randn(length(AA)) ./ (1+length(AA))
+
+F(t) = dot(Δ², P4ML._pb_evaluate(basis2, Δ + t * uΔ, A + t * uA))
+
+dF(t) = begin 
+   val, pb = P4ML.rrule(P4ML._pb_evaluate, basis2,  Δ + t * uΔ, A + t * uA)
+   _, _, ∇_Δ, ∇_A = pb(Δ²)
+   return dot(∇_Δ, uΔ) + dot(∇_A, uA)
+end
+
+print_tf(@test fdtest(F, dF, 0.0; verbose=true))
+
 
 ##
 

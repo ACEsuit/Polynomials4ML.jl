@@ -163,27 +163,22 @@ end
    quote                         
       TG = promote_type(eltype(Δ), eltype(A))
       gA = zeros(TG, size(A))
-
-      if basis.hasconst
-         gA[1] = 0 
-      end
-
       @nexprs $ORD N -> _pb_evaluate_pbAA!(
                               gA, 
                               __view_AA(Δ, basis, N), 
                               basis.specs[N], 
                               A)
-
       return gA
    end 
 end
 
-_pb_evaluate_pbAA_const!(gA::AbstractVector) = (gA[1] .= 0; nothing)
-_pb_evaluate_pbAA_const!(gA::AbstractMatrix) = (gA[:, 1] .= 0; nothing)
+# _pb_evaluate_pbAA_const!(gA::AbstractVector) = (gA[1] .= 0; nothing)
+# _pb_evaluate_pbAA_const!(gA::AbstractMatrix) = (gA[:, 1] .= 0; nothing)
 
 function _pb_evaluate_pbAA!(gA::AbstractVector, ΔN::AbstractVector, 
                             spec::Vector{NTuple{N, Int}}, 
                             A) where {N}
+   # we compute ∇_A w.r.t. the expression ∑_i Δ[i] * AA[i]                             
    for (i, ϕ) in enumerate(spec)
       aa = ntuple(i -> A[ϕ[i]], N)
       pi, gi = _grad_static_prod(aa) 
@@ -193,7 +188,6 @@ function _pb_evaluate_pbAA!(gA::AbstractVector, ΔN::AbstractVector,
    end
    return nothing 
 end 
-
 
 function _pb_evaluate_pbAA!(gA, ΔN::AbstractMatrix, 
                             spec::Vector{NTuple{N, Int}}, 
@@ -212,11 +206,53 @@ function _pb_evaluate_pbAA!(gA, ΔN::AbstractMatrix,
 end
 
 
+function rrule(::typeof(_pb_evaluate), basis::SparseSymmProd, ΔAA, A)
+   uA = _pb_evaluate(basis, ΔAA, A)
+   return uA, Δ² -> (NoTangent(), NoTangent(), 
+                     _pb_pb_evaluate(basis, Δ², ΔAA, A)...)
+end
+
+
+@generated function _pb_pb_evaluate(basis::SparseSymmProd{ORD}, Δ², ΔAA, A)  where {ORD}
+   quote 
+      TG = promote_type(eltype(Δ²), eltype(ΔAA), eltype(A))
+      gΔAA = zeros(TG, size(ΔAA))
+      gA = zeros(TG, size(A))
+      @nexprs $ORD N -> _pb_pb_evaluate_AA!(basis.specs[N], 
+                              gΔAA, gA,   # outputs (gradients)
+                              Δ²,         # differential 
+                              __view_AA(ΔAA, basis, N), A, # inputs 
+                              )
+      return gΔAA, gA
+   end 
+end 
+
+function _pb_pb_evaluate_AA!(spec::Vector{NTuple{N, Int}}, 
+                             gΔAA, gA, 
+                             Δ², 
+                             ΔN::AbstractVector, A::AbstractVector) where {N}
+   # We wish to compute ∇_Δ and ∇_A w.r.t.  the expression 
+   #         ∑ₖ Δ²ₖ * ∇_{Aₖ} (Δ ⋅ AA)    (Δ = ΔN)
+   #      =  ∑ᵢ Δᵢ * ∇̃ AA[i] 
+   # where   ∇̃ = ∑_k Δ²ₖ * ∇_Aₖ
+   #   here k = 1,...,#A and i = 1,...,#AA 
+   for (i, ϕ) in enumerate(spec)
+      A_ϕ = ntuple(t -> A[ϕ[t]], N)
+      Δ²_ϕ = ntuple(t -> Δ²[ϕ[t]], N)
+      pi, gi, ui = _pb_grad_static_prod(Δ²_ϕ, A_ϕ)
+      gΔAA[i] += sum(gi .* Δ²_ϕ) * pi 
+      for j = 1:N 
+         gA[ϕ[j]] += ui[j] * ΔN[i]
+      end
+   end
+   return nothing 
+end
 
 
 # -------------- Lux integration 
-
 # it needs an extra lux interface reason as in the case of the `basis` 
+# should it not be enough to just overload valtype? 
+
 function evaluate(l::PolyLuxLayer{<: SparseSymmProd}, A::AbstractVector{T}, ps, st) where {T}
    AA = acquire!(st.pool, :AA, (length(l),), T)
    evaluate!(AA, l.basis, A)
