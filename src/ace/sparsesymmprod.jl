@@ -236,13 +236,39 @@ function _pb_pb_evaluate_AA!(spec::Vector{NTuple{N, Int}},
    #      =  ∑ᵢ Δᵢ * ∇̃ AA[i] 
    # where   ∇̃ = ∑_k Δ²ₖ * ∇_Aₖ
    #   here k = 1,...,#A and i = 1,...,#AA 
-   for (i, ϕ) in enumerate(spec)
+
+   @assert size(gA) == size(A) 
+   @assert length(gΔAA) >= length(spec)
+   @assert length(ΔN) >= length(spec)
+   @assert length(Δ²) >= length(A)
+
+   @inbounds for (i, ϕ) in enumerate(spec)
       A_ϕ = ntuple(t -> A[ϕ[t]], N)
       Δ²_ϕ = ntuple(t -> Δ²[ϕ[t]], N)
       p_i, g_i, u_i = _pb_grad_static_prod(Δ²_ϕ, A_ϕ)
       gΔAA[i] = sum(g_i .* Δ²_ϕ) 
-      for j = 1:N 
-         gA[ϕ[j]] += u_i[j] * ΔN[i]
+      for t = 1:N 
+         gA[ϕ[t]] += u_i[t] * ΔN[i]
+      end
+   end
+   return nothing 
+end
+
+
+function _pb_pb_evaluate_AA!(spec::Vector{NTuple{N, Int}}, 
+                             gΔAA, gA, 
+                             Δ², 
+                             ΔN::AbstractMatrix, A::AbstractMatrix) where {N}
+   nX = size(A, 1)
+   for (i, ϕ) in enumerate(spec)
+      for j = 1:nX
+         A_ϕ = ntuple(t -> A[j, ϕ[t]], N)
+         Δ²_ϕ = ntuple(t -> Δ²[j, ϕ[t]], N)
+         p_i, g_i, u_i = _pb_grad_static_prod(Δ²_ϕ, A_ϕ)
+         gΔAA[j, i] = sum(g_i .* Δ²_ϕ)
+         for t = 1:N 
+            gA[j, ϕ[t]] += u_i[t] * ΔN[j, i]
+         end
       end
    end
    return nothing 

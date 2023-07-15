@@ -156,6 +156,33 @@ dF(t) = begin
 end
 print_tf(@test fdtest(F, dF, 0.0; verbose=true))
 
+##
+
+using LinearAlgebra: Diagonal
+sbA = size(bA)
+@info("Test batched double-pullback")
+for ntest = 1:30
+   local bA, bA2
+   local bUU, u
+   bA = randn(sbA)
+   bAA = basis2(bA)
+   Δ = randn(size(bAA)) /  Diagonal(1:size(bAA, 2))
+   Δ² = randn(size(bA)) /  Diagonal(1:size(bA, 2))
+   uA = randn(size(bA)) /  Diagonal(1:size(bA, 2))
+   uΔ = randn(size(bAA)) / Diagonal(1:size(bAA, 2))
+
+   _X(t) = (Δ + t * uΔ, bA + t * uA)
+
+   F(t) = dot(Δ², P4ML._pb_evaluate(basis2, _X(t)...))
+   dF(t) = begin
+      val, pb = rrule(P4ML._pb_evaluate, basis2, _X(t)...)
+      _, _, ∇_Δ, ∇_A = pb(Δ²)
+      return dot(∇_Δ, uΔ) + dot(∇_A, uA)
+   end
+   print_tf(@test fdtest(F, dF, 0.0; verbose=false))
+end
+println() 
+
 
 ##
 
