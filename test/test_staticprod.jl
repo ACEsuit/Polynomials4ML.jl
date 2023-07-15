@@ -41,3 +41,12 @@ for ORD = 1:5
    end
 end
 println() 
+
+# using BenchmarkTools
+# # @benchmark P4ML._static_prod($b.data)
+# ORD = 3
+# valNB = Val(ORD) # 100 ns
+# @btime Val($ORD) # 100 ns
+
+# @btime P4ML._prod_ed($b.data, $valNB) # 120 ns
+# @btime P4ML._grad_static_prod($b.data) # 116.54 ns
