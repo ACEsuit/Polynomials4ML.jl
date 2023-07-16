@@ -33,7 +33,7 @@ for ORD = 1:5
       g1 = prodgrad(b.data, Val(ORD))
       u1 = ForwardDiff.gradient(_b -> dot(SVector(prodgrad(_b.data, Val(ORD))...), ∂), b).data
       p2 = P4ML._static_prod(b.data)
-      p3, g3 = P4ML._grad_static_prod(b.data)
+      p3, g3 = P4ML._static_prod_ed(b.data)
       p4, g4, u4 = P4ML._pb_grad_static_prod(∂.data, b.data)
       print_tf(@test p1 ≈ p2 ≈ p3 ≈ p4)
       print_tf(@test all(g1 .≈ g3 .≈ g4))
