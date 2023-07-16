@@ -5,13 +5,13 @@ _static_prod(b::NTuple{N, T}) where {N, T <: Number} =
 
 _static_prod(b::NTuple{1, T}) where {T <: Number} = b[1]
 
-function _grad_static_prod(b::NTuple{N, T}) where {N, T <: Number} 
+function _static_prod_ed(b::NTuple{N, T}) where {N, T <: Number} 
    b2 = b[2:N]
-   p2, g2 = _grad_static_prod(b2)
+   p2, g2 = _static_prod_ed(b2)
    return b[1] * p2, tuple(p2, ntuple(i -> b[1] * g2[i], N-1)...)
 end
 
-function _grad_static_prod(b::NTuple{1, T}) where {N, T <: Number} 
+function _static_prod_ed(b::NTuple{1, T}) where {N, T <: Number} 
    return b[1], (one(T),)
 end
 

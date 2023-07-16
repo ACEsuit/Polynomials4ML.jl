@@ -132,7 +132,7 @@ function evaluate_ed!(A, dA, basis::SparseProduct{NB}, BB::Tuple{Vararg{Abstract
       b = ntuple(Val(NB)) do i 
          @inbounds BB[i][ϕ[i]] 
       end 
-      a, g = _grad_static_prod(b)
+      a, g = _static_prod_ed(b)
       A[iA] = a
       fill!.(dA[iA], 0.0)
       for i = 1:NB
@@ -153,7 +153,7 @@ function evaluate_ed!(A, dA, basis::SparseProduct{NB}, BB::Tuple{Vararg{Abstract
         b = ntuple(Val(NB)) do i 
            @inbounds BB[i][j, ϕ[i]] 
         end 
-        a, g = _grad_static_prod(b)
+        a, g = _static_prod_ed(b)
         A[j, iA] = a 
         for i = 1:NB
            dA[iA][i][j, ϕ[i]] += g[i]
@@ -171,7 +171,7 @@ function evaluate_ed2!(A, dA, ddA, basis::SparseProduct{NB}, BB::Tuple{Vararg{Ab
       b = ntuple(Val(NB)) do i 
          @inbounds BB[i][ϕ[i]] 
       end 
-      a, g = _grad_static_prod(b)
+      a, g = _static_prod_ed(b)
       A[iA] = a
       fill!.(dA[iA], 0.0)
       fill!.(ddA[iA], 0.0)
@@ -195,7 +195,7 @@ function evaluate_ed2!(A, dA, ddA, basis::SparseProduct{NB}, BB::Tuple{Vararg{Ab
         b = ntuple(Val(NB)) do i 
            @inbounds BB[i][j, ϕ[i]] 
         end 
-        a, g = _grad_static_prod(b)
+        a, g = _static_prod_ed(b)
         A[j, iA] = a
         for i = 1:NB
            dA[iA][i][j, ϕ[i]] += g[i]
@@ -214,7 +214,7 @@ function _frule_evaluate!(A, dA, basis::SparseProduct{NB}, BB::Tuple{Vararg{Abst
       b = ntuple(Val(NB)) do i 
          @inbounds BB[i][ϕ[i]] 
       end 
-      a, g = _grad_static_prod(b)
+      a, g = _static_prod_ed(b)
       A[iA] = a
       for i = 1:NB
          for j = 1:length(∂BB[1][1])
@@ -236,7 +236,7 @@ function _frule_evaluate!(A, dA, basis::SparseProduct{NB}, BB::Tuple{Vararg{Abst
         b = ntuple(Val(NB)) do i 
            @inbounds BB[i][j, ϕ[i]] 
         end 
-        a, g = _grad_static_prod(b)
+        a, g = _static_prod_ed(b)
         A[j, iA] = a 
         for i = 1:NB
             for k = 1:length(∂BB[1][1])
@@ -351,7 +351,7 @@ function _pullback_evaluate!(∂BB, ∂A, basis::SparseProduct{NB}, BB::Tuple) w
         b = ntuple(Val(NB)) do i 
            @inbounds BB[i][j, ϕ[i]] 
         end 
-        a, g = _grad_static_prod(b)
+        a, g = _static_prod_ed(b)
         for i = 1:NB 
            ∂BB[i][j, ϕ[i]] = muladd(∂A[j, iA], g[i], ∂BB[i][j, ϕ[i]])
         end

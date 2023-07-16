@@ -256,7 +256,7 @@ function _pullback_evaluate!(∂BB, ∂A, basis::PooledSparseProduct{NB}, BB::Tu
          b = ntuple(Val(NB)) do i 
             @inbounds BB[i][j, ϕ[i]] 
          end 
-         a, g = _grad_static_prod(b)
+         a, g = _static_prod_ed(b)
          for i = 1:NB 
             ∂BB[i][j, ϕ[i]] = muladd(∂A_iA, g[i], ∂BB[i][j, ϕ[i]])
          end
