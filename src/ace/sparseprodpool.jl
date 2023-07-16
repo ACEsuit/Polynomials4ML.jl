@@ -40,6 +40,7 @@ _gradtype(basis::AbstractPoly4MLBasis, BB::Tuple) =
 _alloc(basis::PooledSparseProduct, BB::TupVecMat) = 
       acquire!(basis.pool, :A, (length(basis), ), _valtype(basis, BB) )
 
+
 # _alloc_d(basis::AbstractPoly4MLBasis, BB::TupVecMat) = 
 #       acquire!(basis.pool, _outsym(BB), (length(basis), ), _gradtype(basis, BB) )
 
@@ -458,18 +459,19 @@ end
 # but technically the pooling operation changes the behaviour in
 # a few ways and we need to be very careful about this
 
+import LuxCore: AbstractExplicitLayer, initialparameters, initialstates
 
-# struct PooledSparseProductLayer{NB} <: AbstractExplicitLayer 
-#    basis::PooledSparseProduct{NB}
-# end
+struct PooledSparseProductLayer{NB} <: AbstractExplicitLayer 
+   basis::PooledSparseProduct{NB}
+end
 
-# lux(basis::PooledSparseProduct) = PooledSparseProductLayer(basis)
+lux(basis::PooledSparseProduct) = PooledSparseProductLayer(basis)
 
-# initialparameters(rng::AbstractRNG, layer::PooledSparseProductLayer) = 
-#       NamedTuple() 
+initialparameters(rng::AbstractRNG, layer::PooledSparseProductLayer) = 
+      NamedTuple() 
 
-# initialstates(rng::AbstractRNG, layer::PooledSparseProductLayer) = 
-#       NamedTuple()
+initialstates(rng::AbstractRNG, layer::PooledSparseProductLayer) = 
+      NamedTuple()
 
-# (l::PooledSparseProductLayer)(BB, ps, st) = 
-#       evaluate(l.basis, BB), st 
+(l::PooledSparseProductLayer)(BB, ps, st) = 
+      evaluate(l.basis, BB), st 
