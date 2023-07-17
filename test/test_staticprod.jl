@@ -5,23 +5,6 @@ P4ML = Polynomials4ML
 
 ##
 
-@info("Testing _prod_grad - old implementation")
-
-prodgrad = P4ML._prod_grad
-
-for N = 1:5
-   for ntest = 1:10
-      local g, b, g1 
-      b = rand(SVector{N,Float64})
-      g = prodgrad(b.data, Val(N))
-      g1 = ForwardDiff.gradient(prod, b)
-      print_tf(@test g1 ≈ SVector(g...))
-   end
-end
-println()
-
-##
-
 @info("Testing _static_prod")
 
 for ORD = 1:5 

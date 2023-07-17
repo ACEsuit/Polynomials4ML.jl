@@ -105,7 +105,8 @@ function evaluate!(A, basis::SparseProduct{NB}, BB::Tuple{Vararg{AbstractVector}
    @assert length(BB) == NB
    spec = basis.spec
    for (iA, ϕ) in enumerate(spec)
-       @inbounds A[iA] = BB_prod(ϕ, BB)
+      b = ntuple(t->BB[t][ϕ[t]], NB)
+      @inbounds A[iA] = @fastmath prod(b)
    end
    return A 
 end
@@ -117,7 +118,8 @@ function evaluate!(A, basis::SparseProduct{NB}, BB::Tuple{Vararg{AbstractMatrix}
 
    @inbounds for (iA, ϕ) in enumerate(spec)
       @simd ivdep for j = 1:nX
-         A[j, iA] = BB_prod(ϕ, BB, j)
+         b = ntuple(t->BB[t][j, ϕ[t]], NB)
+         A[j, iA] = @fastmath prod(b)
       end
    end
    return A
