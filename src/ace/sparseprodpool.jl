@@ -86,7 +86,8 @@ function evaluate!(A, basis::PooledSparseProduct{NB}, BB::TupVec) where {NB}
    spec = basis.spec
    fill!(A, 0)
    for (iA, ϕ) in enumerate(spec)
-      @inbounds A[iA] += BB_prod(ϕ, BB)
+      b = ntuple(t -> BB[t][ϕ[t]], NB)
+      @inbounds A[iA] += @fastmath prod(b) 
    end
    return nothing 
 end
@@ -120,7 +121,8 @@ function evaluate!(A, basis::PooledSparseProduct{NB}, BB::TupMat,
    @inbounds for (iA, ϕ) in enumerate(spec)
       a = zero(eltype(A))
       @simd ivdep for j = 1:nX
-         a += BB_prod(ϕ, BB, j)
+         b = ntuple(t -> BB[t][j, ϕ[t]], NB)
+         a += @fastmath(prod(b))
       end
       A[iA] = a
    end
@@ -224,8 +226,6 @@ end
 using StaticArrays
 
 
-
-
 function _rrule_evaluate(basis::PooledSparseProduct{NB}, BB::TupMat) where {NB}
    A = evaluate(basis, BB)
    return A, ∂A -> _pullback_evaluate(∂A, basis, BB)
@@ -256,7 +256,7 @@ function _pullback_evaluate!(∂BB, ∂A, basis::PooledSparseProduct{NB}, BB::Tu
          b = ntuple(Val(NB)) do i 
             @inbounds BB[i][j, ϕ[i]] 
          end 
-         g = _prod_grad(b, Val(NB))
+         a, g = _static_prod_ed(b)
          for i = 1:NB 
             ∂BB[i][j, ϕ[i]] = muladd(∂A_iA, g[i], ∂BB[i][j, ϕ[i]])
          end
