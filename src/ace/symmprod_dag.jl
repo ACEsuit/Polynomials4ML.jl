@@ -5,6 +5,22 @@ using Combinatorics: combinations, partitions
 
 const BinDagNode = Tuple{Int, Int}
 
+"""
+`struct SparseSymmProdDAG` : alternative (recursive) implementation of 
+`SparseSymmProd`. This has better theoretical performance for high correlation 
+orders. 
+
+The potential downside is that it inserts auxiliary basis functions into the 
+basis. This means, that the specification of the output will be different 
+from the specification that is used to construct the basis. To that end, the 
+field `projection` can be used to reduce it back to the original spec. E.g., 
+```julia
+basis = SparseSymmProd(spec)
+basis_dag = SparseSymmProdDAG(spec)
+A = randn(nA)
+basis(A) ≈ basis_dag(A)[basis_dag.projection]   # true
+```
+"""
 struct SparseSymmProdDAG <: AbstractPoly4MLBasis
    nodes::Vector{BinDagNode}
    has0::Bool
