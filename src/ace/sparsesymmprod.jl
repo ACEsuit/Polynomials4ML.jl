@@ -51,7 +51,7 @@ function SparseSymmProd(spec::AbstractVector{<: Union{Tuple, AbstractVector}}; k
    specs = ntuple(N -> Vector{NTuple{N, Int}}(), MAXORD)
    for b in spec 
       N = length(b) 
-      push!(specs[N], sort(tuple(b...)))
+      push!(specs[N], tuple(sort([b...])...))
    end
    ranges = [] 
    idx = Int(hasconst)
