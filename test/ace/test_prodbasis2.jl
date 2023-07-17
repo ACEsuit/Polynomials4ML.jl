@@ -62,28 +62,32 @@ println_slim(@test AA2_c ≈ AA1_c)
 using LinearAlgebra: dot
 using Printf
 
-A = randn(2*M+1)
-AA = basis2(A)
-Δ = randn(length(AA)) ./ (1+length(AA))
+for ntest = 1:10 
+   local A, AA, Δ, f, g, pb, g0, dg0, errs, h, δA
 
-f(A) = dot(basis2(A), Δ)
-f(A)
+   A = randn(2*M+1)
+   AA = basis2(A)
+   Δ = randn(length(AA)) ./ (1+length(AA))
 
-δA = randn(length(A)) ./ (1+length(A))
-g(t) = f(A + t * δA)
+   f(A) = dot(basis2(A), Δ)
+   f(A)
 
-AA, pb = P4ML.rrule(evaluate, basis2, A)
-g0 = dot(Δ, AA)
-dg0 = dot(pb(Δ)[3], δA)
+   δA = randn(length(A)) ./ (1+length(A))
+   g(t) = f(A + t * δA)
 
-errs = Float64[]
-for h = (0.1).^(0:10)
-   push!(errs, abs((g(h) - g0)/h - dg0))
-   @printf(" %.2e | %.2e \n", h, errs[end])
+   AA, pb = rrule(evaluate, basis2, A)
+   g0 = dot(Δ, AA)
+   dg0 = dot(pb(Δ)[3], δA)
+
+   errs = Float64[]
+   for h = (0.1).^(0:10)
+      push!(errs, abs((g(h) - g0)/h - dg0))
+      # @printf(" %.2e | %.2e \n", h, errs[end])
+   end
+   /(extrema(errs)...)
+   print_tf(@test /(extrema(errs)...) < 1e-4)
 end
-/(extrema(errs)...)
-println_slim(@test /(extrema(errs)...) < 1e-4)
-
+println() 
 
 ## 
 
@@ -140,21 +144,26 @@ println()
 
 @info("Test _pb_pb_evaluate")
 
-A = randn(2*M+1)
-AA = basis2(A)
-Δ = randn(length(AA)) ./ (1+length(AA))
-Δ² = randn(length(A)) ./ (1+length(A))
-uA = randn(length(A)) ./ (1+length(A))
-uΔ = randn(length(AA)) ./ (1+length(AA))
+for ntest = 1:10 
+   local A, AA, Δ, Δ², uA, uΔ, F, dF
 
-F(t) = dot(Δ², P4ML._pb_evaluate(basis2, Δ + t * uΔ, A + t * uA))
+   A = randn(2*M+1)
+   AA = basis2(A)
+   Δ = randn(length(AA)) ./ (1+length(AA))
+   Δ² = randn(length(A)) ./ (1+length(A))
+   uA = randn(length(A)) ./ (1+length(A))
+   uΔ = randn(length(AA)) ./ (1+length(AA))
 
-dF(t) = begin 
-   val, pb = P4ML.rrule(P4ML._pb_evaluate, basis2,  Δ + t * uΔ, A + t * uA)
-   _, _, ∇_Δ, ∇_A = pb(Δ²)
-   return dot(∇_Δ, uΔ) + dot(∇_A, uA)
+   F(t) = dot(Δ², P4ML._pb_evaluate(basis2, Δ + t * uΔ, A + t * uA))
+
+   dF(t) = begin 
+      val, pb = P4ML.rrule(P4ML._pb_evaluate, basis2,  Δ + t * uΔ, A + t * uA)
+      _, _, ∇_Δ, ∇_A = pb(Δ²)
+      return dot(∇_Δ, uΔ) + dot(∇_A, uA)
+   end
+   print_tf(@test fdtest(F, dF, 0.0; verbose=false))
 end
-print_tf(@test fdtest(F, dF, 0.0; verbose=true))
+println() 
 
 ##
 
@@ -162,8 +171,7 @@ using LinearAlgebra: Diagonal
 sbA = size(bA)
 @info("Test batched double-pullback")
 for ntest = 1:30
-   local bA, bA2
-   local bUU, u
+   local bA, bA2, bUU, u, Δ, Δ², uΔ, uA 
    bA = randn(sbA)
    bAA = basis2(bA)
    Δ = randn(size(bAA)) /  Diagonal(1:size(bAA, 2))

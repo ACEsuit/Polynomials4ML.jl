@@ -1,5 +1,5 @@
 
-using BenchmarkTools, Test, Polynomials4ML
+using BenchmarkTools, Test, Polynomials4ML, ChainRulesCore
 using Polynomials4ML: PooledSparseProduct, evaluate, evaluate!
 using ACEbase.Testing: fdtest, println_slim, print_tf
 
@@ -71,7 +71,7 @@ println()
 
 ##
 
-@info("Testing _rrule_evalpool")
+@info("Testing rrule")
 using LinearAlgebra: dot
 
 for ntest = 1:30
@@ -86,8 +86,8 @@ for ntest = 1:30
    u = randn(size(bA2))
    F(t) = dot(u, evaluate(basis, _BB(t)))
    dF(t) = begin
-      val, pb = Zygote.pullback(evaluate, basis, _BB(t))
-      ∂BB = pb(u)[2]
+      val, pb = rrule(evaluate, basis, _BB(t))
+      ∂BB = pb(u)[3]
       return sum(dot(∂BB[i], bUU[i]) for i = 1:length(bUU))
    end
    print_tf(@test fdtest(F, dF, 0.0; verbose=false))

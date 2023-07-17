@@ -181,7 +181,7 @@ function _pb_evaluate_pbAA!(gA::AbstractVector, ΔN::AbstractVector,
    # we compute ∇_A w.r.t. the expression ∑_i Δ[i] * AA[i]                             
    for (i, ϕ) in enumerate(spec)
       aa = ntuple(i -> A[ϕ[i]], N)
-      pi, gi = _grad_static_prod(aa) 
+      pi, gi = _static_prod_ed(aa) 
       for j = 1:N 
          gA[ϕ[j]] += ΔN[i] * gi[j]
       end
@@ -196,7 +196,7 @@ function _pb_evaluate_pbAA!(gA, ΔN::AbstractMatrix,
    for (i, ϕ) in enumerate(spec)
       for j = 1:nX 
          aa = ntuple(i -> A[j, ϕ[i]], N)
-         pi, gi = _grad_static_prod(aa) 
+         pi, gi = _static_prod_ed(aa) 
          for t = 1:N 
             gA[j, ϕ[t]] += ΔN[j, i] * gi[t]
          end

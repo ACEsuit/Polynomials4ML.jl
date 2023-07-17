@@ -318,8 +318,7 @@ function _pb_pb_evaluate(basis::PooledSparseProduct{NB}, ∂2,
          ∂g = ntuple(Val(NB)) do i 
             @inbounds ∂2[i][j, ϕ[i]]
          end
-         # g = _prod_grad(b, Val(NB))
-         g, ∂g_b = _pb_prod_grad(∂g, b, Val(NB))
+         _, g, ∂g_b = _pb_grad_static_prod(∂g, b)
          for i = 1:NB 
             # ∂BB[i][j, ϕ[i]] += ∂A[iA] * g[i]
             ∂2_∂A[iA] += ∂2[i][j, ϕ[i]] * g[i]

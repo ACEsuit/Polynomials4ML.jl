@@ -23,7 +23,7 @@ using Test
 
     # ACE 
     @testset "SparsePooledProduct" begin include("ace/test_sparseprodpool.jl"); end 
-    # @testset "Sparse Symmetric Product" begin include("ace/test_prodbasis1.jl"); end 
+    @testset "Sparse Symmetric Product - DAG" begin include("ace/test_prodbasis1.jl"); end 
     @testset "Sparse Symmetric Product" begin include("ace/test_prodbasis2.jl"); end 
 
     # Misc
