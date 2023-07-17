@@ -20,6 +20,10 @@ basis_dag = SparseSymmProdDAG(spec)
 A = randn(nA)
 basis(A) ≈ basis_dag(A)[basis_dag.projection]   # true
 ```
+
+However, the field `projection` is used only for information, and not 
+to actually reduce the output. One could of course use it to compose 
+the output with a projection matrix.
 """
 struct SparseSymmProdDAG <: AbstractPoly4MLBasis
    nodes::Vector{BinDagNode}
