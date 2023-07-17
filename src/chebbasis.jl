@@ -1,6 +1,6 @@
 export ChebBasis
 
-"""
+@doc raw"""
 `ChebBasis(N)`: 
 
 Chebyshev polynomials up to degree `N-1` (inclusive). i.e  basis with length `N`. The basis is ordered as 

@@ -1,11 +1,12 @@
 
-using Test, BenchmarkTools, Polynomials4ML, ChainRulesCore
-using Polynomials4ML: SimpleProdBasis, release!, SparseSymmProdDAG
+using Test, BenchmarkTools, Polynomials4ML
+using Polynomials4ML: SimpleProdBasis, release!, SparseSymmProd
 using Polynomials4ML.Testing: println_slim, print_tf, generate_SO2_spec
 using Random
 
 using ACEbase.Testing: fdtest, dirfdtest
 using Lux
+using Zygote
 
 P4ML = Polynomials4ML
 ##
@@ -20,27 +21,29 @@ A = randn(ComplexF64, 2*M+1)
 basis1 = SimpleProdBasis(spec)
 AA1 = basis1(A)
 
-basis2 = SparseSymmProdDAG(spec)
+basis2 = SparseSymmProd(spec)
 AA2 = basis2(A)
-proj = basis2.projection 
 
 @info("check against simple implementation")
-println_slim(@test AA1 ≈ AA2[proj])
+println_slim(@test AA1 ≈ AA2)
 
 @info("reconstruct spec")
 spec_ = P4ML.reconstruct_spec(basis2)
-println_slim(@test spec_[proj] == spec)
+println_slim(@test spec_ == spec)
+
+println_slim(@test basis2.hasconst == false)
 
 ##
 
 @info("Test with a constant")
 spec_c = [ [Int[],]; spec]
 basis1_c = SimpleProdBasis(spec_c)
-basis2_c = SparseSymmProdDAG(spec_c)
-proj_c = basis2_c.projection
+basis2_c = SparseSymmProd(spec_c)
+
+println_slim(@test basis2_c.hasconst == true)
 
 spec_c_ = P4ML.reconstruct_spec(basis2_c)
-println_slim(@test spec_c_[proj_c] == spec_c)
+println_slim(@test spec_c_ == spec_c)
 
 AA1_c = basis1_c(A)
 println_slim(@test AA1 ≈ AA1_c[2:end])
@@ -48,8 +51,7 @@ println_slim(@test AA1_c[1] ≈ 1.0)
 
 AA2_c = basis2_c(A)
 println_slim(@test AA2_c[1] ≈ 1.0)
-println_slim(@test collect(AA2) ≈ collect(AA2_c[2:end]))
-println_slim(@test AA2_c[proj_c] ≈ AA1_c)
+println_slim(@test AA2_c ≈ AA1_c)
 
 
 ## 
@@ -88,9 +90,9 @@ println_slim(@test /(extrema(errs)...) < 1e-4)
 
 nX = 32
 bA = randn(ComplexF64, nX, 2*M+1)
-bAA1 = zeros(ComplexF64, nX, length(basis2))
+bAA1 = zeros(ComplexF64, nX, length(spec))
 for i = 1:nX
-   bAA1[i, :] = basis2(bA[i, :])
+   bAA1[i, :] = basis1(bA[i, :])
 end
 bAA2 = basis2(bA)
 
@@ -102,18 +104,17 @@ println_slim(@test bAA1 ≈ bAA2)
 
 nX = 32
 bA = randn(ComplexF64, nX, 2*M+1)
-bAA1 = zeros(ComplexF64, nX, length(basis2_c))
+bAA1 = zeros(ComplexF64, nX, length(basis1_c))
 for i = 1:nX
-   bAA1[i, :] = basis2_c(bA[i, :])
+   bAA1[i, :] = basis1_c(bA[i, :])
 end
 bAA2 = basis2_c(bA)
 
 println_slim(@test bAA1 ≈ bAA2)
 
-##
-
+## 
 sbA = size(bA)
-@info("Test batched rrule")
+@info("Test batched rrule with Zygote")
 for ntest = 1:30
    local bA, bA2
    local bUU, u
@@ -124,12 +125,13 @@ for ntest = 1:30
    u = randn(size(bA2))
    F(t) = dot(u, evaluate(basis2, _BB(t)))
    dF(t) = begin
-      val, pb = rrule(evaluate, basis2, _BB(t))
-      ∂BB = pb(u)[3]
+      val, pb = Zygote.pullback(evaluate, basis2, _BB(t))
+      ∂BB = pb(u)[2]
       return sum(dot(∂BB[i], bU[i]) for i = 1:length(bU))
    end
    print_tf(@test fdtest(F, dF, 0.0; verbose=false))
 end
+println() 
 
 ##
 
@@ -141,5 +143,5 @@ ps, st = Lux.setup(MersenneTwister(1234), l_basis2)
 l_AA2, _ = l_basis2(bA, ps, st)
 println_slim(@test l_AA2 ≈ basis2(bA))
 
+println()
 ##
-
