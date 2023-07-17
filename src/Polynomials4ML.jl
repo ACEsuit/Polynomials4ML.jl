@@ -64,6 +64,9 @@ include("atomicorbitalsradials/atomicorbitalsradials.jl")
 include("staticprod.jl")
 include("sparseproduct.jl")
 
+# LinearLayer implementation
+include("linear.jl")
+
 # generic machinery for wrapping poly4ml bases into lux layers 
 include("lux.jl")
 
