@@ -2,10 +2,11 @@
 using Polynomials4ML, Test
 using Polynomials4ML: evaluate, evaluate_d, evaluate_dd
 using Polynomials4ML.Testing: println_slim, test_derivatives, print_tf
-using LinearAlgebra: I, norm 
+using LinearAlgebra: I, norm, dot 
 using QuadGK
 using ACEbase.Testing: fdtest
 using Printf
+using ChainRulesCore: rrule 
 using Zygote
 
 @info("Testing OrthPolyBasis1D3T")
@@ -102,3 +103,40 @@ for ntest = 1:30
    print_tf(@test fdtest(F, dF, 0.0; verbose = false))
 end
 println()
+
+##
+# ---------------- Double Pullback Test ----------------
+using ForwardDiff
+P4ML = Polynomials4ML
+
+@info("Testing double-pullback")
+
+Nx = 6; Np = 11
+cheb = chebyshev_basis(Np, normalize=false)
+X = 2*rand(Nx) .- 1
+
+@info("    first double-check first pullback a different way")
+bP1 = cheb(X)
+val, pb = rrule(evaluate, cheb, X)
+println_slim(@test val ≈ bP1)
+dP1 = P4ML.evaluate_d(cheb, X)
+u = randn(size(bP1))
+println_slim(@test pb(u)[3] ≈  [ dot(u[j, :], collect(dP1[j, :])) for j = 1:Nx ])
+
+##
+
+@info("    now check the second-order pullback")
+
+function F(u, X) 
+   d = 1:length(X) 
+   val, pb = rrule(evaluate, cheb, X)
+   return dot(d, pb(u)[3])
+end 
+
+g_uX = Zygote.gradient(F, u, X)
+
+gf_u = ForwardDiff.gradient(_u -> F(_u, X), u)
+println_slim(@test (gf_u ≈ g_uX[1]))
+
+gf_X = ForwardDiff.gradient(_X -> F(u, _X), X)
+println_slim(@test (gf_X ≈ g_uX[2]))

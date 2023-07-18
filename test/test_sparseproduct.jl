@@ -167,8 +167,8 @@ println_slim(@test bA1 ≈ bA2)
 nX = 2
 bBB = Tuple([randn(nX, N[i]) for i = 1:NB])
 A1 = zeros(ComplexF64, nX, length(basis))
-_similar(BB::Tuple) = Tuple([similar(BB[i]) for i = 1:length(BB)])
-bA1 = [_similar(bBB) for j = 1:length(basis)]  # nX * basis
+_similar1(BB::Tuple) = Tuple([similar(BB[i]) for i = 1:length(BB)])
+bA1 = [_similar1(bBB) for j = 1:length(basis)]  # nX * basis
 
 for j = 1:nX
     A1[j, :] = evaluate_ed(basis, Tuple([bBB[i][j, :] for i = 1:NB]))[1]
@@ -195,9 +195,9 @@ println_slim(@test Δ ≈ 0)
 nX = 64 
 bBB = Tuple([randn(nX, N[i]) for i = 1:NB])
 A1 = zeros(ComplexF64, nX, length(basis))
-_similar(BB::Tuple) = Tuple([similar(BB[i]) for i = 1:length(BB)])
-bA1 = [_similar(bBB) for j = 1:length(basis)]  # nX * basis
-bbA1 = [_similar(bBB) for j = 1:length(basis)] 
+_similar2(BB::Tuple) = Tuple([similar(BB[i]) for i = 1:length(BB)])
+bA1 = [_similar2(bBB) for j = 1:length(basis)]  # nX * basis
+bbA1 = [_similar2(bBB) for j = 1:length(basis)] 
 
 for j = 1:nX
     A1[j, :] = evaluate_ed2(basis, Tuple([bBB[i][j, :] for i = 1:NB]))[1]

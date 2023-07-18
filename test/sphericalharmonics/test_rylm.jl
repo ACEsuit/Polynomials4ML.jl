@@ -16,7 +16,7 @@ verbose = false
 
 @info("Testing consistency of Real and Complex SH; Condon-Shortley convention")
 
-function test_r2c(L, cY, rY)
+function test_r2c_y(L, cY, rY)
    cYt = similar(cY)
    for l = 0:L
       m = 0
@@ -46,7 +46,7 @@ for nsamples = 1:30
    R = rand_sphere()
    cY = evaluate(cSH, R)
    rY = evaluate(rSH, R)
-   print_tf(@test test_r2c(maxL, cY, rY))
+   print_tf(@test test_r2c_y(maxL, cY, rY))
 end
 println()
 
@@ -122,7 +122,7 @@ using LinearAlgebra: tr
 using ForwardDiff
 P4 = Polynomials4ML
 
-function fwdΔ(rYlm, x)
+function fwdΔ1(rYlm, x)
    Y = evaluate(rYlm, x)
    nY = length(Y)
    _j(x) = ForwardDiff.jacobian(x -> evaluate(rYlm, x), x)[:]
@@ -133,7 +133,7 @@ end
 
 for x in X 
    ΔY = P4.laplacian(rSH, x)
-   ΔYfwd = fwdΔ(rSH, x)
+   ΔYfwd = fwdΔ1(rSH, x)
    print_tf(@test ΔYfwd ≈ ΔY)
 end
 println() 
