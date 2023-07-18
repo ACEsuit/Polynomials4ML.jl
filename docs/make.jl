@@ -18,6 +18,10 @@ makedocs(;
         "Home" => "index.md",
         "API" => "api.md", 
         "Experimental" => "experimental.md",
+        "Lux Interface" => "lux.md", 
+        "Models" => [ 
+                "3D Harmonics" => "SH.md",
+                "Cluster Expansion" => "ace.md", ], 
         "Docstrings" => "docstrings.md",
     ],
 )

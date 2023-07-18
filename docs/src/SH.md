@@ -9,6 +9,7 @@ This section provides documentation for the evaluation of complex and real spher
 - [Real Solid Harmonics](#real-solid-harmonics)
 
 ### Associated Legendre Polynomials
+
 Associated Legendre polynomials $P_{\ell}^m$ are closely related to the spherical harmonics, $P_{\ell}^m$ of degree $\ell$ and order $m\geq 0$ are defined as (in the phase convention of Condon and Shortley)
 $$
 \begin{aligned}
@@ -52,6 +53,7 @@ index_p(l,m)
 The algorithm for computing associated Legendre polynomials is based on Dusson(2022) eq.(A.7), where `A_l^m`, `B_l^m`, `C_l^m` can be found in Limpanuparb(2014) eq.(7)-(14). 
 
 ### Condon-Shortley Sign Convention
+
 There are two sign conventions for associated Legendre polynomials. 
 - Include the Condon-Shortley phase factor:
 $$
