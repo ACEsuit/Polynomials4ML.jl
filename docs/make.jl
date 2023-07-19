@@ -3,8 +3,9 @@ using Documenter, Literate
 
 DocMeta.setdocmeta!(Polynomials4ML, :DocTestSetup, :(using Polynomials4ML); recursive=true)
 
-_tutorial_out = joinpath(@__DIR__(), "src", "_literate_tutorials")
+_tutorial_out = joinpath(@__DIR__(), "src", "literate_tutorials")
 _tutorial_src = joinpath(@__DIR__(), "..", "tutorials")
+
 
 Literate.markdown(_tutorial_src * "/polyregression.jl", 
                   _tutorial_out; documenter = true)
@@ -24,12 +25,15 @@ makedocs(;
     pages=[
         "Home" => "index.md",
         "API" => "api.md", 
-        "Experimental" => "experimental.md",
-        "Tutorials" => "tutorials.md",
+        "Tutorials" => Any[
+            "Tutorial Index" => "tutorials.md",
+            "Linear Regression" => "literate_tutorials/polyregression.md",
+        ],
         "Models" => [ 
                 "3D Harmonics" => "SH.md",
                 "Cluster Expansion" => "ace.md", ], 
         "Docstrings" => "docstrings.md",
+        "Experimental" => "experimental.md",
     ],
 )
 

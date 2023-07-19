@@ -57,16 +57,6 @@ The meaning of the different symbols is exactly the same as described above. The
 Their type should be stable (if not, please file a bug report), but unspecified in the sense that the output type is not semver-stable for the time being. 
 If you need a sem-ver stable output then it is best to follow the above with a `collect`.
 
-## ChainRules.jl integration 
-
-We aim to provide `ChainRules.jl` integration for all model components. At present, we have focused on providing the `rrule` interface. If `basis` is a polynomial basis (or other model component) then one can obtain its value and pullback via the `ChainRules.jl` interface, 
-```julia 
-B, pb = rrule(evaluate, basis, X)
-``` 
-Internally, the pullback `pb` will most likely call a custom implementation of the pullback operation. Where possible we also implement pullbacks over pullbacks to enable second-order backward differentiation. This is needed when minimizing a loss function that involves a model derivative.
-
-If any `rrule`s are missing or not working as expected, please file an issue. 
-
 ## Re-using Output Arrays
 
 For many models / bases, pullbacks, etc, the default output arrays are of type `CachedArray`. 
@@ -85,7 +75,18 @@ The `release!` function can still be applied to output arrays that are not a `Ca
     `CachedArray`s can cause type instabilities when used in unexpected ways. To prevent this, if `B::CachedArray` is an output from a basis (or similar) simply use its parent instead, `parent(B)`. This will extract the internally stored array, normally a core Julia `Array` or a `PtrArray` from the package `StrideArrays.jl`. 
     
 
-## Lux Interface
+## ChainRules.jl integration 
+
+We aim to provide `ChainRules.jl` integration for all model components. At present, we have focused on providing the `rrule` interface. If `basis` is a polynomial basis (or other model component) then one can obtain its value and pullback via the `ChainRules.jl` interface, 
+```julia 
+B, pb = rrule(evaluate, basis, X)
+``` 
+Internally, the pullback `pb` will most likely call a custom implementation of the pullback operation. Where possible we also implement pullbacks over pullbacks to enable second-order backward differentiation. This is needed when minimizing a loss function that involves a model derivative.
+
+If any `rrule`s are missing or not working as expected, please file an issue. 
+
+
+## Lux.jl Interface
 
 Although all bases and models components that we implement here can be used "as is", we also aim to provide wrappers that turn them into `Lux.jl` layers. For any basis or model component `basis`, one can simply call 
 ```julia
