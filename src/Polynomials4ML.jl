@@ -65,6 +65,8 @@ include("staticprod.jl")
 include("sparseproduct.jl")
 
 # LinearLayer implementation
+# this is needed to better play with cached arrays + to give the correct 
+# behaviour when the feature dimension is different from expected. 
 include("linear.jl")
 
 # generic machinery for wrapping poly4ml bases into lux layers 

@@ -48,7 +48,7 @@ for (feat, in_size, out_fun) in zip(feature_arr, in_size_arr, out_fun_arr)
 
    @info("Testing rrule")
    for ntest = 1:30
-      local x
+      local x, val, u
       x = randn(in_size)
       bu = randn(in_size)
       _BB(t) = x + t * bu
@@ -66,6 +66,7 @@ for (feat, in_size, out_fun) in zip(feature_arr, in_size_arr, out_fun_arr)
 
    @info("Testing rrule w.r.t ps.W")
    for ntest = 1:30
+      local val, W0, re, u 
       w = randn(size(ps.W))
       bu = randn(size(ps.W))
       _BB(t) = w + t * bu
