@@ -31,4 +31,5 @@ using Test
     @testset "Flex Array Interface" begin include("test_flex.jl"); end 
     @testset "Sparse Product" begin include("test_sparseproduct.jl"); end 
     @testset "Lux" begin include("test_lux.jl"); end 
+    @testset "Linear lux layer" begin include("test_linear.jl"); end 
 end
