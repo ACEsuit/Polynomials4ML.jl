@@ -3,6 +3,12 @@
 
 The interfaces specified below are experimental and not part of the public API yet. Some of it is not even implemented yet and are just being sketched out in separate branches. There is no guarantee that these are provided for all of the exported basis sets, and there is no guarantee of semver-compatible backward compatibility at this point.
 
+## Some General Experimental / Undocumented Objects
+
+
+* [`LinearLayer`](@ref) : a custom dense linear layer we use to fix a type instability caused by the use of `CachedArray`s
+* [`SparseProduct`](@ref) : a model layer to form tensor products of features, e.g., tensor product polynomial bases. 
+
 ## Laplacian 
 
 The laplacian interface is experimental and should not be considered part of the public API. 
