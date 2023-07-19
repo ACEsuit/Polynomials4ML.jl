@@ -2,6 +2,40 @@ import ChainRulesCore: rrule
 using LuxCore
 using Random
 
+
+"""
+```julia 
+`LinearLayer : This lux layer returns `W * x` if `feature_first` is true, otherwise it returns `x * transpose(W)`, where `W` is the weight matrix`
+```
+where 
+`x::AbstractMatrix` of size `(in_dim, N)` or `(N, in_dim)``, where `in_dim = feature dimension`, `N = batch size`
+`W::AbstractMatrix` of size `(out_dim, in_dim)`
+
+### Constructor 
+```julia 
+LinearLayer(in_dim, out_dim; feature_first = false)
+```
+
+For example
+```julia 
+in_d, out_d = 4, 3 # feature dimensions
+N = 10 # batch size
+
+# feature_first = true
+l = P4ML.LinearLayer(in_d, out_d; feature_first = true)
+ps, st = LuxCore.setup(MersenneTwister(1234), l)
+x = randn(in_d, N) # feature-first
+out, st = l(x, ps, st)
+println(out == W * x) # true
+
+# feature_first = false
+l2 = P4ML.LinearLayer(in_d, out_d; feature_first = true)
+ps2, st2 = LuxCore.setup(MersenneTwister(1234), l2)
+x = randn(N, in_d) # batch-first
+out, st = l(x, ps, st)
+println(out == x * transpose(W))) # true
+```
+"""
 struct LinearLayer{FEATFIRST} <: AbstractExplicitLayer
    in_dim::Integer
    out_dim::Integer
