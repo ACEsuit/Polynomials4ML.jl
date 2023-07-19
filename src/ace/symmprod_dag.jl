@@ -5,6 +5,8 @@ using Combinatorics: combinations, partitions
 
 const BinDagNode = Tuple{Int, Int}
 
+export SparseSymmProdDAG
+
 """
 `struct SparseSymmProdDAG` : alternative (recursive) implementation of 
 `SparseSymmProd`. This has better theoretical performance for high correlation 

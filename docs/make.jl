@@ -5,10 +5,17 @@ DocMeta.setdocmeta!(Polynomials4ML, :DocTestSetup, :(using Polynomials4ML); recu
 
 _tutorial_out = joinpath(@__DIR__(), "src", "literate_tutorials")
 _tutorial_src = joinpath(@__DIR__(), "..", "tutorials")
+_tutorial_out_jl = joinpath(_tutorial_out, "tutorials")
 
+try; run(`mkdir $_tutorial_out`); catch; end 
+try; run(`mkdir $_tutorial_out_jl`); catch; end 
 
-Literate.markdown(_tutorial_src * "/polyregression.jl", 
-                  _tutorial_out; documenter = true)
+for tfile in [ "polyregression.jl", ]
+    infile = _tutorial_src * "/" * tfile
+    outfile_jl = _tutorial_out * "/tutorials/" * tfile 
+    Literate.markdown(infile, _tutorial_out; documenter = true)
+    run(`cp $infile $outfile_jl`)
+end
 
 
 makedocs(;
@@ -30,8 +37,8 @@ makedocs(;
             "Linear Regression" => "literate_tutorials/polyregression.md",
         ],
         "Background" => [ 
-                "3D Harmonics" => "SH.md",
-                "Cluster Expansion" => "ace.md", ], 
+                "SH.md",
+                "ace.md", ], 
         "Docstrings" => "docstrings.md",
         "Experimental" => "experimental.md",
     ],

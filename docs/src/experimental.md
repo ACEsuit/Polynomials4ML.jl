@@ -16,21 +16,11 @@ eval_grad_laplace!(Y, dY, ΔY, basis, X)
 Y, dY, ΔY = eval_grad_laplace(basis, X)
 ```
 
+## Explicit Backward Differentiation
 
-<!-- ## (Atomic) Cluster Expansion 
-
-Two key operations are probided that are needed for the implementation of the (atomic) cluster expansion. The precise deficitions and interface may still change, so those are also still labelled experimental. 
-* [`PooledSparseProduct`](@ref) : implements a merged product basis and pooling operation; in the atomic cluster expansion this is called the atomic basis; in GAP it is called the density projection.
-* [`SparseSymmProd`](@ref) : implements a sparse symmetric rank-1 tensor product, in ACE this is called the product basis, in GAP the n-correlations.
-
-Both of those operations have pullbacks implemented, but not `evaluate_ed!` or `evaluate_ed2!`. -->
-
-## Backward Differentiation w.r.t. Inputs `X`
-
-[WORK IN PROGRESS] We implement "manual" pullbacks w.r.t. the `X` variable. These  take the form
+We implement custom pullbacks for most bases. These  take the form
 ```julia
 ∂X = pb_evaluate(basis, ∂B, X, args...)
 pb_evaluate!(∂X, basis, ∂B, X, args...)
 ```
-and analogously for the `evaluate_***` variants. The `args...` can differ between different basis sets e.g. may rely on intermediate results in the evaluation of the basis. 
-
+and analogously for the `evaluate_***` variants. The `args...` can differ between different basis sets e.g. may rely on intermediate results in the evaluation of the basis. The `rrule` implementations are wrappers for these.

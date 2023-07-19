@@ -1,3 +1,5 @@
+# ### Linear Polynomial Regression 
+#
 # This tutorial show how to use the P4ML package to perform a naive polynomial 
 # regression. This is not really the intended use-case of the package, but it 
 # serves to illustrate some basic usage and functionality. 
@@ -5,7 +7,7 @@
 
 using Polynomials4ML, LinearAlgebra, StaticArrays
 
-# ### Example 1: Univeriate Polynomial Regression 
+# ### Example 1: Univariate Polynomial Regression 
 #
 # First, we specify a target function, which we will try to approximate.
 

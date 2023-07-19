@@ -17,11 +17,15 @@ This page documents the public API, i.e. the list of bases and functions that ar
    - Complex solid harmonics [`CRlmBasis`](@ref)
    - Real solid harmonics [`RRlmBasis`](@ref)
 * Chebyshev polynomials of the first kind [`ChebBasis`](@ref)
+* Cluster Expansion: 
+   - Fused tensor produce and pooling [`PooledSparseProduct`](@ref)
+   - Sparse symmetric product [`SparseSymmProd`](@ref)
+   - Alternative sparse symmetric product implementation [`SparseSymmProdDAG`](@ref) 
 * Various quantum chemistry related radial basis functions. (experimental)
    
 ## In-place Evaluation  
 
-This section documents the in-place evaluation interface. *All* basis sets implemented in this package should provide this interface as a minimal requirement. 
+This section documents the in-place evaluation interface. The polynomial basis sets implemented in this package should provide this interface as a minimal requirement. The cluster expansion features do not implement these at present. 
 
 ```julia
 evaluate!(P, basis, X)
@@ -86,7 +90,7 @@ Internally, the pullback `pb` will most likely call a custom implementation of t
 If any `rrule`s are missing or not working as expected, please file an issue. 
 
 
-## Lux.jl Interface
+## Lux.jl Integration
 
 Although all bases and models components that we implement here can be used "as is", we also aim to provide wrappers that turn them into `Lux.jl` layers. For any basis or model component `basis`, one can simply call 
 ```julia
