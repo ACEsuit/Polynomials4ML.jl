@@ -32,7 +32,7 @@ out_fun_arr = [(x, W) -> W * x, (x, W) -> x * transpose(W)]
 ##
 
 for (feat, in_size, out_fun) in zip(feature_arr, in_size_arr, out_fun_arr)
-   local l, ps, st, x
+   local l, ps, st, x, X, Y1, Y2
 
    @info("Testing feature_first = $feat")
    l = P4ML.LinearLayer(in_d, out_d; feature_first = feat)
