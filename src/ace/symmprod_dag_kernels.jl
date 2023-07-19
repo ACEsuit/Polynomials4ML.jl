@@ -89,6 +89,50 @@ function pullback_arg!(∂A, ∂AA::AbstractVector,
    return nothing                                                    
 end
 
+# ------------------------- rrule integration 
+
+import ChainRulesCore: rrule, NoTangent 
+
+function rrule(::typeof(evaluate), dag::SparseSymmProdDAG, A::AbstractVector)
+   AA = evaluate(dag, A)
+   return AA, Δ -> (NoTangent(), NoTangent(), _pb_evaluate(dag, Δ, A, AA))
+end
+
+function _pb_evaluate(dag::SparseSymmProdDAG, ∂AA,
+                        A::AbstractVector, 
+                        AA::AbstractVector)
+   # NB this computes only ∇A. The last input AA is only provided here to 
+   #    accelerate evaluation of the pullback but we don't need to differentiate 
+   #    wrt to it. Think of AA as just a buffer. same in the _pb_pb below!!!
+
+   T∂A = promote_type(eltype(∂AA), eltype(AA))
+   ∂A = zeros(T∂A, length(A))
+   pullback_arg!(∂A, ∂AA, dag, AA)
+   return ∂A
+end
+
+function rrule(::typeof(_pb_evaluate), dag::SparseSymmProdDAG, 
+               ∂AA, A::AbstractVector, 
+               AA::AbstractVector)
+   # we need to differentiate w.r.t. ∂AA and A. AA is just a buffer.
+   ∂A = _pb_evaluate(dag, ∂AA, A, AA)
+
+   # _pb_pb_evaluate will return ∂2_∂AA and ∂2_A
+   # the buffer has no tangent
+   return ∂A, ∂2 -> (NoTangent(), NoTangent(), _pb_pb_evaluate(dag, ∂2, ∂AA, A, AA, ∂A)..., NoTangent())
+end
+
+function _pb_pb_evaluate(dag::SparseSymmProdDAG, 
+                         ∂2,                       # differential to be pbed 
+                         ∂AA, A::AbstractVector,   # input arguments
+                         AA::AbstractVector, ∂A)   # buffers / temps 
+   T∂2_∂AA = Float64 
+   T∂2_A = Float64
+   ∂2_∂AA = zeros(T∂2_∂AA, length(∂AA))
+   ∂2_A = zeros(T∂2_A, length(A))
+
+   
+end
 
 # ------------------------- batched kernels 
 

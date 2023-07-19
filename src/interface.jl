@@ -211,18 +211,64 @@ end
 # --------------------------------------- 
 # general rrules and frules interface for ChainRulesCore
 
+import ChainRulesCore: rrule
+
 # ∂_xa ( ∂P : P ) = ∑_ij ∂_xa ( ∂P_ij * P_ij ) 
 #                 = ∑_ij ∂P_ij * ∂_xa ( P_ij )
 #                 = ∑_ij ∂P_ij * dP_ij δ_ia
-function ChainRulesCore.rrule(::typeof(evaluate), basis::ScalarPoly4MLBasis, R::AbstractVector{<: Real})
-   A, dR = evaluate_ed(basis, R)
-   ∂R = similar(R)
-   function pb(∂A)
-        @assert size(∂A) == (length(R), length(basis))
-        for i = 1:length(R)
-            ∂R[i] = dot(@view(∂A[i, :]), @view(dR[i, :]))
-        end
-        return NoTangent(), NoTangent(), ∂R
+function rrule(::typeof(evaluate), 
+                  basis::ScalarPoly4MLBasis, 
+                  R::AbstractVector{<: Real})
+   P = evaluate(basis, R)
+   return P, ∂ -> (NoTangent(), NoTangent(), _evaluate_pb(basis, ∂, R))
+end
+
+function _evaluate_pb(basis::ScalarPoly4MLBasis, ∂, X::AbstractVector{<: Real})
+   P, dP = evaluate_ed(basis, X)
+   @assert size(∂) == (length(X), length(basis))
+   T∂R = promote_type(eltype(∂), eltype(dP))
+   ∂X = zeros(T∂R, length(X))
+   # manual loops to avoid any broadcasting of StrideArrays 
+   for n = 1:size(dP, 2)
+         @simd ivdep for a = 1:length(X)
+             ∂X[a] += dP[a, n] * ∂[a, n]
+         end
    end
-   return A, pb
+   
+   return ∂X
+end
+
+
+function rrule(::typeof(_evaluate_pb),
+               basis::ScalarPoly4MLBasis, ∂, X::AbstractVector{<: Real})
+   ∂X = _evaluate_pb(basis, ∂, X)
+   return ∂X, ∂2 -> (NoTangent(), NoTangent(), 
+                     _evaluate_pb2(basis, ∂2, ∂, X)...)
+end
+
+
+function _evaluate_pb2(basis::ScalarPoly4MLBasis, 
+                        ∂2, ∂, X::AbstractVector{<: Real})
+   @info("_evaluate_pb2")                        
+   Nbasis = length(basis)
+   Nx = length(X)                        
+   P, dP, ddP = evaluate_ed2(basis, X)
+   # ∂2 is the dual to ∂X ∈ ℝ^N, N = length(X) 
+   @assert ∂2 isa AbstractVector 
+   @assert length(∂2) == Nx
+   @assert size(∂) == (Nx, Nbasis)
+
+   ∂2_∂ = zeros(size(∂))
+   ∂2_X = zeros(length(X))
+
+   for n = 1:Nbasis 
+      @simd ivdep for a = 1:Nx 
+         ∂2_∂[a, n] = ∂2[a] * dP[a, n]
+         ∂2_X[a] += ∂2[a] * ddP[a, n] * ∂[a, n]
+      end
+   end
+
+   release!(P); release!(dP); release!(ddP)
+
+   return ∂2_∂, ∂2_X
 end
