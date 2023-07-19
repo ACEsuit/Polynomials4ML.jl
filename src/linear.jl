@@ -4,12 +4,10 @@ using Random
 
 
 """
-```julia 
-`LinearLayer : This lux layer returns `W * x` if `feature_first` is true, otherwise it returns `x * transpose(W)`, where `W` is the weight matrix`
-```
+`struct LinearLayer` : This lux layer returns `W * x` if `feature_first` is true, otherwise it returns `x * transpose(W)`, where `W` is the weight matrix`
 where 
-`x::AbstractMatrix` of size `(in_dim, N)` or `(N, in_dim)`, where `in_dim = feature dimension`, `N = batch size`
-`W::AbstractMatrix` of size `(out_dim, in_dim)`
+* `x::AbstractMatrix` of size `(in_dim, N)` or `(N, in_dim)`, where `in_dim = feature dimension`, `N = batch size`
+* `W::AbstractMatrix` of size `(out_dim, in_dim)`
 
 ### Constructor 
 ```julia 
