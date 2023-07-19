@@ -43,7 +43,7 @@ end
  
 LinearLayer(in_dim::Int, out_dim::Int; feature_first = false) = LinearLayer{feature_first}(in_dim, out_dim)
 
-(l::LinearLayer)(x::AbstractMatrix, ps, st) = ps.W * parent(x), st
+(l::LinearLayer)(x::AbstractVector, ps, st) = ps.W * parent(x), st
 (l::LinearLayer{true})(x::AbstractMatrix, ps, st) = ps.W * parent(x), st
 (l::LinearLayer{false})(x::AbstractMatrix, ps, st) = parent(x) * transpose(ps.W), st
  

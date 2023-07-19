@@ -38,6 +38,18 @@ for (feat, in_size, out_fun) in zip(feature_arr, in_size_arr, out_fun_arr)
    l = P4ML.LinearLayer(in_d, out_d; feature_first = feat)
    ps, st = LuxCore.setup(MersenneTwister(1234), l)
 
+   if !feat 
+      @info("Testing evaluate on vector input vs batch input")
+      for ntest = 1:30 
+         X = randn(N, in_d) 
+         Y1, _ = l(X, ps, st)
+         Y2 = hcat([l(X[i,:], ps, st)[1] for i = 1:N]...)'
+         Y3 = hcat([ps.W * X[i,:] for i = 1:N]...)'
+         print_tf(@test Y1 ≈ Y2 ≈ Y3)
+      end
+      println() 
+   end
+
    @info("Testing evaluate")
    for ntest = 1:30
       x = randn(in_size)
@@ -91,3 +103,4 @@ for (feat, in_size, out_fun) in zip(feature_arr, in_size_arr, out_fun_arr)
 end
 
 ##
+
