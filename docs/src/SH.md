@@ -2,11 +2,11 @@
 
 This section provides documentation for the evaluation of complex and real spherical harmonics and solid harmonics, including gradient and Laplacian calculations. 
 
-- [Associated Legendre Polynomials](#associated-legendre-polynomials)
-- [Complex Spherical Harmonics](#complex-spherical-harmonics)
-- [Complex Solid Harmonics](#complex-solid-harmonics)
-- [Real Spherical Harmonics](#real-spherical-harmonics)
-- [Real Solid Harmonics](#real-solid-harmonics)
+- [Associated Legendre Polynomials](#Associated-Legendre-Polynomials)
+- [Complex Spherical Harmonics](#Complex-Spherical-Harmonics)
+- [Complex Solid Harmonics](#Complex-Solid-Harmonics)
+- [Real Spherical Harmonics](#Real-Spherical-Harmonics)
+- [Real Solid Harmonics](#Real-Solid-Harmonics)
 
 ## Associated Legendre Polynomials
 Associated Legendre polynomials ``P_{\ell}^m`` are closely related to the spherical harmonics, ``P_{\ell}^m`` of degree ``\ell`` and order ``m\geq 0`` are defined as (in the phase convention of Condon and Shortley)
