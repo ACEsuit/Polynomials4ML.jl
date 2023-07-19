@@ -7,6 +7,6 @@ CurrentModule = Polynomials4ML
 Documentation for [Polynomials4ML](https://github.com/ACEsuit/Polynomials4ML.jl).
 
 ```@contents
-Pages = ["api.md", "experimental.md", "lux.md", "SH.md", "ace.md", "docstrings.md"]
+Pages = ["api.md", "tutorials.md", "SH.md", "ace.md", "docstrings.md", "experimental.md", ]
 Depth = 3
 ```

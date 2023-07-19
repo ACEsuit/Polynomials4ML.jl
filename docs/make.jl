@@ -29,7 +29,7 @@ makedocs(;
             "Tutorial Index" => "tutorials.md",
             "Linear Regression" => "literate_tutorials/polyregression.md",
         ],
-        "Models" => [ 
+        "Background" => [ 
                 "3D Harmonics" => "SH.md",
                 "Cluster Expansion" => "ace.md", ], 
         "Docstrings" => "docstrings.md",
