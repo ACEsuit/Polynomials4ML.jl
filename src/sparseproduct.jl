@@ -1,6 +1,9 @@
 using ChainRulesCore
 using ChainRulesCore: NoTangent
 
+"""
+`SparseProduct` : a model layer to build tensor products
+"""
 struct SparseProduct{NB} <: AbstractPoly4MLBasis
    spec::Vector{NTuple{NB, Int}}
    # ---- temporaries & caches

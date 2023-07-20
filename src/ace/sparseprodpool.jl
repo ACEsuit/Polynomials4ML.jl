@@ -1,7 +1,26 @@
 using ChainRulesCore
 using ChainRulesCore: NoTangent
 
+export PooledSparseProduct 
 
+
+@doc raw"""
+`struct PooledSparseProduct` : 
+This implements a fused (tensor) product and pooling operation. Suppose 
+we are given $N$ embeddings $\phi^{(i)}_{k_i}$ then the pooled sparse product 
+generates feature vectors of the form 
+```math 
+A_{k_1, \dots, k_N} = \sum_{j} \prod_{t = 1}^N \phi^{(t)}_{k_t}(x_j)
+```
+where $x_j$ are an list of inputs (multi-set). 
+
+### Constructor 
+```julia
+PooledSparseProduct(spec)
+```
+where `spec` is a list of $(k_1, \dots, k_N)$ tuples or vectors, or 
+`AbstractMatrix` where each column specifies such a tuple. 
+"""
 struct PooledSparseProduct{NB} <: AbstractPoly4MLBasis
    spec::Vector{NTuple{NB, Int}}
    # ---- temporaries & caches 
@@ -17,7 +36,7 @@ function PooledSparseProduct(spect::AbstractVector{<: Tuple})
 end
 
 # each column defines a basis element
-function PooledSparseProduct(spec::Matrix{<: Integer})
+function PooledSparseProduct(spec::AbstractMatrix{<: Integer})
    @assert all(spec .> 0)
    spect = [ Tuple(spec[:, i]...) for i = 1:size(spec, 2) ]
    return PooledSparseProduct(spect)

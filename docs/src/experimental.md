@@ -3,17 +3,11 @@
 
 The interfaces specified below are experimental and not part of the public API yet. Some of it is not even implemented yet and are just being sketched out in separate branches. There is no guarantee that these are provided for all of the exported basis sets, and there is no guarantee of semver-compatible backward compatibility at this point.
 
-## Re-using Basis Output Arrays
+## Some General Experimental / Undocumented Objects
 
-The default output arrays are of type `CachedArray`. This means that after they have been used, they can be released back into an array cache from which they have been acquired. (See `ObjectPools.jl` for more details.) This will avoid a new allocation next time a basis is evaluated. The interface for this is 
-```julia
-B = evaluate(basis, X)
-release!(B)
-B, dB = evaluate_ed(basis, X)
-release!(B)
-release!(dB)
-# ... and so forth ... 
-``` 
+
+* [`LinearLayer`](@ref) : a custom dense linear layer we use to fix a type instability caused by the use of `CachedArray`s
+* [`SparseProduct`](@ref) : a model layer to form tensor products of features, e.g., tensor product polynomial bases. 
 
 ## Laplacian 
 
@@ -28,25 +22,11 @@ eval_grad_laplace!(Y, dY, ΔY, basis, X)
 Y, dY, ΔY = eval_grad_laplace(basis, X)
 ```
 
+## Explicit Backward Differentiation
 
-## (Atomic) Cluster Expansion 
-
-Two key operations are probided that are needed for the implementation of the (atomic) cluster expansion. The precise deficitions and interface may still change, so those are also still labelled experimental. 
-* [`PooledSparseProduct`](@ref) : implements a merged product basis and pooling operation; in the atomic cluster expansion this is called the atomic basis; in GAP it is called the density projection.
-* [`SparseSymmProd`](@ref) : implements a sparse symmetric rank-1 tensor product, in ACE this is called the product basis, in GAP the n-correlations.
-
-Both of those operations have pullbacks implemented, but not `evaluate_ed!` or `evaluate_ed2!`.
-
-## Backward Differentiation w.r.t. Inputs `X`
-
-[WORK IN PROGRESS] We implement "manual" pullbacks w.r.t. the `X` variable. These  take the form
+We implement custom pullbacks for most bases. These  take the form
 ```julia
 ∂X = pb_evaluate(basis, ∂B, X, args...)
 pb_evaluate!(∂X, basis, ∂B, X, args...)
 ```
-and analogously for the `evaluate_***` variants. The `args...` can differ between different basis sets e.g. may rely on intermediate results in the evaluation of the basis. 
-
-
-## Lux  
-
-[TODO] describe the lux layer interface as it evolves ... 
+and analogously for the `evaluate_***` variants. The `args...` can differ between different basis sets e.g. may rely on intermediate results in the evaluation of the basis. The `rrule` implementations are wrappers for these.

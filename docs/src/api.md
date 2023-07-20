@@ -17,11 +17,15 @@ This page documents the public API, i.e. the list of bases and functions that ar
    - Complex solid harmonics [`CRlmBasis`](@ref)
    - Real solid harmonics [`RRlmBasis`](@ref)
 * Chebyshev polynomials of the first kind [`ChebBasis`](@ref)
+* Cluster Expansion: 
+   - Fused tensor produce and pooling [`PooledSparseProduct`](@ref)
+   - Sparse symmetric product [`SparseSymmProd`](@ref)
+   - Alternative sparse symmetric product implementation [`SparseSymmProdDAG`](@ref) 
 * Various quantum chemistry related radial basis functions. (experimental)
    
 ## In-place Evaluation  
 
-This section documents the in-place evaluation interface. *All* basis sets implemented in this package should provide this interface as a minimal requirement. 
+This section documents the in-place evaluation interface. The polynomial basis sets implemented in this package should provide this interface as a minimal requirement. The cluster expansion features do not implement these at present. 
 
 ```julia
 evaluate!(P, basis, X)
@@ -51,9 +55,45 @@ P = evaluate(basis, X)
 P, dP = evaluate_ed(basis, X)
 P, dP, ddP = evaluate_ed2(basis, X)
 ```
-The output types of `P, dP, ddP` are guarnateed to be `AbstractArray`s but may otherwise change between package versions. The exact type should not be relied upon when using this package. 
+The output types of `P, dP, ddP` are guaranteed to be `AbstractArray`s but may otherwise change between package versions. The exact type should not be relied upon when using this package.
 
 The meaning of the different symbols is exactly the same as described above. The only difference is that the output containers `P`, `dP`, `ddP` are now allocated. 
 Their type should be stable (if not, please file a bug report), but unspecified in the sense that the output type is not semver-stable for the time being. 
 If you need a sem-ver stable output then it is best to follow the above with a `collect`.
 
+## Re-using Output Arrays
+
+For many models / bases, pullbacks, etc, the default output arrays are of type `CachedArray`. 
+This means that after they have been used, they can be released back into an array cache from which they have been acquired. (See `ObjectPools.jl` for more details.) This will avoid a new allocation next time a basis is evaluated. The interface for this is 
+```julia
+B = evaluate(basis, X)
+release!(B)
+B, dB = evaluate_ed(basis, X)
+release!(B)
+release!(dB)
+# ... and so forth ... 
+``` 
+The `release!` function can still be applied to output arrays that are not a `CachedArray`, this will then simply be a no-op. 
+
+!!! danger "Usage of `CachedArray` outputs"
+    `CachedArray`s can cause type instabilities when used in unexpected ways. To prevent this, if `B::CachedArray` is an output from a basis (or similar) simply use its parent instead, `parent(B)`. This will extract the internally stored array, normally a core Julia `Array` or a `PtrArray` from the package `StrideArrays.jl`. 
+    
+
+## ChainRules.jl integration 
+
+We aim to provide `ChainRules.jl` integration for all model components. At present, we have focused on providing the `rrule` interface. If `basis` is a polynomial basis (or other model component) then one can obtain its value and pullback via the `ChainRules.jl` interface, 
+```julia 
+B, pb = rrule(evaluate, basis, X)
+``` 
+Internally, the pullback `pb` will most likely call a custom implementation of the pullback operation. Where possible we also implement pullbacks over pullbacks to enable second-order backward differentiation. This is needed when minimizing a loss function that involves a model derivative.
+
+If any `rrule`s are missing or not working as expected, please file an issue. 
+
+
+## Lux.jl Integration
+
+Although all bases and models components that we implement here can be used "as is", we also aim to provide wrappers that turn them into `Lux.jl` layers. For any basis or model component `basis`, one can simply call 
+```julia
+l_basis = lux(basis)
+```
+The resulting object `l_basis` can then be used to construct networks using the `Lux.jl` package. 

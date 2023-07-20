@@ -4,6 +4,8 @@ using LoopVectorization
 using ChainRulesCore
 using ChainRulesCore: NoTangent
 
+export SparseSymmProd
+
 @doc raw"""
 `SparseSymmProd` : sparse symmetric product with entries stored as tuples. 
 Input is a vector `A`; each entry of the output vector `AA` is of the form 
