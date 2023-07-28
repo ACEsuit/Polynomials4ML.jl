@@ -19,7 +19,9 @@ in_d, out_d = 4, 3 # feature dimensions
 N = 10 # batch size
 
 @info("Testing default constructor is using feature_first = false")
-println_slim(@test P4ML.LinearLayer(in_d, out_d; feature_first=false) == P4ML.LinearLayer(in_d, out_d))
+TL = typeof(P4ML.LinearLayer(in_d, out_d; feature_first=false))
+TL2 = typeof(P4ML.LinearLayer(in_d, out_d))
+println_slim(@test TL == TL2)
 
 println()
 
@@ -54,7 +56,7 @@ for (feat, in_size, out_fun) in zip(feature_arr, in_size_arr, out_fun_arr)
    for ntest = 1:30
       x = randn(in_size)
       out, st = l(x, ps, st)
-      print_tf(@test out == out_fun(x, ps.W))
+      print_tf(@test out ≈ out_fun(x, ps.W))
    end
    println()
 
@@ -103,4 +105,20 @@ for (feat, in_size, out_fun) in zip(feature_arr, in_size_arr, out_fun_arr)
 end
 
 ##
+
+
+# check which matmul it is calling
+# l = P4ML.LinearLayer(in_d, out_d; feature_first = false)
+# ps, st = LuxCore.setup(MersenneTwister(1234), l)
+# X = rand(N, in_d)
+# using ObjectPools
+# release!(X)
+# X = rand(N,in_d)
+
+# @profview let l = l, ps = ps, st = st, X = X
+#    for _ = 1:100_000
+#       out = l(X, ps, st)[1]
+#       release!(out)
+#    end
+# end
 

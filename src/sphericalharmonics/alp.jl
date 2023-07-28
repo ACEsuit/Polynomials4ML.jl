@@ -83,13 +83,13 @@ _gradtype(alp::ALPolynomials{T}, ::Type{SphericalCoords{S}}) where {T, S} =
 			
 # function evaluate(alp::ALPolynomials, S::SphericalCoords) 
 # 	P = acquire!(alp.pool, length(alp), _valtype(alp, S))
-# 	evaluate!(parent(P), alp, S)
+# 	evaluate!(unwrap(P), alp, S)
 # 	return P 
 # end
 
 # function evaluate(alp::ALPolynomials, S::AbstractVector{<: SphericalCoords}) 
 # 	P = acquire!(alp.ppool, (length(S), length(alp)), _valtype(alp, S[1]))
-# 	evaluate!(parent(P), alp, S)
+# 	evaluate!(unwrap(P), alp, S)
 # 	return P 
 # end
 
@@ -103,7 +103,7 @@ _gradtype(alp::ALPolynomials{T}, ::Type{SphericalCoords{S}}) where {T, S} =
 # 	VT = _valtype(alp, S)
 # 	P = Vector{VT}(undef, length(alp))
 # 	dP = Vector{VT}(undef, length(alp))
-# 	_evaluate_ed!(parent(P), parent(dP), alp, S)
+# 	_evaluate_ed!(unwrap(P), unwrap(dP), alp, S)
 # 	return P, dP 
 # end
 
@@ -111,7 +111,7 @@ _gradtype(alp::ALPolynomials{T}, ::Type{SphericalCoords{S}}) where {T, S} =
 # 	VT = _valtype(alp, S[1])
 # 	P = Matrix{VT}(undef, (length(S), length(alp)))
 # 	dP = Matrix{VT}(undef, (length(S), length(alp)))
-# 	_evaluate_ed!(parent(P), parent(dP), alp, S)
+# 	_evaluate_ed!(unwrap(P), unwrap(dP), alp, S)
 # 	return P, dP 
 # end
 

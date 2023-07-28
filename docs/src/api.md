@@ -76,7 +76,7 @@ release!(dB)
 The `release!` function can still be applied to output arrays that are not a `CachedArray`, this will then simply be a no-op. 
 
 !!! danger "Usage of `CachedArray` outputs"
-    `CachedArray`s can cause type instabilities when used in unexpected ways. To prevent this, if `B::CachedArray` is an output from a basis (or similar) simply use its parent instead, `parent(B)`. This will extract the internally stored array, normally a core Julia `Array` or a `PtrArray` from the package `StrideArrays.jl`. 
+    `CachedArray`s can cause type instabilities when used in unexpected ways. To prevent this, if `B::CachedArray` is an output from a basis (or similar) simply use its unwrapped `PtrArray` instead by calling `unwrap(B)` in `ObjectPools.jl`. This will extract the internally stored array, normally a core Julia `Array` or a `PtrArray` from the package `StrideArrays.jl`. 
     
 
 ## ChainRules.jl integration 

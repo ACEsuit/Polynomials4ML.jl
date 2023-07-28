@@ -99,7 +99,7 @@ end
 using Base.Cartesian: @nexprs 
 using ObjectPools: FlexCachedArray
 
-__view_AA(AA::FlexCachedArray, basis, N) = __view_AA(parent(AA), basis, N)
+__view_AA(AA::FlexCachedArray, basis, N) = __view_AA(unwrap(AA), basis, N)
 __view_AA(AA::AbstractVector, basis, N) = (@view AA[basis.ranges[N]])
 __view_AA(AA::AbstractMatrix, basis, N) = (@view AA[:, basis.ranges[N]])
 

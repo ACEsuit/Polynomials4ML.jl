@@ -1,7 +1,7 @@
 import ChainRulesCore: rrule
 using LuxCore
 using Random
-
+using LinearAlgebra: mul!
 
 """
 `struct LinearLayer` : This lux layer returns `W * x` if `feature_first` is true, otherwise it returns `x * transpose(W)`, where `W` is the weight matrix`
@@ -46,19 +46,19 @@ LinearLayer(in_dim::Int, out_dim::Int; feature_first = false, use_cache = true) 
 
 (l::LinearLayer)(x::AbstractVector, ps, st) = begin
    out = acquire!(st.pool, :A, (l.out_dim, ), eltype(x)); 
-   out = ps.W * parent(x); release!(x); 
+   mul!(unwrap(out), ps.W, unwrap(x)); release!(x); 
    return out, st
 end
 
 (l::LinearLayer{true})(x::AbstractMatrix, ps, st) = begin 
    out = acquire!(st.pool, :bA, (l.out_dim, size(x, 2)), eltype(x)); 
-   out = ps.W * parent(x); release!(x); 
+   mul!(unwrap(out), ps.W, unwrap(x)); release!(x); 
    return out, st
 end
 
 (l::LinearLayer{false})(x::AbstractMatrix, ps, st) = begin
    out = acquire!(st.pool, :bA, (size(x, 1), l.out_dim), eltype(x)); 
-   out = parent(x) * transpose(ps.W); release!(x);
+   mul!(unwrap(out), unwrap(x), transpose(ps.W)); release!(x);
    return out, st
 end
  
