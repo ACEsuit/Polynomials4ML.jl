@@ -40,7 +40,7 @@ function evaluate!(Y::AbstractArray, basis::RYlmBasis, X)
     S = cart2spher(basis, X)
 	_P = _acqu_P!(basis, S)
 	P = evaluate!(_P, basis.alp, S)
-	rYlm!(Y, maxL(basis), S, parent(P), basis)
+	rYlm!(Y, maxL(basis), S, unwrap(P), basis)
 	return Y
 end
 
@@ -50,7 +50,7 @@ function evaluate_ed!(Y::AbstractArray, dY::AbstractArray, basis::RYlmBasis, X)
 	S = cart2spher(basis, X)
 	_P, _dP = _acqu_P!(basis, S), _acqu_dP!(basis, S)
 	P, dP = evaluate_ed!(_P, _dP, basis.alp, S)
-	rYlm_ed!(Y, dY, maxL(basis), S, parent(P), parent(dP), basis)
+	rYlm_ed!(Y, dY, maxL(basis), S, unwrap(P), unwrap(dP), basis)
 	return Y, dY
 end
 
@@ -298,7 +298,7 @@ end
 
 function _lap(basis::RYlmBasis, Y::AbstractMatrix) 
 	ΔY = acquire!(basis.pool, :ΔY, size(Y), eltype(Y))
-	_lap!(parent(ΔY), basis, Y)
+	_lap!(unwrap(ΔY), basis, Y)
 	return ΔY
 end
 

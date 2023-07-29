@@ -141,19 +141,19 @@ _alloc_ed2(basis::AbstractPoly4MLBasis, x) =
             
 function evaluate(basis::AbstractPoly4MLBasis, x) 
    B = _alloc(basis, x)
-   evaluate!(parent(B), basis, x)
+   evaluate!(unwrap(B), basis, x)
    return B 
 end
 
 function evaluate_ed(basis::AbstractPoly4MLBasis, x) 
    B, dB = _alloc_ed(basis, x)
-   evaluate_ed!(parent(B), parent(dB), basis, x)
+   evaluate_ed!(unwrap(B), unwrap(dB), basis, x)
    return B, dB
 end 
 
 function evaluate_ed2(basis::AbstractPoly4MLBasis, x)
    B, dB, ddB = _alloc_ed2(basis, x)
-   evaluate_ed2!(parent(B), parent(dB), parent(ddB), basis, x)
+   evaluate_ed2!(unwrap(B), unwrap(dB), unwrap(ddB), basis, x)
    return B, dB, ddB
 end
 

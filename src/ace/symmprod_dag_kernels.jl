@@ -181,7 +181,7 @@ function evaluate_dot(dag::SparseSymmProdDAG, A::AbstractMatrix{T}, c, freal
    nX = size(A, 1)
    AA = acquire!(dag.pool, :AA, (nX, length(dag)), T)
    vals = zeros(freal(T), nX)
-   evaluate_dot!(vals, parent(AA), dag, A, c, freal)
+   evaluate_dot!(vals, unwrap(AA), dag, A, c, freal)
    return vals, AA
 end
 

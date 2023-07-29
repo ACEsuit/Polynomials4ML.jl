@@ -1,7 +1,7 @@
 import ChainRulesCore: rrule
 using LuxCore
 using Random
-
+using LinearAlgebra: mul!
 
 """
 `struct LinearLayer` : This lux layer returns `W * x` if `feature_first` is true, otherwise it returns `x * transpose(W)`, where `W` is the weight matrix`
@@ -37,17 +37,34 @@ println(out == x * transpose(W))) # true
 struct LinearLayer{FEATFIRST} <: AbstractExplicitLayer
    in_dim::Integer
    out_dim::Integer
+   use_cache::Bool
+   @reqfields()
 end
- 
-LinearLayer(in_dim::Int, out_dim::Int; feature_first = false) = LinearLayer{feature_first}(in_dim, out_dim)
 
-(l::LinearLayer)(x::AbstractVector, ps, st) = ps.W * parent(x), st
-(l::LinearLayer{true})(x::AbstractMatrix, ps, st) = ps.W * parent(x), st
-(l::LinearLayer{false})(x::AbstractMatrix, ps, st) = parent(x) * transpose(ps.W), st
+LinearLayer(in_dim::Int, out_dim::Int; feature_first = false, use_cache = true) = LinearLayer{feature_first}(in_dim, out_dim, use_cache, _make_reqfields()...)
+
+
+(l::LinearLayer)(x::AbstractVector, ps, st) = begin
+   out = acquire!(st.pool, :A, (l.out_dim, ), eltype(x)); 
+   mul!(unwrap(out), ps.W, unwrap(x)); release!(x); 
+   return out, st
+end
+
+(l::LinearLayer{true})(x::AbstractMatrix, ps, st) = begin 
+   out = acquire!(st.pool, :bA, (l.out_dim, size(x, 2)), eltype(x)); 
+   mul!(unwrap(out), ps.W, unwrap(x)); release!(x); 
+   return out, st
+end
+
+(l::LinearLayer{false})(x::AbstractMatrix, ps, st) = begin
+   out = acquire!(st.pool, :bA, (size(x, 1), l.out_dim), eltype(x)); 
+   mul!(unwrap(out), unwrap(x), transpose(ps.W)); release!(x);
+   return out, st
+end
  
 # Jerry: Maybe we should use Glorot Uniform if we have no idea about what we should use?
 LuxCore.initialparameters(rng::AbstractRNG, l::LinearLayer) = ( W = randn(rng, l.out_dim, l.in_dim), )
-LuxCore.initialstates(rng::AbstractRNG, l::LinearLayer) = NamedTuple()
+LuxCore.initialstates(rng::AbstractRNG, l::LinearLayer) = ( l.use_cache ?  (pool =  ArrayPool(FlexArrayCache), ) : (pool =  ArrayPool(FlexArray), ))
  
 function rrule(::typeof(LuxCore.apply), l::LinearLayer, x::AbstractMatrix, ps, st)
    val = l(x, ps, st)

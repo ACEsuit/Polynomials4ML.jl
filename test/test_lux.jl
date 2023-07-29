@@ -24,7 +24,7 @@ for (basis, rnd) in test_bases
    l = lux(basis)
    ps, st = Lux.setup(rng, l)
    B2, _ = l(x, ps, st)
-   println_slim(@test B1 == parent(B2))
+   println_slim(@test B1 == unwrap(B2))
 end
 
 using Zygote

@@ -2,7 +2,7 @@ module Polynomials4ML
 
 # -------------- Import ObjectPools stuff ---------------
 using ObjectPools: acquire!, release!, 
-                   FlexArray, FlexArrayCache, TSafe, ArrayPool
+                   FlexArray, FlexArrayCache, TSafe, ArrayPool, unwrap
 
 
 # -------------- import ACEbase stuff 
