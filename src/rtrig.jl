@@ -1,3 +1,5 @@
+using HyperDualNumbers: Hyper
+
 export RTrigBasis
 
 """
@@ -9,7 +11,7 @@ Real trigonometric polynomials up to degree `N` (inclusive). The basis is ordere
 ```
 where `θ` is input variable. 
 """
-struct RTrigBasis <: AbstractPoly4MLBasis
+struct RTrigBasis <: ScalarPoly4MLBasis
    N::Int
    @reqfields
 end
@@ -29,6 +31,7 @@ function natural_indices(basis::RTrigBasis)
 end
 
 _valtype(basis::RTrigBasis, T::Type{<: Real}) = T
+_valtype(::RTrigBasis, T::Type{<: Hyper{<: Real}}) = T
 
 
 function evaluate!(P::AbstractVector, basis::RTrigBasis, θ::Real)
@@ -48,7 +51,7 @@ end
 
 
 function evaluate!(P::AbstractMatrix, basis::RTrigBasis, 
-                   θ::AbstractVector{<: Real})
+                   θ::AbstractVector)
    N = basis.N 
    nX = length(θ)
    @assert N  >= 1 
@@ -95,7 +98,7 @@ end
 
 
 function evaluate_ed!(P::AbstractMatrix, dP::AbstractMatrix, basis::RTrigBasis, 
-                      θ::AbstractVector{<: Real})
+                      θ::AbstractVector)
    N = basis.N 
    nX = length(θ)
    @assert N  >= 1 
@@ -154,7 +157,7 @@ end
 
 
 function evaluate_ed2!(P::AbstractMatrix, dP::AbstractMatrix, ddP::AbstractMatrix, basis::RTrigBasis, 
-                      θ::AbstractVector{<: Real})
+                      θ::AbstractVector)
    N = basis.N 
    nX = length(θ)
    @assert N  >= 1 
