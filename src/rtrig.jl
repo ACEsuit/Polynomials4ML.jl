@@ -33,6 +33,7 @@ end
 _valtype(basis::RTrigBasis, T::Type{<: Real}) = T
 _valtype(::RTrigBasis, T::Type{<: Hyper{<: Real}}) = T
 
+##
 
 function evaluate!(P::AbstractVector, basis::RTrigBasis, θ::Real)
    N = basis.N 
