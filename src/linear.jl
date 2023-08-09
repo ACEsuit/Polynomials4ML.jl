@@ -58,7 +58,7 @@ end
 
 (l::LinearLayer{false})(x::AbstractMatrix, ps, st) = begin
    out = acquire!(st.pool, :bA, (size(x, 1), l.out_dim), eltype(x)); 
-   mul!(unwrap(out), unwrap(x), transpose(ps.W)); release!(x);
+   mul!(unwrap(out), unwrap(X), transpose(PtrArray(ps.W))) release!(x);
    return out, st
 end
  
