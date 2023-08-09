@@ -2,6 +2,7 @@ import ChainRulesCore: rrule
 using LuxCore
 using Random
 using LinearAlgebra: mul!
+using StrideArrays
 
 """
 `struct LinearLayer` : This lux layer returns `W * x` if `feature_first` is true, otherwise it returns `x * transpose(W)`, where `W` is the weight matrix`
