@@ -4,9 +4,11 @@ using Random
 using LinearAlgebra: mul!
 using StrideArrays
 
+export LinearLayer
+
 """
-`struct LinearLayer` : This lux layer returns `W * x` if `feature_first` is true, otherwise it returns `x * transpose(W)`, where `W` is the weight matrix`
-where 
+`struct LinearLayer` : This lux layer returns `W * x` if `feature_first` is true, otherwise it returns `x * transpose(W)`, where `W` is the weight matrix`.
+
 * `x::AbstractMatrix` of size `(in_dim, N)` or `(N, in_dim)`, where `in_dim = feature dimension`, `N = batch size`
 * `W::AbstractMatrix` of size `(out_dim, in_dim)`
 
@@ -15,7 +17,7 @@ where
 LinearLayer(in_dim, out_dim; feature_first = false)
 ```
 
-For example
+### Example
 ```julia 
 in_d, out_d = 4, 3 # feature dimensions
 N = 10 # batch size
@@ -34,6 +36,7 @@ x = randn(N, in_d) # batch-first
 out, st = l(x, ps, st)
 println(out == x * transpose(W))) # true
 ```
+
 """
 struct LinearLayer{FEATFIRST} <: AbstractExplicitLayer
    in_dim::Integer

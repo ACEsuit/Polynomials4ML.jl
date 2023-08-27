@@ -21,8 +21,9 @@ This page documents the public API, i.e. the list of bases and functions that ar
    - Fused tensor produce and pooling [`PooledSparseProduct`](@ref)
    - Sparse symmetric product [`SparseSymmProd`](@ref)
    - Alternative sparse symmetric product implementation [`SparseSymmProdDAG`](@ref) 
+* LinearLayer [`LinearLayer`](@ref)
 * Various quantum chemistry related radial basis functions. (experimental)
-   
+
 ## In-place Evaluation  
 
 This section documents the in-place evaluation interface. The polynomial basis sets implemented in this package should provide this interface as a minimal requirement. The cluster expansion features do not implement these at present. 
