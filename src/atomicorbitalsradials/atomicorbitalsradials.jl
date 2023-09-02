@@ -125,10 +125,10 @@ end
 
 # --------------------- connect with Lux 
 struct AORLayer <: AbstractExplicitLayer 
-    basis::AtomicOrbitalsRadials
+    basis::Union{GaussianBasis, SlaterBasis}
 end
 
-lux(basis::AtomicOrbitalsRadials) = AORLayer(basis)
+lux(basis::Union{GaussianBasis, SlaterBasis}) = AORLayer(basis)
  
 initialparameters(rng::AbstractRNG, l::AORLayer) = ( ζ = l.basis.Dn.ζ, )
  
@@ -142,6 +142,23 @@ end
 
 (l::AORLayer)(X, ps, st) = evaluate(l, X, ps, st)
 
+struct STOLayer <: AbstractExplicitLayer 
+    basis::STO_NG
+end
+
+lux(basis::STO_NG) = STOLayer(basis)
+ 
+initialparameters(rng::AbstractRNG, l::STOLayer) = NamedTuple()
+ 
+initialstates(rng::AbstractRNG, l::STOLayer) = ( ζ = l.basis.Dn.ζ, )
+ 
+function evaluate(l::STOLayer, X, ps, st)
+    l.basis.Dn.ζ = st[1]
+    B = evaluate(l.basis, X)
+    return B, st 
+end 
+
+(l::STOLayer)(X, ps, st) = evaluate(l, X, ps, st)
 
 # The following code is used to compute the derivative with respect to zeta by Hyperduals.
 
