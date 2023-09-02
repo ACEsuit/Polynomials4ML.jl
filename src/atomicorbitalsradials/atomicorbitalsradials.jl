@@ -182,13 +182,13 @@ end
 
 eps1(h::Hyper{<:Real}) = h.epsilon1
 
-function pb_params(ζ, basis::AtomicOrbitalsRadials, R::AbstractVector{<: Real})
+function pb_params(ζ::AbstractVector, basis::AtomicOrbitalsRadials, R::AbstractVector{<: Real})
     Dn = expontype(basis.Dn, ζ)
     bRnl = AtomicOrbitalsRadials(basis.Pn, Dn, basis.spec) 
     Rnl = _alloc_dp(bRnl, R)
     eval_dp!(Rnl, bRnl, R)
-    ∂ζ = eps1.(Rnl)
-    return ∂ζ
+    dζ = eps1.(Rnl)
+    return dζ
 end
 
 function ChainRulesCore.rrule(::typeof(evaluate), basis::AtomicOrbitalsRadials, R::AbstractVector{<: Real})
