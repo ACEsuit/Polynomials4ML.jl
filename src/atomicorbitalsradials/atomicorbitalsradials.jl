@@ -125,11 +125,21 @@ end
 
 # --------------------- connect with Lux 
 struct AORLayer <: AbstractExplicitLayer 
-    basis::Union{GaussianBasis, SlaterBasis}
+    basis::AtomicOrbitalsRadials
 end
 
-lux(basis::Union{GaussianBasis, SlaterBasis}) = AORLayer(basis)
- 
+struct STOLayer <: AbstractExplicitLayer 
+    basis::AtomicOrbitalsRadials
+end
+
+lux(basis::AtomicOrbitalsRadials) = begin
+    if basis.Dn isa Union{GaussianBasis,SlaterBasis}
+        return AORLayer(basis)
+    elseif basis.Dn isa STO_NG
+        return STOLayer(basis)
+    end
+end
+
 initialparameters(rng::AbstractRNG, l::AORLayer) = ( ζ = l.basis.Dn.ζ, )
  
 initialstates(rng::AbstractRNG, l::AORLayer) = NamedTuple()
@@ -141,12 +151,6 @@ function evaluate(l::AORLayer, X, ps, st)
 end 
 
 (l::AORLayer)(X, ps, st) = evaluate(l, X, ps, st)
-
-struct STOLayer <: AbstractExplicitLayer 
-    basis::STO_NG
-end
-
-lux(basis::STO_NG) = STOLayer(basis)
  
 initialparameters(rng::AbstractRNG, l::STOLayer) = NamedTuple()
  
