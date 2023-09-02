@@ -208,7 +208,7 @@ function pb_params(ζ::AbstractVector, basis::AtomicOrbitalsRadials, R::Abstract
     return dζ
 end
 
-function ChainRulesCore.rrule(::typeof(evaluate), basis::AtomicOrbitalsRadials, R::AbstractVector{<: Real})
+function ChainRulesCore.rrule(::typeof(evaluate), basis::Union{GaussianBasis, SlaterBasis}, R::AbstractVector{<: Real})
     A, dR = evaluate_ed(basis, R)
     dζ = pb_params(basis.Dn.ζ, basis, R)
 
@@ -241,6 +241,19 @@ function ChainRulesCore.rrule(::typeof(evaluate), l::AORLayer, R::AbstractVector
             ∂ζ[i] = dot(@view(∂A[1][:, i]), @view(dζ[:, i]))
         end
         return NoTangent(), NoTangent(), ∂R, (ζ = ∂ζ,), NoTangent()
+    end
+    return (A, NamedTuple()), pb
+end 
+
+function ChainRulesCore.rrule(::typeof(evaluate), l::STOLayer, R::AbstractVector{<: Real}, ps, st)
+    A, dR = evaluate_ed(l.basis, R)
+    ∂R = similar(R)
+    function pb(∂A)
+        @assert size(∂A[1]) == (length(R), length(l.basis))
+        for i = 1:length(R)
+            ∂R[i] = dot(@view(∂A[1][i, :]), @view(dR[i, :]))
+        end
+        return NoTangent(), NoTangent(), ∂R, NoTangent(), NoTangent()
     end
     return (A, NamedTuple()), pb
 end 
