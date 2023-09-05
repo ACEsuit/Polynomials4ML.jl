@@ -128,8 +128,8 @@ struct AORLayer <: AbstractExplicitLayer
     basis::AtomicOrbitalsRadials
 end
 
-struct STOLayer <: AbstractExplicitLayer 
-    basis::AtomicOrbitalsRadials
+struct STOLayer{TP, TD, TI} <: AbstractExplicitLayer 
+    basis::AtomicOrbitalsRadials{TP, TD, TI}
 end
 
 lux(basis::AtomicOrbitalsRadials) = begin
@@ -156,8 +156,8 @@ initialparameters(rng::AbstractRNG, l::STOLayer) = NamedTuple()
  
 initialstates(rng::AbstractRNG, l::STOLayer) = ( ζ = l.basis.Dn.ζ, )
  
-function evaluate(l::STOLayer, X, ps, st)
-    l.basis.Dn.ζ = st[1]
+function evaluate(l::STOLayer, X::AbstractArray, ps, st)
+    l.basis.Dn.ζ::Tuple{Matrix{Float64}, Matrix{Float64}} = st[1]
     B = evaluate(l.basis, X)
     return B, st 
 end 
