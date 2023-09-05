@@ -168,45 +168,45 @@ evaluate_dd(basis::AbstractPoly4MLBasis, x) = evaluate_ed2(basis, x)[3]
 
 # this is experimental and we don't require semver-stability for now ... 
 
-_alloc(flex::FlexArray, basis::AbstractPoly4MLBasis, X) = 
-      acquire!(flex, _out_size(basis, X), _valtype(basis, X))
+# _alloc(flex::FlexArray, basis::AbstractPoly4MLBasis, X) = 
+#       acquire!(flex, _out_size(basis, X), _valtype(basis, X))
 
-_alloc_d(flex_d::FlexArray, basis::AbstractPoly4MLBasis, X) = 
-      acquire!(flex_d, _out_size(basis, X), _gradtype(basis, X))
+# _alloc_d(flex_d::FlexArray, basis::AbstractPoly4MLBasis, X) = 
+#       acquire!(flex_d, _out_size(basis, X), _gradtype(basis, X))
 
-_alloc_dd(flex_dd::FlexArray, basis::AbstractPoly4MLBasis, X) = 
-      acquire!(flex_dd, _out_size(basis, X), _hesstype(basis, X))
+# _alloc_dd(flex_dd::FlexArray, basis::AbstractPoly4MLBasis, X) = 
+#       acquire!(flex_dd, _out_size(basis, X), _hesstype(basis, X))
 
-_alloc_ed(flex::FlexArray, flex_d::FlexArray, basis::AbstractPoly4MLBasis, x) = 
-      _alloc(flex, basis, x), _alloc_d(flex_d, basis, x)      
+# _alloc_ed(flex::FlexArray, flex_d::FlexArray, basis::AbstractPoly4MLBasis, x) = 
+#       _alloc(flex, basis, x), _alloc_d(flex_d, basis, x)      
 
-_alloc_ed2(flex::FlexArray, flex_d::FlexArray, 
-           flex_dd::FlexArray, basis::AbstractPoly4MLBasis, x) = 
-      _alloc(flex, basis, x), _alloc_d(flex_d, basis, x), _alloc_dd(flex_dd, basis, x)      
+# _alloc_ed2(flex::FlexArray, flex_d::FlexArray, 
+#            flex_dd::FlexArray, basis::AbstractPoly4MLBasis, x) = 
+#       _alloc(flex, basis, x), _alloc_d(flex_d, basis, x), _alloc_dd(flex_dd, basis, x)      
 
 
-function evaluate!(flex_B::FlexArray, basis::AbstractPoly4MLBasis, x) 
-   B = _alloc(flex_B, basis, x)
-   evaluate!(B, basis, x)
-   return B 
-end
+# function evaluate!(flex_B::FlexArray, basis::AbstractPoly4MLBasis, x) 
+#    B = _alloc(flex_B, basis, x)
+#    evaluate!(B, basis, x)
+#    return B 
+# end
 
-function evaluate_ed!(flex_B::FlexArray, 
-                      flex_dB::FlexArray, 
-                      basis::AbstractPoly4MLBasis, x) 
-   B, dB = _alloc_ed(flex_B, flex_dB, basis, x)
-   evaluate_ed!(B, dB, basis, x)
-   return B, dB
-end 
+# function evaluate_ed!(flex_B::FlexArray, 
+#                       flex_dB::FlexArray, 
+#                       basis::AbstractPoly4MLBasis, x) 
+#    B, dB = _alloc_ed(flex_B, flex_dB, basis, x)
+#    evaluate_ed!(B, dB, basis, x)
+#    return B, dB
+# end 
 
-function evaluate_ed2!(flex_B::FlexArray, 
-                       flex_dB::FlexArray, 
-                       flex_ddB::FlexArray,
-                       basis::AbstractPoly4MLBasis, x)
-   B, dB, ddB = _alloc_ed2(flex_B, flex_dB, flex_ddB, basis, x)
-   evaluate_ed2!(B, dB, ddB, basis, x)
-   return B, dB, ddB
-end
+# function evaluate_ed2!(flex_B::FlexArray, 
+#                        flex_dB::FlexArray, 
+#                        flex_ddB::FlexArray,
+#                        basis::AbstractPoly4MLBasis, x)
+#    B, dB, ddB = _alloc_ed2(flex_B, flex_dB, flex_ddB, basis, x)
+#    evaluate_ed2!(B, dB, ddB, basis, x)
+#    return B, dB, ddB
+# end
 
 # --------------------------------------- 
 # general rrules and frules interface for ChainRulesCore
