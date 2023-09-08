@@ -124,8 +124,8 @@ function evaluate_ed2!(Rnl, dRnl, ddRnl, basis::Union{AtomicOrbitalsRadials, Exp
 end
 
 # --------------------- connect with Lux 
-struct AORLayer <: AbstractExplicitLayer 
-    basis::AtomicOrbitalsRadials
+struct AORLayer{TP, TD, TI} <: AbstractExplicitLayer 
+    basis::AtomicOrbitalsRadials{TP, TD, TI}
 end
 
 struct STOLayer{TP, TD, TI} <: AbstractExplicitLayer 
@@ -167,10 +167,10 @@ end
 # The following code is used to compute the derivative with respect to zeta by Hyperduals.
 
 _alloc_dp(basis::ExponentialType, X) = 
-      acquire!(basis.pool, _outsym(X), _out_size(basis, X), promote_type(eltype(basis.ζ)) )
+      acquire!(basis.tmp, _outsym(X), _out_size(basis, X), promote_type(eltype(basis.ζ)) )
 
 _alloc_dp(basis::AtomicOrbitalsRadials, X) = 
-      acquire!(basis.pool, _outsym(X), _out_size(basis, X), promote_type(eltype(basis.Dn.ζ)) )
+      acquire!(basis.tmp, _outsym(X), _out_size(basis, X), promote_type(eltype(basis.Dn.ζ)) )
 
 function eval_dp!(Rnl, basis::AtomicOrbitalsRadials, R::AbstractVector)
     nR = length(R)
@@ -209,7 +209,7 @@ function pb_params(ζ::AbstractVector, basis::AtomicOrbitalsRadials, R::Abstract
     Rnl = _alloc_dp(bRnl, R)
     eval_dp!(Rnl, bRnl, R)
     dζ = eps1.(Rnl)
-    return dζ
+    return copy(dζ)
 end
 
 function ChainRulesCore.rrule(::typeof(evaluate), basis::Union{GaussianBasis, SlaterBasis}, R::AbstractVector{<: Real})
