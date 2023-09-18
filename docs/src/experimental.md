@@ -5,8 +5,6 @@ The interfaces specified below are experimental and not part of the public API y
 
 ## Some General Experimental / Undocumented Objects
 
-
-* [`LinearLayer`](@ref) : a custom dense linear layer we use to fix a type instability caused by the use of `CachedArray`s
 * [`SparseProduct`](@ref) : a model layer to form tensor products of features, e.g., tensor product polynomial bases. 
 
 ## Laplacian 

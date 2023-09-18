@@ -1,6 +1,8 @@
 using ChainRulesCore
 using ChainRulesCore: NoTangent
 
+export SparseProduct
+
 """
 `SparseProduct` : a model layer to build tensor products
 """
