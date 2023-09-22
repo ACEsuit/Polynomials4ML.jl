@@ -1,4 +1,4 @@
-struct STO_NG{T} <: ScalarPoly4MLBasis
+mutable struct STO_NG{T} <: ScalarPoly4MLBasis
     ζ::Tuple{Matrix{T}, Matrix{T}}
     # ----------------- metadata 
     @reqfields

@@ -124,12 +124,22 @@ function evaluate_ed2!(Rnl, dRnl, ddRnl, basis::Union{AtomicOrbitalsRadials, Exp
 end
 
 # --------------------- connect with Lux 
-struct AORLayer <: AbstractExplicitLayer 
-    basis::AtomicOrbitalsRadials
+struct AORLayer{TP, TD, TI} <: AbstractExplicitLayer 
+    basis::AtomicOrbitalsRadials{TP, TD, TI}
 end
 
-lux(basis::AtomicOrbitalsRadials) = AORLayer(basis)
- 
+struct STOLayer{TP, TD, TI} <: AbstractExplicitLayer 
+    basis::AtomicOrbitalsRadials{TP, TD, TI}
+end
+
+lux(basis::AtomicOrbitalsRadials) = begin
+    if basis.Dn isa Union{GaussianBasis,SlaterBasis}
+        return AORLayer(basis)
+    elseif basis.Dn isa STO_NG
+        return STOLayer(basis)
+    end
+end
+
 initialparameters(rng::AbstractRNG, l::AORLayer) = ( ζ = l.basis.Dn.ζ, )
  
 initialstates(rng::AbstractRNG, l::AORLayer) = NamedTuple()
@@ -141,15 +151,26 @@ function evaluate(l::AORLayer, X, ps, st)
 end 
 
 (l::AORLayer)(X, ps, st) = evaluate(l, X, ps, st)
+ 
+initialparameters(rng::AbstractRNG, l::STOLayer) = NamedTuple()
+ 
+initialstates(rng::AbstractRNG, l::STOLayer) = ( ζ = l.basis.Dn.ζ, )
+ 
+function evaluate(l::STOLayer, X::AbstractArray, ps, st)
+    l.basis.Dn.ζ::Tuple{Matrix{Float64}, Matrix{Float64}} = st[1]
+    B = evaluate(l.basis, X)
+    return B, st 
+end 
 
+(l::STOLayer)(X, ps, st) = evaluate(l, X, ps, st)
 
 # The following code is used to compute the derivative with respect to zeta by Hyperduals.
 
 _alloc_dp(basis::ExponentialType, X) = 
-      acquire!(basis.pool, _outsym(X), _out_size(basis, X), promote_type(eltype(basis.ζ)) )
+      acquire!(basis.tmp, _outsym(X), _out_size(basis, X), promote_type(eltype(basis.ζ)) )
 
 _alloc_dp(basis::AtomicOrbitalsRadials, X) = 
-      acquire!(basis.pool, _outsym(X), _out_size(basis, X), promote_type(eltype(basis.Dn.ζ)) )
+      acquire!(basis.tmp, _outsym(X), _out_size(basis, X), promote_type(eltype(basis.Dn.ζ)) )
 
 function eval_dp!(Rnl, basis::AtomicOrbitalsRadials, R::AbstractVector)
     nR = length(R)
@@ -182,16 +203,16 @@ end
 
 eps1(h::Hyper{<:Real}) = h.epsilon1
 
-function pb_params(ζ, basis::AtomicOrbitalsRadials, R::AbstractVector{<: Real})
+function pb_params(ζ::AbstractVector, basis::AtomicOrbitalsRadials, R::AbstractVector{<: Real})
     Dn = expontype(basis.Dn, ζ)
     bRnl = AtomicOrbitalsRadials(basis.Pn, Dn, basis.spec) 
     Rnl = _alloc_dp(bRnl, R)
     eval_dp!(Rnl, bRnl, R)
-    ∂ζ = eps1.(Rnl)
-    return ∂ζ
+    dζ = eps1.(Rnl)
+    return copy(dζ)
 end
 
-function ChainRulesCore.rrule(::typeof(evaluate), basis::AtomicOrbitalsRadials, R::AbstractVector{<: Real})
+function ChainRulesCore.rrule(::typeof(evaluate), basis::Union{GaussianBasis, SlaterBasis}, R::AbstractVector{<: Real})
     A, dR = evaluate_ed(basis, R)
     dζ = pb_params(basis.Dn.ζ, basis, R)
 
@@ -224,6 +245,19 @@ function ChainRulesCore.rrule(::typeof(evaluate), l::AORLayer, R::AbstractVector
             ∂ζ[i] = dot(@view(∂A[1][:, i]), @view(dζ[:, i]))
         end
         return NoTangent(), NoTangent(), ∂R, (ζ = ∂ζ,), NoTangent()
+    end
+    return (A, NamedTuple()), pb
+end 
+
+function ChainRulesCore.rrule(::typeof(evaluate), l::STOLayer, R::AbstractVector{<: Real}, ps, st)
+    A, dR = evaluate_ed(l.basis, R)
+    ∂R = similar(R)
+    function pb(∂A)
+        @assert size(∂A[1]) == (length(R), length(l.basis))
+        for i = 1:length(R)
+            ∂R[i] = dot(@view(∂A[1][i, :]), @view(dR[i, :]))
+        end
+        return NoTangent(), NoTangent(), ∂R, NoTangent(), NoTangent()
     end
     return (A, NamedTuple()), pb
 end 
