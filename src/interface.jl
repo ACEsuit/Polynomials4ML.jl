@@ -162,6 +162,7 @@ evaluate_d(basis::AbstractPoly4MLBasis, x) = evaluate_ed(basis, x)[2]
 evaluate_dd(basis::AbstractPoly4MLBasis, x) = evaluate_ed2(basis, x)[3] 
 
 
+# Jerry: comment it out for now since it is not used else where and causes some problem
 # the next set of interface functions are in-place but work a little 
 # differently : by using a FlexArray as input the evaluation function 
 # can extract the right output array from it and then return it. 
