@@ -50,6 +50,23 @@ for (feat, in_size, out_fun) in zip(feature_arr, in_size_arr, out_fun_arr)
          print_tf(@test Y1 ≈ Y2 ≈ Y3)
       end
       println() 
+
+      @info("Testing rrule for vector input")
+      for ntest = 1:30
+         local x, val, u
+         x = randn(in_d)
+         bu = randn(in_d)
+         _BB(t) = x + t * bu
+         val, _ = l(x, ps, st)
+         u = randn(size(val))
+         F(t) = dot(u, l(_BB(t), ps, st)[1])
+         dF(t) = begin
+            val, pb = Zygote.pullback(LuxCore.apply, l, _BB(t), ps, st)
+            ∂BB = pb((u, st))[2]
+            return dot(∂BB, bu)
+         end
+         print_tf(@test fdtest(F, dF, 0.0; verbose=false))
+      end
    end
 
    @info("Testing evaluate")
