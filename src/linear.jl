@@ -70,6 +70,15 @@ end
 LuxCore.initialparameters(rng::AbstractRNG, l::LinearLayer) = ( W = randn(rng, l.out_dim, l.in_dim), )
 LuxCore.initialstates(rng::AbstractRNG, l::LinearLayer) = ( l.use_cache ?  (pool =  ArrayPool(FlexArrayCache), ) : (pool =  ArrayPool(FlexArray), ))
  
+# TODO: check whether we can do this without multiple dispatch on vec/mat without loss of performance
+function rrule(::typeof(LuxCore.apply), l::LinearLayer, x::AbstractVector, ps, st)
+   val = l(x, ps, st)
+   function pb(A)
+      return NoTangent(), NoTangent(), ps.W' * A[1], (W = A[1] * x',), NoTangent()
+   end
+   return val, pb
+end
+
 function rrule(::typeof(LuxCore.apply), l::LinearLayer, x::AbstractMatrix, ps, st)
    val = l(x, ps, st)
    function pb(A)
