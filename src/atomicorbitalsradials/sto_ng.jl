@@ -6,7 +6,7 @@ end
 
 STO_NG(ζ) = STO_NG(ζ, _make_reqfields()...)
 
-Base.length(basis::STO_NG) = length(basis.ζ[1])
+Base.length(basis::STO_NG) = size(basis.ζ,1)
 
 _valtype(::STO_NG, T::Type{<: Real}) = T
 _valtype(::STO_NG, T::Type{<: Hyper{<:Real}}) = T
