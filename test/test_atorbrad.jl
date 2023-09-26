@@ -283,9 +283,9 @@ n1 = 5 # degree
 n2 = 1
 Pn = Polynomials4ML.legendre_basis(n1+1)
 spec = [(n1 = n1, n2 = n2, l = l) for n1 = 1:n1 for n2 = 1:1 for l = 0:n1-1] 
-M = 3
-ζ = (rand(2 * length(spec), M), rand(2 * length(spec), M))
-Dn = STO_NG(ζ)
+ζ = [rand(rand(collect(1:5))) for i = 1:length(spec)]
+D = [rand(length(ζ[i])) for i = 1:length(spec)]
+Dn = STO_NG((ζ, D))
 bRnl = AtomicOrbitalsRadials(Pn, Dn, spec) 
 rr = 2 * rand(10) .- 1
 Rnl = evaluate(bRnl, rr)
