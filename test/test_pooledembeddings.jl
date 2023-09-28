@@ -2,6 +2,9 @@ using Polynomials4ML: legendre_basis, RYlmBasis, ScalarPoly4MLBasis, PooledSpars
 using StaticArrays, LinearAlgebra
 using ObjectPools: acquire!, release!
 using Polynomials4ML
+using ACEbase.Testing: fdtest, print_tf
+using Test
+using Printf
 
 function _generate_basis(; order=2, len = 50)
    NN = [ rand(5:10) for _ = 1:order ]
@@ -50,8 +53,27 @@ X = [ @SVector(randn(3)) for i in 1:3 ]
 
 embeddings = (Rnl, Ylm)
 embed_and_pool = Polynomials4ML.PooledEmebddings(embeddings, pooling)
-# Polynomials4ML.PooledEmbed.myevaluate(embed_and_pool, X)
-using Zygote
-out, pb = Zygote.pullback(evaluate, embed_and_pool, X)
 
-pb(out)
+
+# @info("Test evaluate")
+# for ntest = 1:30
+#    bX = [ @SVector(randn(3)) for i in 1:3 ]
+#    evaluate(embed_and_pool, X)
+# end
+
+@info("Test rrule")
+using Zygote
+for ntest = 1:30
+   bX = [ @SVector(randn(3)) for i in 1:3 ]
+   bu = [ @SVector(randn(3)) for i in 1:3 ]
+   _BB(t) = bX + t * bu
+   bA = evaluate(embed_and_pool, X)
+   u = randn(size(bA))
+   F(t) = dot(u, Polynomials4ML.evaluate(embed_and_pool, _BB(t)))
+   dF(t) = begin
+      out, pb = Zygote.pullback(evaluate, embed_and_pool, _BB(t))
+      ∂BB = pb(u)[2]
+      return sum( dot(∂BB[i], bu[i]) for i = 1:length(bX) )
+   end
+   print_tf(@test fdtest(F, dF, 0.0; verbose = false))
+end

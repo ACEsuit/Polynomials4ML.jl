@@ -28,7 +28,7 @@ function _write_code_Bi_tup(NB)
 end
 
 # TODO: generalize to any X
-@generated function evaluate(basis::PooledEmebddings{NB, TB}, X::Vector{SVector{3, T}}) where {NB, TB, T}
+@generated function evaluate(basis::PooledEmebddings{NB, TB}, X) where {NB, TB, T}
    @assert NB > 0
    B_tup = _write_code_Bi_tup(NB)
    quote
@@ -42,8 +42,7 @@ end
    end
 end
 
-function ChainRulesCore.rrule(::typeof(evaluate), basis::PooledEmebddings{NB, TB}, X::Vector{SVector{3, T}}) where {NB, TB, T}
-   @show "Calling correct rrule"
+function ChainRulesCore.rrule(::typeof(evaluate), basis::PooledEmebddings{NB, TB}, X) where {NB, TB}
    A = evaluate(basis, X)
    return A, Δ -> _evaluate_pb(basis, Δ, X)
 end
@@ -76,7 +75,6 @@ end
          ∂X_i = embed_pb_i(∂BBs[i])
          ∂X .+= ∂X_i[3]
       end
-      @show ∂X
       return (NoTangent(), NoTangent(), ∂X)
    end
 end
