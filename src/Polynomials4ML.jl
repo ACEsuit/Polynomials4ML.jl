@@ -75,6 +75,9 @@ include("lux.jl")
 # basis components to implement cluster expansion methods
 include("ace/ace.jl")
 
+# pooled embeddings
+include("pooledembeddings.jl")
+
 # some nice utility functions to generate basis sets and other things  
 include("utils/utils.jl")
 
