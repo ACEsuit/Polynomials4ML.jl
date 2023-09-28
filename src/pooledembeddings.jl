@@ -30,9 +30,9 @@ end
          embed_i = basis.embeddings[i]
          B_i = evaluate(embed_i, X)
       end
-      A = basis.pooling($_write_code_Bi_tup(NB))
+      B_tup = _write_code_Bi_tup(NB)
+      A = basis.pooling($B_tup)
       @nexprs $NB i -> release!(B_i)
-
       return A
    end
 end
