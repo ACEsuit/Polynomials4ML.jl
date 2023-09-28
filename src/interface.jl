@@ -135,7 +135,7 @@ _alloc_ed2(basis::AbstractPoly4MLBasis, x) =
       _alloc(basis, x), _alloc_d(basis, x), _alloc_dd(basis, x)
 
 # --------------------------------------- 
-# evaluation interface 
+# general evaluation interface 
 
 (basis::AbstractPoly4MLBasis)(x) = evaluate(basis, x)
             
@@ -144,6 +144,18 @@ function evaluate(basis::AbstractPoly4MLBasis, x)
    evaluate!(unwrap(B), basis, x)
    return B 
 end
+
+# function evaluate(basis::ScalarPoly4MLBasis, x::Vector{SVector{3, S}})  where {S <: real}
+#    nX = length(X)
+#    R = acquire!(basis.pool, :R, (nX,), T)
+#    @simd ivdep for i = 1:Nel
+#       R[i] = norm(X[i])
+#    end
+#    B = _alloc(basis, R)
+#    evaluate!(unwrap(B), basis, R)
+#    release!(R)
+#    return B 
+# end
 
 function evaluate_ed(basis::AbstractPoly4MLBasis, x) 
    B, dB = _alloc_ed(basis, x)
@@ -160,7 +172,6 @@ end
 evaluate_d(basis::AbstractPoly4MLBasis, x) = evaluate_ed(basis, x)[2] 
 
 evaluate_dd(basis::AbstractPoly4MLBasis, x) = evaluate_ed2(basis, x)[3] 
-
 
 # the next set of interface functions are in-place but work a little 
 # differently : by using a FlexArray as input the evaluation function 
