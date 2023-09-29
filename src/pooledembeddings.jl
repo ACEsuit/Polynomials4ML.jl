@@ -1,4 +1,4 @@
-export PooledEmebddings
+export PooledEmbeddings
 
 using ChainRulesCore: NoTangent
 using Polynomials4ML: PooledSparseProduct, AbstractPoly4MLBasis
@@ -6,17 +6,17 @@ using Polynomials4ML: PooledSparseProduct, AbstractPoly4MLBasis
 import ChainRulesCore: rrule
 import Base.Cartesian: @nexprs
 
-struct PooledEmebddings{NB, TB <: Tuple} <: AbstractPoly4MLBasis
+struct PooledEmbeddings{NB, TB <: Tuple} <: AbstractPoly4MLBasis
    embeddings::TB
    pooling::PooledSparseProduct{NB}
    @reqfields()
 end
 
-function PooledEmebddings(embeddings, pooling)
-   return PooledEmebddings(embeddings, pooling, _make_reqfields()...)
+function PooledEmbeddings(embeddings, pooling)
+   return PooledEmbeddings(embeddings, pooling, _make_reqfields()...)
 end
 
-Base.length(basis::PooledEmebddings) = length(basis.pooling)
+Base.length(basis::PooledEmbeddings) = length(basis.pooling)
 
 function _write_code_Bi_tup(NB)
    Bi_tup_str = "(B_1, "
@@ -28,7 +28,7 @@ function _write_code_Bi_tup(NB)
 end
 
 # TODO: generalize to any X
-@generated function evaluate(basis::PooledEmebddings{NB, TB}, X) where {NB, TB, T}
+@generated function evaluate(basis::PooledEmbeddings{NB, TB}, X) where {NB, TB}
    @assert NB > 0
    B_tup = _write_code_Bi_tup(NB)
    quote
@@ -42,12 +42,12 @@ end
    end
 end
 
-function ChainRulesCore.rrule(::typeof(evaluate), basis::PooledEmebddings{NB, TB}, X) where {NB, TB}
+function ChainRulesCore.rrule(::typeof(evaluate), basis::PooledEmbeddings{NB, TB}, X) where {NB, TB}
    A = evaluate(basis, X)
    return A, Δ -> _evaluate_pb(basis, Δ, X)
 end
 
-@generated function _evaluate_pb(basis::PooledEmebddings{NB, TB}, Δ, X) where {NB, TB}
+@generated function _evaluate_pb(basis::PooledEmbeddings{NB, TB}, Δ, X) where {NB, TB}
    B_tup = _write_code_Bi_tup(NB)
    quote
       # evaluate
@@ -68,13 +68,20 @@ end
       # pooling_pb : Vec -> (B_1, B_2, ..., B_NB)
       # embed_pb_i : B_i -> ∂X
       # use 3 since the interface must return (NoTangent(), NoTangent(), ∂)
-      ∂X = zero(X)
+      # ∂X = similar(X)
       ∂BBs = pooling_pb(Δ)[3]
       # writes and accumulate to ∂X
-      @nexprs $NB i -> begin
-         ∂X_i = embed_pb_i(∂BBs[i])
-         ∂X .+= ∂X_i[3]
+      ∂X = embed_pb_1(∂BBs[1])[3]
+      @nexprs $(NB-1) i -> begin
+         ∂X_{i+1} = embed_pb_{i+1}(∂BBs[i+1])
+         ∂X .+= ∂X_{i+1}[3]
       end
       return (NoTangent(), NoTangent(), ∂X)
    end
+end
+
+
+# lux integration to prevent it dispatch to wrong methods, ObjectPools is not required here since it is done internally in each embedding
+function evaluate(l::Polynomials4ML.PolyLuxLayer{PooledEmbeddings{NB, TB}}, X, ps, st) where {NB, TB}
+   return evaluate(l.basis, X), st
 end

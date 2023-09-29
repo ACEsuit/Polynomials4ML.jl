@@ -52,7 +52,7 @@ _valtype(basis::OrthPolyBasis1D3T{T}, ::Type{<: StaticVector{3, S}}) where {T <:
 # x can be any object for which a polynomial could be defined, but normally 
 #     a number. x cannot be an abstractvector since this would dispatch to a 
 #     different method. 
-function evaluate!(P::AbstractArray, basis::OrthPolyBasis1D3T, x) 
+function evaluate!(P::AbstractArray, basis::OrthPolyBasis1D3T, x::Number) 
    N = length(basis.A)
    @assert length(P) >= N 
    @inbounds P[1] = basis.A[1]
@@ -112,7 +112,7 @@ end
 
 # P should be a matrix now and we will write basis(X[i]) into P[i, :]; 
 # this is the format the optimizes memory access. 
-function evaluate!(P::AbstractArray, basis::OrthPolyBasis1D3T, X::AbstractVector) 
+function evaluate!(P::AbstractArray, basis::OrthPolyBasis1D3T, X::AbstractVector{T}) where T <: Number
    N = length(basis.A)
    nX = length(X) 
    # ------- do the bounds checks here 

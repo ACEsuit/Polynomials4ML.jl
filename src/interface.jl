@@ -70,6 +70,8 @@ function _laplacetype end
 _valtype(basis::AbstractPoly4MLBasis, x::SINGLE) = 
       _valtype(basis, typeof(x)) 
 
+_valtype(basis::ScalarPoly4MLBasis, ::Type{<: StaticVector{3, S}}) where {S <: Real} = _valtype(basis, S)
+
 _gradtype(basis::AbstractPoly4MLBasis, x::SINGLE) = 
       _gradtype(basis, typeof(x)) 
 
@@ -145,17 +147,34 @@ function evaluate(basis::AbstractPoly4MLBasis, x)
    return B 
 end
 
-# function evaluate(basis::ScalarPoly4MLBasis, x::Vector{SVector{3, S}})  where {S <: real}
-#    nX = length(X)
-#    R = acquire!(basis.pool, :R, (nX,), T)
-#    @simd ivdep for i = 1:Nel
-#       R[i] = norm(X[i])
-#    end
-#    B = _alloc(basis, R)
-#    evaluate!(unwrap(B), basis, R)
-#    release!(R)
-#    return B 
-# end
+function evaluate!(B::AbstractMatrix, basis::ScalarPoly4MLBasis, X::AbstractArray{SVector{3, T}}) where T
+   nX = length(X)
+   R = acquire!(basis.pool, :R, (nX,), T)
+   @simd ivdep for i = 1:nX
+      R[i] = norm(X[i])
+   end
+   evaluate!(B, basis, R)
+   release!(R)
+   return B
+end
+
+function ChainRulesCore.rrule(::typeof(evaluate), basis::ScalarPoly4MLBasis, X::AbstractArray{SVector{3, T}}) where T
+   R = norm.(X)
+   P, dP = evaluate_ed(basis, R)
+
+   function pb(∂)
+      TR = promote_type(T, eltype(∂))
+      ∂X = [SVector{3, TR}(0, 0, 0) for _ in eachindex(X)]
+      for n = 1:size(dP, 2)
+         @simd ivdep for a = 1:length(X)
+            ∂X[a] += ∂[a, n] * dP[a, n] * X[a] / R[a]
+         end
+      end
+      return (NoTangent(), NoTangent(), ∂X)
+   end
+
+  return P, pb
+end
 
 function evaluate_ed(basis::AbstractPoly4MLBasis, x) 
    B, dB = _alloc_ed(basis, x)
