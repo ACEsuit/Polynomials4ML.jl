@@ -139,7 +139,7 @@ function _evaluate_AA!(AA, spec::Vector{NTuple{N, Int}}, A::AbstractMatrix) wher
    @assert size(AA, 2) >= length(spec)
    @inbounds for (i, ϕ) in enumerate(spec)
       @simd ivdep for j = 1:nX
-         aa = ntuple(i -> A[j, ϕ[i]], N)
+         aa = ntuple(i -> @inbounds(A[j, ϕ[i]]), N)
          AA[j, i] = prod(aa)
       end
    end
@@ -194,10 +194,10 @@ end
 function _pb_evaluate_pbAA!(gA, ΔN::AbstractMatrix, 
                             spec::Vector{NTuple{N, Int}}, 
                             A::AbstractMatrix) where {N}
-   nX = size(A, 1)                            
+   nX = size(A, 1)                      
    for (i, ϕ) in enumerate(spec)
       for j = 1:nX 
-         aa = ntuple(i -> A[j, ϕ[i]], N)
+         aa = ntuple(i -> @inbounds(A[j, ϕ[i]]), N)
          pi, gi = _static_prod_ed(aa) 
          for t = 1:N 
             gA[j, ϕ[t]] += ΔN[j, i] * gi[t]
