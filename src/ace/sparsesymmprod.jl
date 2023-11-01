@@ -185,7 +185,7 @@ function _pb_evaluate_pbAA!(gA::AbstractVector, ΔN::AbstractVector,
       aa = ntuple(i -> A[ϕ[i]], N)
       pi, gi = _static_prod_ed(aa) 
       for j = 1:N 
-         gA[ϕ[j]] += ΔN[i] * gi[j]
+         gA[ϕ[j]] += ΔN[i] * conj(gi[j])
       end
    end
    return nothing 
@@ -194,13 +194,13 @@ end
 function _pb_evaluate_pbAA!(gA, ΔN::AbstractMatrix, 
                             spec::Vector{NTuple{N, Int}}, 
                             A::AbstractMatrix) where {N}
-   nX = size(A, 1)                            
+   nX = size(A, 1)             
    for (i, ϕ) in enumerate(spec)
       for j = 1:nX 
          aa = ntuple(i -> A[j, ϕ[i]], N)
-         pi, gi = _static_prod_ed(aa) 
+         pi, gi = _static_prod_ed(aa)
          for t = 1:N 
-            gA[j, ϕ[t]] += ΔN[j, i] * gi[t]
+            gA[j, ϕ[t]] += ΔN[j, i] * conj(gi[t])
          end
       end
    end

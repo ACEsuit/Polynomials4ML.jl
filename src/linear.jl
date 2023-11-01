@@ -57,9 +57,12 @@ function (l::LinearLayer)(x::AbstractVector, ps, st)
 end
 
 function (l::LinearLayer{true})(x::AbstractMatrix, ps, st)
-   out = acquire!(st.pool, :bA, (l.out_dim, size(x, 2)), _valtype(l, x, ps)); 
-   mul!(unwrap(out), ps.W, unwrap(x)); release!(x); 
-   return out, st
+   #out = acquire!(st.pool, :bA, (l.out_dim, size(x, 2)), _valtype(l, x, ps)); 
+   #@show typeof(out)
+   #@show typeof(ps.W)
+   #@show typeof(x)
+   #mul!(unwrap(out), ps.W, unwrap(x)); release!(x); 
+   return ps.W * unwrap(x), st
 end
 
 (l::LinearLayer{false})(x::AbstractMatrix, ps, st) = begin

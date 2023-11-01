@@ -9,12 +9,14 @@ export SparseProduct
 struct SparseProduct{NB} <: AbstractPoly4MLBasis
    spec::Vector{NTuple{NB, Int}}
    # ---- temporaries & caches
-   @reqfields()
+   @reqfields
 end
 
 function SparseProduct()
-   return SparseProduct(bases, NTuple{NB, Int}[])
+   return SparseProduct(NTuple{NB, Int}[], _make_reqfields()...)
 end
+
+SparseProduct(spec) = SparseProduct(spec, _make_reqfields()...)
 
 # each column defines a basis element
 function SparseProduct(spec::Matrix{<: Integer})
@@ -25,11 +27,9 @@ end
  
 Base.length(basis::SparseProduct) = length(basis.spec)
 
-SparseProduct(spec) = SparseProduct(spec, _make_reqfields()...)
-
+# ----------------------- evaluation interfaces 
 _valtype(basis::SparseProduct{T1}, TX::NTuple{NB, AbstractVecOrMat{T2}}) where {T1, T2, NB} = T2
 
-# ----------------------- evaluation interfaces 
 function _frule_evaluate(basis::SparseProduct, BB::Tuple{Vararg{AbstractVector}}, ∂BB::Tuple{Vararg{AbstractVector}}) 
    VT = mapreduce(eltype, promote_type, BB)
    A = zeros(VT, length(basis))
@@ -318,8 +318,9 @@ function _frule_frule_evaluate!(A, dA, ddA, basis::SparseProduct{NB}, BB::Tuple{
    return A, dA, ddA
 end
 # -------------------- reverse mode gradient
+import ChainRulesCore: rrule, NoTangent
 
-function ChainRulesCore.rrule(::typeof(evaluate), basis::SparseProduct{NB}, BB::Tuple) where {NB}
+function rrule(::typeof(evaluate), basis::SparseProduct{NB}, BB::Tuple) where {NB}
    A = evaluate(basis, BB)
    function pb(∂A)
       return NoTangent(), NoTangent(), _pullback_evaluate(∂A, basis, BB)
@@ -360,11 +361,56 @@ function _pullback_evaluate!(∂BB, ∂A, basis::SparseProduct{NB}, BB::Tuple) w
         end 
         a, g = _static_prod_ed(b)
         for i = 1:NB 
-           ∂BB[i][j, ϕ[i]] = muladd(∂A[j, iA], g[i], ∂BB[i][j, ϕ[i]])
+           ∂BB[i][j, ϕ[i]] = muladd(conj(∂A[j, iA]), g[i], ∂BB[i][j, ϕ[i]])
         end
       end 
    end
    return nothing 
 end
 
+function _pullback_evaluate!(∂BB, ∂A, basis::SparseProduct{2}, BB::Tuple)
+   nX = size(BB[1], 1)
+   NB = 2 
+   @assert length(BB) == length(∂BB) == 2
+   # @assert all(nX <= size(BB[i], 1) for i = 1:NB)
+   # @assert all(nX <= size(∂BB[i], 1) for i = 1:NB)
+   # @assert all(size(∂BB[i], 2) >= size(BB[i], 2) for i = 1:NB)
+   
+   @inbounds for (iA, ϕ) in enumerate(basis.spec)
+      @simd ivdep for j = 1:nX 
+         ϕ1 = ϕ[1]
+         ϕ2 = ϕ[2]
+         b1 = BB[1][j, ϕ1]
+         b2 = BB[2][j, ϕ2]
+         ∂BB[1][j, ϕ1] = muladd(conj(∂A[j, iA]), b2, ∂BB[1][j, ϕ1])
+         ∂BB[2][j, ϕ2] = muladd(conj(∂A[j, iA]), b1, ∂BB[2][j, ϕ2])
+      end 
+   end
+   return nothing 
+end
 
+# --------------------- connect with Lux 
+# it looks like we could use the standard P4ML basis wrapper 
+# but technically the pooling operation changes the behaviour in
+# a few ways and we need to be very careful about this
+
+import LuxCore: AbstractExplicitLayer, initialparameters, initialstates
+using ObjectPools: release!
+
+struct SparseProductLayer{NB} <: AbstractExplicitLayer 
+   basis::SparseProduct{NB}
+end
+
+lux(basis::SparseProduct) = SparseProductLayer(basis)
+
+initialparameters(rng::AbstractRNG, layer::SparseProductLayer) = 
+      NamedTuple()
+
+initialstates(rng::AbstractRNG, layer::SparseProductLayer) = 
+      NamedTuple()
+
+(l::SparseProductLayer)(BB, ps, st) = begin
+   out = evaluate(l.basis, BB)
+   release!(BB)
+   return out, st
+end
