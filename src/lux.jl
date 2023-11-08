@@ -57,7 +57,7 @@ initialstates(rng::AbstractRNG, l::PolyLuxLayer) = _init_luxstate(rng, l)
 (l::PolyLuxLayer)(args...) = evaluate(l, args...)
 
 # # general fallback of evaluate interface if we dont have trainble parameters
-evaluate!(out, basis::AbstractPoly4MLBasis, X, ps) = evaluate!(out, basis, X)
+evaluate!(out, basis::AbstractPoly4MLBasis, X, ps::NamedTuple) = evaluate!(out, basis, X)
 
 # lux evaluation interface
 function evaluate(l::PolyLuxLayer, X, ps, st)
@@ -67,14 +67,21 @@ function evaluate(l::PolyLuxLayer, X, ps, st)
    return out, st
 end
 
+function evaluate(l::PolyLuxLayer, X::Tuple, ps, st)
+   out = acquire!(st.pool, _outsym(X), _out_size(l.basis, X), _valtype(l.basis, X))
+   evaluate!(out, l.basis, X, ps)
+   for x in X
+      release!(x)
+   end
+   return out, st
+end
+
 # Fallback of all PolyLuxLayer if no specific rrule is defined
 # I use the usual rrule interface here since pb with temp array seems dangerous 
-function ChainRulesCore.rrule(::typeof(LuxCore.apply), l::PolyLuxLayer, X, ps, st)
+function ChainRulesCore.rrule(::typeof(LuxCore.apply), l::PolyLuxLayer, X, ps::NamedTuple, st::NamedTuple)
    val, inner_pb = ChainRulesCore.rrule(evaluate, l.basis, X)
    return (val, st), Δ -> (inner_pb(Δ[1])..., NoTangent(), NoTangent())
 end
-
-## === 
 
 # Backup: interface before we migrate to non-allocating lux layers
 

@@ -491,5 +491,10 @@ initialparameters(rng::AbstractRNG, layer::PooledSparseProductLayer) =
 initialstates(rng::AbstractRNG, layer::PooledSparseProductLayer) = 
       NamedTuple()
 
-(l::PooledSparseProductLayer)(BB, ps, st) = 
-      evaluate(l.basis, BB), st 
+(l::PooledSparseProductLayer)(BB, ps, st) = begin
+   out = evaluate(l.basis, BB)
+   for bb in BB
+      release!(bb)
+   end
+   return out, st
+end

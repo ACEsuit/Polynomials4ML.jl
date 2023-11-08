@@ -336,7 +336,7 @@ end
 
 
 function _pullback_evaluate(∂A, basis::SparseProduct{NB}, BB::Tuple) where {NB}
-   TA = promote_type(eltype.(BB)...)
+   TA = promote_type(eltype.(BB)..., eltype(∂A))
    ∂BB = ntuple(i -> zeros(TA, size(BB[i])...), NB)
    _pullback_evaluate!(∂BB, ∂A, basis, BB)
    return ∂BB
