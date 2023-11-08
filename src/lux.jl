@@ -15,9 +15,10 @@ function lux(basis::AbstractPoly4MLBasis;
                use_cache = true,
                name = String(nameof(typeof(basis))), 
                meta = Dict{String, Any}("name" => name),
+               release_input = true
             )
    @assert haskey(meta, "name")
-   return PolyLuxLayer(basis, meta, use_cache)
+   return PolyLuxLayer(basis, meta, use_cache, release_input)
 end
 """
 a fall-back method for `initalparameters` that all AbstractPoly4MLBasis
@@ -42,6 +43,7 @@ struct PolyLuxLayer{TB} <: AbstractExplicitLayer
    basis::TB
    meta::Dict{String, Any}
    use_cache::Bool
+   release_input::Bool
 end
 
 function Base.show(io::IO, l::PolyLuxLayer)
@@ -63,15 +65,19 @@ evaluate!(out, basis::AbstractPoly4MLBasis, X, ps::NamedTuple) = evaluate!(out, 
 function evaluate(l::PolyLuxLayer, X, ps, st)
    out = acquire!(st.pool, _outsym(X), _out_size(l.basis, X), _valtype(l.basis, X))
    evaluate!(out, l.basis, X, ps)
-   release!(X)
+   if l.release_input
+      release!(X)
+   end
    return out, st
 end
 
 function evaluate(l::PolyLuxLayer, X::Tuple, ps, st)
    out = acquire!(st.pool, _outsym(X), _out_size(l.basis, X), _valtype(l.basis, X))
    evaluate!(out, l.basis, X, ps)
-   for x in X
-      release!(x)
+   if l.release_input
+      for x in X
+         release!(x)
+      end
    end
    return out, st
 end
