@@ -61,6 +61,8 @@ include("rylm.jl")
 include("crlm.jl")
 include("rrlm.jl")
 
+include("scylm.jl")
+
 const XlmBasis = Union{RYlmBasis, CYlmBasis, CRlmBasis, RRlmBasis}
 
 """
