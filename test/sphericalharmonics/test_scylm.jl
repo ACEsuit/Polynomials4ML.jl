@@ -1,43 +1,18 @@
 using LinearAlgebra, StaticArrays, Test, Printf, SparseArrays, BlockDiagonals
 using Polynomials4ML, Polynomials4ML.Testing
-using Polynomials4ML: SphericalCoords, index_y, 
-                      dspher_to_dcart, cart2spher, spher2cart, rand_sphere
+using Polynomials4ML: index_y, rand_sphere
 using Polynomials4ML: evaluate, evaluate_d, evaluate_ed 
 using Polynomials4ML.Testing: print_tf, println_slim 
-using ACEbase.Testing: fdtest
+# using ACEbase.Testing: fdtest
 using HyperDualNumbers: Hyper
 
 
 
 verbose = false
 
-##
-using Polynomials4ML
-using Polynomials4ML: SphericalCoords, index_y, 
-                      dspher_to_dcart, cart2spher, spher2cart, rand_sphere
-maxL = 3
-rSH = SCYlmBasis(maxL)
-rSH_ref = RYlmBasis(maxL)
-
-R = [rand_sphere(),]
-rSH(R)
-rSH_ref(R)
-# [evaluate(rSH, R)...]
-evaluate_d(rSH, R)
-evaluate_d(rSH_ref, R)
-evaluate_ed(rSH, R)
-evaluate_ed(rSH_ref, R)
-
-R = rand_sphere()
-evaluate(rSH, R)
-evaluate(rSH_ref, R)
-evaluate_ed(rSH, R)
-evaluate_ed(rSH_ref, R)
-##
-
 @info("Testing consistency of Real and Complex SH; SpheriCart convention")
 
-# SpheriCart
+# SpheriCart R2C transformation
 function ctran3(L)
    AA = zeros(ComplexF64, 2L+1, 2L+1)
    for i = 1:2L+1
@@ -189,6 +164,7 @@ println_slim(@test dY1 ≈ dY2)
 # @info("Test rrule")
 # using LinearAlgebra: dot 
 # rSH = SCYlmBasis(10)
+
 # for ntest = 1:30
 #     local X
 #     local Y
@@ -210,45 +186,23 @@ println_slim(@test dY1 ≈ dY2)
 # end
 # println()
 
-# # using SpheriCart: compute_with_gradients
-# # compute_with_gradients(rSH.basis, R)
-# # 
+# ## Debugging code
+# X = [ rand_sphere() for i = 1:21 ]
+# Y = [ rand_sphere() for i = 1:21 ]
+# _x(t) = X + t * Y
+# A = evaluate(rSH, X)
+# u = randn(size(A))
+# F(t) = dot(u, evaluate(rSH, _x(t)))
+# t = 1
+# val, pb = Zygote.pullback(rSH, _x(t))
+# pb
+# ∂BB = pb(A)[1]
 
-# ## Debug
-# using Polynomials4ML: _alloc, _alloc_ed, unwrap
+# dF(t) = begin
+#       val, pb = Zygote.pullback(rSH, _x(t))
+#       ∂BB = pb(u)[1] # pb(u)[1] returns NoTangent() for basis argument
+#       return sum( dot(∂BB[i], Y[i]) for i = 1:length(Y) )
+#    end
+# fdtest(F, dF, 0.0; verbose = false)
 
-# @which evaluate(rSH, R)
-# B = _alloc(rSH, R)
-# evaluate!(unwrap(B), rSH, R)
-# B
-
-# B = _alloc(rSH_ref, R)
-# @which evaluate!(unwrap(B), rSH_ref, R)
-# B
-# basis = rSH_ref
-# X = R
-# L = Polynomials4ML.maxL(basis)
-# S = Polynomials4ML.cart2spher(basis, X)
-# _P = Polynomials4ML._acqu_P!(basis, S)
-# _P
-# P = evaluate!(_P, basis.alp, S)
-# Y = unwrap(B)
-# Polynomials4ML.rYlm!(Y, Polynomials4ML.maxL(basis), S, unwrap(P), basis)
-
-
-
-# evaluate_ed(rSH, R)
-# @which evaluate_ed(rSH, R)
-# basis = rSH
-# x = R
-# B, dB = _alloc_ed(basis, x)
-# evaluate_ed!(unwrap(B), unwrap(dB), basis, x)
-# Polynomials4ML.scYlm_ed!(unwrap(B),unwrap(dB),compute_with_gradients(basis.basis,X)[1],compute_with_gradients(basis.basis,X)[2])
-# unwrap(B) .= compute_with_gradients(basis.basis,X)[1]
-# unwrap(dB) .= compute_with_gradients(basis.basis,X)[2]
-# for i = 1:length(unwrap(dB)) 
-#    unwrap(dB)[i] = compute_with_gradients(basis.basis,X)[2][i]
-# end
-# compute_with_gradients(basis.basis,X)[2]
-# @which evaluate_ed!(unwrap(B), unwrap(dB), basis, x)
-# ##
+# print_tf(@test fdtest(F, dF, 0.0; verbose = false))
