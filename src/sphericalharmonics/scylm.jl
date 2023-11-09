@@ -15,6 +15,9 @@ SCYlmBasis(maxL::Integer, T::Type=Float64) =
 SCYlmBasis(scsh::SphericalHarmonics) = 
       SCYlmBasis(scsh, _make_reqfields()...)
 
+natural_indices(basis::SCYlmBasis) = 
+      [ NamedTuple{(:l, :m)}(idx2lm(i)) for i = 1:length(basis) ]
+
 _valtype(sh::SCYlmBasis{L, normalisation, static, T}, ::Type{<: StaticVector{3, S}}) where {L, normalisation, static, T <: Real, S <: Real} = 
 		promote_type(T, S)
 
