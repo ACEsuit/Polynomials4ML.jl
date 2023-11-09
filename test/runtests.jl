@@ -17,7 +17,7 @@ using Test
     @testset "Real Spherical Harmonics" begin include("sphericalharmonics/test_rylm.jl"); end
     @testset "Complex Solid Harmonics" begin include("sphericalharmonics/test_crlm.jl"); end
     @testset "Real Solid Harmonics" begin include("sphericalharmonics/test_rrlm.jl"); end
-    @testset "Real Solid Harmonics" begin include("sphericalharmonics/test_scylm.jl"); end
+    @testset "Real Spherical Harmonics via SpheriCart" begin include("sphericalharmonics/test_scylm.jl"); end
 
     # Quantum Chemistry 
     @testset "Atomic Orbitals Radials" begin include("test_atorbrad.jl"); end
