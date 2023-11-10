@@ -1,0 +1,39 @@
+name: Run benchmarks
+
+on:
+  pull_request:
+    types: [labeled, opened, synchronize, reopened]
+
+env:
+  JULIA_NUM_THREADS: 2
+
+# Only trigger the benchmark job when you add `run benchmark` label to the PR
+jobs:
+  Benchmark:
+    runs-on: ubuntu-latest
+    if: contains(github.event.pull_request.labels.*.name, 'run benchmark')
+    steps:
+      - uses: actions/checkout@v3
+      - uses: julia-actions/setup-julia@latest
+        with:
+          version: 1
+      - run: |
+          using Pkg
+          Pkg.pkg"registry add https://github.com/ACEsuit/ACEregistry"
+        shell: bash -c "julia --color=yes {0}"
+      - uses: julia-actions/julia-buildpkg@latest
+      - name: Install dependencies
+        run: julia -e 'using Pkg; Pkg.add(["PkgBenchmark", "BenchmarkCI"])'
+      - name: Run benchmarks
+        run: julia -e 'using BenchmarkCI; BenchmarkCI.judge(baseline = "origin/main")'
+      - name: Post results
+        #  displayjudgement will post in CI output, postjudge should post to PR thread, but might fail
+        run: julia -e 'using BenchmarkCI; BenchmarkCI.displayjudgement(); BenchmarkCI.postjudge()'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      # Uncomment this if you want the benchmarks to be pushed to the repo
+      #- name: Push results
+      #  run: julia -e "using BenchmarkCI; BenchmarkCI.pushresult()"
+      #  env:
+      #    GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      #    SSH_KEY: ${{ secrets.DOCUMENTER_KEY }}
