@@ -3,7 +3,7 @@ using Polynomials4ML, Polynomials4ML.Testing
 using Polynomials4ML: index_y, rand_sphere
 using Polynomials4ML: evaluate, evaluate_d, evaluate_ed 
 using Polynomials4ML.Testing: print_tf, println_slim 
-# using ACEbase.Testing: fdtest
+using ACEbase.Testing: fdtest
 using HyperDualNumbers: Hyper
 
 
@@ -160,49 +160,28 @@ println_slim(@test dY1 ≈ dY2)
 # println_slim(@test dY1 ≈ dY2)
 # println_slim(@test ΔY1 ≈ ΔY2)
 
-# using Zygote
-# @info("Test rrule")
-# using LinearAlgebra: dot 
-# rSH = SCYlmBasis(10)
+using Zygote
+@info("Test rrule")
+using LinearAlgebra: dot 
+rSH = SCYlmBasis(10)
 
-# for ntest = 1:30
-#     local X
-#     local Y
-#     local Rnl
-#     local u
+for ntest = 1:30
+    local X
+    local Y
+    local Rnl
+    local u
     
-#     X = [ rand_sphere() for i = 1:21 ]
-#     Y = [ rand_sphere() for i = 1:21 ]
-#     _x(t) = X + t * Y
-#     A = evaluate(rSH, X)
-#     u = randn(size(A))
-#     F(t) = dot(u, evaluate(rSH, _x(t)))
-#     dF(t) = begin
-#         val, pb = Zygote.pullback(rSH, _x(t)) # TODO: write a pullback??
-#         ∂BB = pb(u)[1] # pb(u)[1] returns NoTangent() for basis argument
-#         return sum( dot(∂BB[i], Y[i]) for i = 1:length(Y) )
-#     end
-#     print_tf(@test fdtest(F, dF, 0.0; verbose = false))
-# end
-# println()
-
-# ## Debugging code
-# X = [ rand_sphere() for i = 1:21 ]
-# Y = [ rand_sphere() for i = 1:21 ]
-# _x(t) = X + t * Y
-# A = evaluate(rSH, X)
-# u = randn(size(A))
-# F(t) = dot(u, evaluate(rSH, _x(t)))
-# t = 1
-# val, pb = Zygote.pullback(rSH, _x(t))
-# pb
-# ∂BB = pb(A)[1]
-
-# dF(t) = begin
-#       val, pb = Zygote.pullback(rSH, _x(t))
-#       ∂BB = pb(u)[1] # pb(u)[1] returns NoTangent() for basis argument
-#       return sum( dot(∂BB[i], Y[i]) for i = 1:length(Y) )
-#    end
-# fdtest(F, dF, 0.0; verbose = false)
-
-# print_tf(@test fdtest(F, dF, 0.0; verbose = false))
+    X = [ rand_sphere() for i = 1:21 ]
+    Y = [ rand_sphere() for i = 1:21 ]
+    _x(t) = X + t * Y
+    A = evaluate(rSH, X)
+    u = randn(size(A))
+    F(t) = dot(u, evaluate(rSH, _x(t)))
+    dF(t) = begin
+        val, pb = Zygote.pullback(rSH, _x(t)) # TODO: write a pullback??
+        ∂BB = pb(u)[1] # pb(u)[1] returns NoTangent() for basis argument
+        return sum( dot(∂BB[i], Y[i]) for i = 1:length(Y) )
+    end
+    print_tf(@test fdtest(F, dF, 0.0; verbose = false))
+end
+println()

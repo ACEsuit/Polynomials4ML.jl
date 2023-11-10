@@ -30,11 +30,8 @@ Base.show(io::IO, basis::SCYlmBasis{L, normalisation, static, T}) where {L, norm
 # ---------------------- Interfaces
 
 
-evaluate!(Y::AbstractArray, basis::SCYlmBasis, X::SVector{3}) = scYlm!(Y,compute(basis.basis,X))
-
-evaluate_ed!(Y::AbstractArray, dY::AbstractArray, basis::SCYlmBasis, X::SVector{3}) = scYlm_ed!(Y,dY,compute_with_gradients(basis.basis,X)[1],compute_with_gradients(basis.basis,X)[2])
-
-scYlm!(Y,val) = Y .= val
+evaluate!(Y::AbstractArray, basis::SCYlmBasis, X::SVector{3}) = [Y[i] = compute(basis.basis,X)[i] for i = 1:length(Y)] # scYlm!(Y,compute(basis.basis,X))
+evaluate_ed!(Y::AbstractArray, dY::AbstractArray, basis::SCYlmBasis, X::SVector{3}) = scYlm_ed!(Y,dY,compute_with_gradients(basis.basis,X)...)
 
 function scYlm_ed!(Y,dY,val,dval)
     Y .= val
@@ -45,5 +42,19 @@ function scYlm_ed!(Y,dY,val,dval)
 end
 
 evaluate!(Y::AbstractArray, basis::SCYlmBasis, X::AbstractVector{<: SVector{3}}) = compute!(Y,basis.basis,X)
-
 evaluate_ed!(Y::AbstractArray, dY::AbstractArray, basis::SCYlmBasis, X::AbstractVector{<: SVector{3}}) = compute_with_gradients!(Y,dY,basis.basis,X)
+
+# rrule
+function ChainRulesCore.rrule(::typeof(evaluate), basis::SCYlmBasis, X)
+	A, dX = evaluate_ed(basis, X)
+	function pb(∂A)
+		@assert size(∂A) == (length(X), length(basis))
+		T∂X = promote_type(eltype(∂A), eltype(dX))
+		∂X = similar(X, SVector{3, T∂X})
+		for i = 1:length(X)
+            ∂X[i] = sum([∂A[i,j] * dX[i,j] for j = 1:length(dX[i,:])])
+        end
+		return NoTangent(), NoTangent(), ∂X
+	end
+	return A, pb
+end
