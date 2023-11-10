@@ -42,6 +42,9 @@ makedocs(;
                 "ace.md", ], 
         "Docstrings" => "docstrings.md",
         "Experimental" => "experimental.md",
+        "Developter Documentation" => [
+            "benchmarking.jl",
+        ],
     ],
 )
 
