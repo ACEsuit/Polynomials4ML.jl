@@ -43,7 +43,7 @@ makedocs(;
         "Docstrings" => "docstrings.md",
         "Experimental" => "experimental.md",
         "Developter Documentation" => [
-            "benchmarking.jl",
+            "benchmarking.md",
         ],
     ],
 )
