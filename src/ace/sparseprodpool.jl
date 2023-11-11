@@ -323,11 +323,13 @@ function _pb_pb_evaluate(basis::PooledSparseProduct{NB}, ∂2,
    @assert BB isa NTuple{NB,  <: AbstractMatrix}
    @assert ∂A isa AbstractVector
 
+   T = promote_type(eltype.(∂2)..., eltype.(BB)..., eltype(∂A))
+
    nX = size(BB[1], 1)
    @assert all(nX == size(BB[i], 1) for i = 1:NB)
 
-   ∂2_∂A = zeros(length(∂A))
-   ∂2_BB = ntuple(i -> zeros(size(BB[i])...), NB)
+   ∂2_∂A = zeros(T, length(∂A))
+   ∂2_BB = ntuple(i -> zeros(T, size(BB[i])...), NB)
 
    for (iA, ϕ) in enumerate(basis.spec)
       @simd ivdep for j = 1:nX 
@@ -357,10 +359,11 @@ function _pb_pb_evaluate(basis::PooledSparseProduct{1}, ∂2,
    @assert BB isa Tuple{<: AbstractMatrix}
    @assert ∂A isa AbstractVector
    
-   nX = size(BB[1], 1)
+   T = promote_type(eltype.(∂2)..., eltype.(BB)..., eltype(∂A))
 
-   ∂2_∂A = zeros(length(∂A))
-   ∂2_BB = (zeros(size(BB[1])...), )
+   nX = size(BB[1], 1)
+   ∂2_∂A = zeros(T, length(∂A))
+   ∂2_BB = (zeros(T, size(BB[1])...), )
    
    for (iA, ϕ) in enumerate(basis.spec)
       @simd ivdep for j = 1:nX 
@@ -383,10 +386,12 @@ function _pb_pb_evaluate(basis::PooledSparseProduct{2}, ∂2,
    @assert BB isa Tuple{<: AbstractMatrix, <: AbstractMatrix}
    @assert ∂A isa AbstractVector
    
+   T = promote_type(eltype.(∂2)..., eltype.(BB)..., eltype(∂A))
+
    nX = size(BB[1], 1)
 
-   ∂2_∂A = zeros(length(∂A))
-   ∂2_BB = ntuple(i -> zeros(size(BB[i])...), 2)
+   ∂2_∂A = zeros(T, length(∂A))
+   ∂2_BB = ntuple(i -> zeros(T, size(BB[i])...), 2)
    
    for (iA, ϕ) in enumerate(basis.spec)
       @simd ivdep for j = 1:nX 
@@ -444,6 +449,7 @@ end
 
 # --------------------- connect with ChainRules 
 # todo ... 
+using ReverseDiff
 
 import ChainRulesCore: rrule, NoTangent
 
@@ -458,18 +464,34 @@ function rrule(::typeof(evaluate), basis::PooledSparseProduct{NB}, BB::TupMat) w
    return A, pb 
 end
 
-function rrule(::typeof(_pullback_evaluate), Δ, basis::PooledSparseProduct, BB)
-   ∂BB = _pullback_evaluate(Δ, basis, BB)
+# function rrule(::typeof(_pullback_evaluate), Δ, basis::PooledSparseProduct, BB)
+#    ∂BB = _pullback_evaluate(Δ, basis, BB)
 
+#    function pb(Δ2)
+#       ∂2_Δ, ∂2_BB = _pb_pb_evaluate(basis, Δ2, Δ, BB)
+#       return NoTangent(), ∂2_Δ, NoTangent(), ∂2_BB
+#    end
+#    return ∂BB, pb
+# end
+
+import ReverseDiff: track, deriv
+using ReverseDiff: @grad, AbstractInstruction
+
+track(output_value::TupMat, tp::Vector{AbstractInstruction}) = ReverseDiff.track.(output_value, Ref(tp))
+deriv(output_value::TupMat) = ReverseDiff.deriv.(output_value)
+
+_pullback_evaluate(Δ::AbstractArray{T}, basis::PooledSparseProduct, BB::TupMat) where {T <: ReverseDiff.TrackedReal} = 
+            track(_pullback_evaluate, Δ, basis, BB)
+
+@grad function _pullback_evaluate(Δ::AbstractArray{T}, basis::PooledSparseProduct, BB::TupMat) where {T <: ReverseDiff.TrackedReal}
+   val_Δ = ReverseDiff.value.(Δ)
+   ∂BB = _pullback_evaluate(val_Δ, basis, BB) 
    function pb(Δ2)
       ∂2_Δ, ∂2_BB = _pb_pb_evaluate(basis, Δ2, Δ, BB)
-      return NoTangent(), ∂2_Δ, NoTangent(), ∂2_BB
+      return ∂2_Δ, NoTangent(), ∂2_BB
    end
-
    return ∂BB, pb
 end
-
-
 
 
 # --------------------- connect with Lux 
