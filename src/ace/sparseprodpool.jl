@@ -260,6 +260,7 @@ function _pullback_evaluate(∂A, basis::PooledSparseProduct{NB}, BB::TupMat) wh
    return ∂BB
 end
 
+using Base.Cartesian: @nexprs 
 
 function _pullback_evaluate!(∂BB, ∂A, basis::PooledSparseProduct{NB}, BB::TupMat) where {NB}
    nX = size(BB[1], 1)
@@ -301,13 +302,48 @@ function _pullback_evaluate!(∂BB, ∂A, basis::PooledSparseProduct{2}, BB::Tup
    
    @inbounds for (iA, ϕ) in enumerate(basis.spec)
       ∂A_iA = ∂A[iA]
+      ϕ1 = ϕ[1]
+      ϕ2 = ϕ[2]
       @simd ivdep for j = 1:nX 
-         ϕ1 = ϕ[1]
-         ϕ2 = ϕ[2]
          b1 = BB[1][j, ϕ1]
          b2 = BB[2][j, ϕ2]
          ∂BB[1][j, ϕ1] = muladd(∂A_iA, b2, ∂BB[1][j, ϕ1])
          ∂BB[2][j, ϕ2] = muladd(∂A_iA, b1, ∂BB[2][j, ϕ2])
+      end 
+   end
+   return nothing 
+end
+
+
+function _pullback_evaluate!(∂BB, ∂A, basis::PooledSparseProduct{3}, BB::TupMat; 
+                              sizecheck = true)
+   nX = size(BB[1], 1)
+   NB = 3 
+
+   if sizecheck 
+      @assert all(nX <= size(BB[i], 1) for i = 1:NB)
+      @assert all(nX <= size(∂BB[i], 1) for i = 1:NB)
+      @assert all(size(∂BB[i], 2) >= size(BB[i], 2) for i = 1:NB)
+      @assert length(∂A) == length(basis)
+      @assert length(BB) == NB 
+      @assert length(∂BB) == NB 
+   end
+
+   B1 = BB[1]; B2 = BB[2]; B3 = BB[3]
+   ∂B1 = ∂BB[1]; ∂B2 = ∂BB[2]; ∂B3 = ∂BB[3]
+   
+   @inbounds for (iA, ϕ) in enumerate(basis.spec)
+      ∂A_iA = ∂A[iA]
+      ϕ1 = ϕ[1]
+      ϕ2 = ϕ[2]
+      ϕ3 = ϕ[3]
+      @simd ivdep for j = 1:nX 
+         b1 = B1[j, ϕ1]
+         b2 = B2[j, ϕ2]
+         b3 = B3[j, ϕ3]
+         ∂B1[j, ϕ1] = muladd(∂A_iA, b2*b3, ∂B1[j, ϕ1])
+         ∂B2[j, ϕ2] = muladd(∂A_iA, b1*b3, ∂B2[j, ϕ2])
+         ∂B3[j, ϕ3] = muladd(∂A_iA, b1*b2, ∂B3[j, ϕ3])
       end 
    end
    return nothing 
