@@ -50,7 +50,7 @@ show(j.benchmarkgroup)
 
 ## CI Benchmarks
 
-Benchmarks can be run automatically on PR's by adding label "Run Benchmarks" to the PR.
+Benchmarks can be run automatically on PR's by adding label "run benchmark" to the PR.
 
 ## Adding more benchmarks
 
