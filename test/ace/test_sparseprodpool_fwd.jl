@@ -20,12 +20,12 @@ function _rand_input1(basis::PooledSparseProduct{ORDER};
    return BB, ΔBB
 end
 
-function fwddiff1_pfwd(basis::PooledSparseProduct{3}, BB, ΔBB)
+function fwddiff1_pfwd(basis::PooledSparseProduct{NB}, BB, ΔBB) where {NB}
    A1 = basis(BB)
-   ∂A1_1 = ForwardDiff.jacobian(B1 -> basis((B1, BB[2], BB[3])), BB[1])
-   ∂A1_2 = ForwardDiff.jacobian(B2 -> basis((BB[1], B2, BB[3])), BB[2])
-   ∂A1_3 = ForwardDiff.jacobian(B3 -> basis((BB[1], BB[2], B3)), BB[3])
-   ∂A1 = ∂A1_1 * ΔBB[1] + ∂A1_2 * ΔBB[2] + ∂A1_3 * ΔBB[3]
+   sub_i(t, ti, i) = ntuple(a -> a == i ? ti : t[a], length(t))
+   ∂A1_i = [  ForwardDiff.jacobian(B -> basis(sub_i(BB, B, i)), BB[i])
+              for i = 1:NB ]
+   ∂A1 = sum(∂A1_i[i] * ΔBB[i] for i = 1:NB)            
    return A1, ∂A1   
 end
 
@@ -72,8 +72,10 @@ function pfwd(basis::PooledSparseProduct{NB}, BB, ΔBB) where {NB}
    return A, ∂A
 end
 
-@time A1, ∂A1 = fwddiff_pfwd(basis, BB, ΔBB)
-@time A2, ∂A2 = pfwd(basis, BB, ΔBB)
-A2 ≈ A1
-∂A2 ≈ ∂A1
+##
+
+A1, ∂A1 = fwddiff_pfwd(basis, BB, ΔBB)
+A2, ∂A2 = pfwd(basis, BB, ΔBB)
+@show A2 ≈ A1
+@show ∂A2 ≈ ∂A1
 
