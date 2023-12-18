@@ -204,3 +204,27 @@ println_slim(@test l_AA2 ≈ basis2(bA))
 
 println()
 ##
+
+
+@info("Testing basic pushforward")
+
+using ForwardDiff
+
+for ntest = 1:10 
+   local M, nX, spec, A, basis, AA1, AA2 
+   M = rand(4:7)
+   BO = rand(2:5)
+   nX = rand(6:12)
+   spec = generate_SO2_spec(BO, 2*M)
+   A = randn(Float64, 2*M+1)
+   ΔA = randn(length(A), nX)
+
+   basis = SparseSymmProd(spec)
+   AA1 = basis(A)
+   ∂AA1 = ForwardDiff.jacobian(basis, A) * ΔA
+   AA2, ∂AA2 = P4ML.pfwd_evaluate(basis, A, ΔA)
+   print_tf( @test AA1 ≈ AA2 )
+   print_tf( @test ∂AA1 ≈ ∂AA2 )
+end 
+
+##
