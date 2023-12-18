@@ -296,15 +296,14 @@ end
 @generated function pfwd_evaluate!(AA, ∂AA, basis::SparseSymmProd{NB}, A, ΔA) where {NB}
    quote 
       if basis.hasconst; error("no implementation with hasconst"); end 
-      nAA = length(basis)
-      nX = size(ΔA, 2)
-      Base.Cartesian.@nexprs $NB N -> _pfwd_AA_N!(AA, ∂AA, A, ΔA, nX, basis.ranges[N], basis.specs[N])
+      Base.Cartesian.@nexprs $NB N -> _pfwd_AA_N!(AA, ∂AA, A, ΔA, basis.ranges[N], basis.specs[N])
       return AA, ∂AA
    end
 end
 
-function _pfwd_AA_N!(AA, ∂AA, A, ΔA, nX, 
+function _pfwd_AA_N!(AA, ∂AA, A, ΔA, 
                      rg_N, spec_N::Vector{NTuple{N, Int}}) where {N}
+   nX = size(ΔA, 2)                     
    for (i, bb) in zip(rg_N, spec_N)
       aa = ntuple(t -> A[bb[t]], N)
       ∏aa, ∇∏aa = Polynomials4ML._static_prod_ed(aa)

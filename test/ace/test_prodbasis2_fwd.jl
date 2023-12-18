@@ -24,13 +24,18 @@ AA = basis(A)
 ## 
 
 
-
 function pfwd(basis::SparseSymmProd, A, ΔA)
-   @assert !basis.hasconst
    nAA = length(basis)
    nX = size(ΔA, 2)
    AA = zeros(eltype(A), nAA)
    ∂AA = zeros(eltype(ΔA), nAA, nX)
+   return pfwd!(AA, ∂AA, basis, A, ΔA)
+end
+
+function pfwd!(AA, ∂AA, basis::SparseSymmProd, A, ΔA)
+   @assert !basis.hasconst
+   nAA = length(basis)
+   nX = size(ΔA, 2)
 
    function _pfwd_in(::Val{N}, rg_N, spec_N::Vector{NTuple{N, Int}}) where {N}
       for (i, bb) in zip(rg_N, spec_N)
@@ -52,8 +57,23 @@ end
 @time AA2, ∂AA2 = pfwd(basis, A, ΔA)
 @time AA3, ∂AA3 = P4ML.pfwd_evaluate(basis, A, ΔA)
 
-AA ≈ AA2
-AA ≈ AA3
-∂AA1 ≈ ∂AA2
-∂AA1 ≈ ∂AA3
+@show AA ≈ AA2
+@show AA ≈ AA3
+@show ∂AA1 ≈ ∂AA2
+@show ∂AA1 ≈ ∂AA3
 
+## 
+using ObjectPools: unwrap
+@btime Polynomials4ML.pfwd_evaluate!( $(unwrap(AA3)), $(unwrap(∂AA3)), 
+                            $basis, $A, $ΔA)
+
+@btime pfwd!( $(unwrap(AA3)), $(unwrap(∂AA3)), 
+                            $basis, $A, $ΔA)
+
+## 
+
+@profview let AA3 = unwrap(AA3), ∂AA3 = unwrap(∂AA3), basis = basis, A = A, ΔA = ΔA 
+   for nrun = 1:1_000_000 
+      Polynomials4ML.pfwd_evaluate!(AA3, ∂AA3, basis, A, ΔA)
+   end
+end
