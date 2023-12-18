@@ -50,6 +50,10 @@ end
 
 @time ∂AA1 = ForwardDiff.jacobian(basis, A) * ΔA
 @time AA2, ∂AA2 = pfwd(basis, A, ΔA)
+@time AA3, ∂AA3 = P4ML.pfwd_evaluate(basis, A, ΔA)
 
-norm(∂AA1 - ∂AA2, Inf)
+AA ≈ AA2
+AA ≈ AA3
+∂AA1 ≈ ∂AA2
+∂AA1 ≈ ∂AA3
 
