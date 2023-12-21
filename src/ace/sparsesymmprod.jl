@@ -285,7 +285,7 @@ function pfwd_evaluate(basis::SparseSymmProd,
    nAA = length(basis)                       
    TAA = eltype(A)
    AA = acquire!(basis.pool, :AA, (nAA,), TAA)
-   T∂AA = promote_type(TAA, eltype(ΔA))
+   T∂AA = _my_promote_type(TAA, eltype(ΔA))
    ∂AA = acquire!(basis.pool, :∂AA, (nAA, size(ΔA, 2)), T∂AA)
    fill!(∂AA, zero(T∂AA))
    pfwd_evaluate!(unwrap(AA), unwrap(∂AA), basis, A, ΔA)

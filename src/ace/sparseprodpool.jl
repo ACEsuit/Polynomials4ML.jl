@@ -491,6 +491,13 @@ end
 #       A is size (nA,)
 #      ∂A is size (nA, nX)
 
+_my_promote_type(args...) = promote_type(args...)
+_my_promote_type(T1::Type{<: Number}, T2::Type{SVector{N, S}}, args...
+                  ) where {N, S} = 
+      promote_type(SVector{N, T1}, T2, args...)
+
+
+
 function pfwd_evaluate(basis::PooledSparseProduct, BB, ΔBB)
    @assert length(size(BB[1])) == 2
    @assert length(size(ΔBB[1])) == 2
@@ -503,7 +510,7 @@ function pfwd_evaluate(basis::PooledSparseProduct, BB, ΔBB)
    A = acquire!(basis.pool, :A, (nA,), TA)
    fill!(A, zero(TA))
    
-   T∂A = promote_type(TA, eltype.(ΔBB)...)
+   T∂A = _my_promote_type(TA, eltype.(ΔBB)...)
    ∂A = acquire!(basis.pool, :∂A_pfwd, (nA, nX), T∂A)
    fill!(∂A, zero(T∂A))
 
