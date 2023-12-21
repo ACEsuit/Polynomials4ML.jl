@@ -478,6 +478,63 @@ end
 # end
 
 
+# --------------------- Pushforwards 
+
+# This implementation of the pushforward doesn't yet do batching 
+# this means that the output is a single vector A, the inputs 
+#        BB[i] are nX x nBi -> with the nX pooled 
+# It is ASSUMED that ∂BB[i][j, :] / ∂X[j'] = 0 if j ≠ j'
+# Therefore    ΔBB[i] are also nX x nBi
+# This is a simplification that may have to be revisited at some point. 
+#
+# The output will be  A, ∂A   where 
+#       A is size (nA,)
+#      ∂A is size (nA, nX)
+
+_my_promote_type(args...) = promote_type(args...)
+_my_promote_type(T1::Type{<: Number}, T2::Type{SVector{N, S}}, args...
+                  ) where {N, S} = 
+      promote_type(SVector{N, T1}, T2, args...)
+
+
+
+function pfwd_evaluate(basis::PooledSparseProduct, BB, ΔBB)
+   @assert length(size(BB[1])) == 2
+   @assert length(size(ΔBB[1])) == 2
+   @assert all(size(BB[t]) == size(ΔBB[t]) for t = 1:length(BB))
+   
+   nX = size(ΔBB[1], 1)
+   nA = length(basis)
+   
+   TA = promote_type(eltype.(BB)...)
+   A = acquire!(basis.pool, :A, (nA,), TA)
+   fill!(A, zero(TA))
+   
+   T∂A = _my_promote_type(TA, eltype.(ΔBB)...)
+   ∂A = acquire!(basis.pool, :∂A_pfwd, (nA, nX), T∂A)
+   fill!(∂A, zero(T∂A))
+
+   return pfwd_evaluate!(A, ∂A, basis, BB, ΔBB)
+end   
+
+function pfwd_evaluate!(A, ∂A, basis::PooledSparseProduct{NB}, BB, ΔBB) where {NB}
+   nX = size(BB[1], 1)
+   for (i, ϕ) in enumerate(basis.spec)
+      for j = 1:nX 
+         bb = ntuple(t -> BB[t][j, ϕ[t]], NB)
+         Δbb = ntuple(t -> ΔBB[t][j, ϕ[t]], NB)
+         ∏bb, ∇∏bb = Polynomials4ML._static_prod_ed(bb)
+         A[i] += prod(bb)
+         @inbounds for t = 1:NB
+            ∂A[i, j] += ∇∏bb[t] * Δbb[t]
+         end
+      end
+   end
+   return A, ∂A
+end
+
+
+
 # --------------------- connect with ChainRules 
 # todo ... 
 

@@ -277,6 +277,44 @@ function _pb_pb_evaluate_AA!(spec::Vector{NTuple{N, Int}},
 end
 
 
+# -------------- Pushforwards / frules  
+
+function pfwd_evaluate(basis::SparseSymmProd, 
+                       A::AbstractVector{<: Number}, 
+                       ΔA::AbstractMatrix)
+   nAA = length(basis)                       
+   TAA = eltype(A)
+   AA = acquire!(basis.pool, :AA, (nAA,), TAA)
+   T∂AA = _my_promote_type(TAA, eltype(ΔA))
+   ∂AA = acquire!(basis.pool, :∂AA, (nAA, size(ΔA, 2)), T∂AA)
+   fill!(∂AA, zero(T∂AA))
+   pfwd_evaluate!(unwrap(AA), unwrap(∂AA), basis, A, ΔA)
+   return AA, ∂AA
+end
+
+
+@generated function pfwd_evaluate!(AA, ∂AA, basis::SparseSymmProd{NB}, A, ΔA) where {NB}
+   quote 
+      if basis.hasconst; error("no implementation with hasconst"); end 
+      Base.Cartesian.@nexprs $NB N -> _pfwd_AA_N!(AA, ∂AA, A, ΔA, basis.ranges[N], basis.specs[N])
+      return AA, ∂AA
+   end
+end
+
+function _pfwd_AA_N!(AA, ∂AA, A, ΔA, 
+                     rg_N, spec_N::Vector{NTuple{N, Int}}) where {N}
+   nX = size(ΔA, 2)                     
+   for (i, bb) in zip(rg_N, spec_N)
+      aa = ntuple(t -> A[bb[t]], N)
+      ∏aa, ∇∏aa = Polynomials4ML._static_prod_ed(aa)
+      AA[i] = ∏aa
+      for t = 1:N, j = 1:nX
+         ∂AA[i, j] += ∇∏aa[t] * ΔA[bb[t], j]
+      end
+   end
+end 
+
+
 # -------------- Lux integration 
 # it needs an extra lux interface reason as in the case of the `basis` 
 # should it not be enough to just overload valtype? 
