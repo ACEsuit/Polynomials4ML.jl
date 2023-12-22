@@ -66,7 +66,7 @@ function evaluate(l::PolyLuxLayer, X, ps, st)
    out = acquire!(st.pool, _outsym(X), _out_size(l.basis, X), _valtype(l.basis, X))
    evaluate!(out, l.basis, X, ps)
    if l.release_input
-      release!(X)
+      release!.(X)
    end
    return out, st
 end

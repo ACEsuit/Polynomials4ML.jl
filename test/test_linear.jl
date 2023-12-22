@@ -68,7 +68,8 @@ for (feat, in_size, out_fun) in zip(feature_arr, in_size_arr, out_fun_arr)
          print_tf(@test fdtest(F, dF, 0.0; verbose=false))
       end
    end
-
+   println()
+   
    @info("Testing evaluate")
    for ntest = 1:30
       x = randn(in_size)
