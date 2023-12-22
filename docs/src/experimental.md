@@ -28,3 +28,12 @@ We implement custom pullbacks for most bases. These  take the form
 pb_evaluate!(∂X, basis, ∂B, X, args...)
 ```
 and analogously for the `evaluate_***` variants. The `args...` can differ between different basis sets e.g. may rely on intermediate results in the evaluation of the basis. The `rrule` implementations are wrappers for these.
+
+## Explicit Forward Mode Differentiation
+
+We have started to implement custom pushforwards. These take the form
+```julia
+B, ∂B = pfwd_evaluate(basis, X, ΔX)
+pfwd_evaluate!(B, ∂B, basis, X, ΔX)
+```
+and analogously for other functions. There are currently no `frule` wrappers, but we plan to provide these in due course. 
