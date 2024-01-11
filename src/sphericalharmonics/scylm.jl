@@ -29,16 +29,20 @@ Base.show(io::IO, basis::SCYlmBasis{L, normalisation, static, T}) where {L, norm
 
 # ---------------------- Interfaces
 
+function evaluate!(Y::AbstractArray, basis::SCYlmBasis, X::SVector{3})
+	Y_temp = reshape(Y, 1, :)
+	compute!(Y_temp, basis.basis, SA[X,])
+	# release!(Y_temp)
+	return Y
+end
 
-evaluate!(Y::AbstractArray, basis::SCYlmBasis, X::SVector{3}) = [Y[i] = compute(basis.basis,X)[i] for i = 1:length(Y)] # scYlm!(Y,compute(basis.basis,X))
-evaluate_ed!(Y::AbstractArray, dY::AbstractArray, basis::SCYlmBasis, X::SVector{3}) = scYlm_ed!(Y,dY,compute_with_gradients(basis.basis,X)...)
-
-function scYlm_ed!(Y,dY,val,dval)
-    Y .= val
-    for i = 1:length(dY)
-        dY[i] = dval[i]
-    end
-    return Y, dY
+function evaluate_ed!(Y::AbstractArray, dY::AbstractArray, basis::SCYlmBasis, X::SVector{3})
+	Y_temp = reshape(Y, 1, :)
+	dY_temp = reshape(dY, 1, :)
+	compute_with_gradients!(Y_temp, dY_temp, basis.basis, SA[X,])
+	# release!(Y_temp)
+	# release!(dY_temp)
+	return Y, dY
 end
 
 evaluate!(Y::AbstractArray, basis::SCYlmBasis, X::AbstractVector{<: SVector{3}}) = compute!(Y,basis.basis,X)
