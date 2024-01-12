@@ -1,4 +1,7 @@
-using SpheriCart: compute, compute_with_gradients, compute!, compute_with_gradients!, SphericalHarmonics
+using SpheriCart: compute, compute_with_gradients, 
+				      compute!, compute_with_gradients!, 
+						SphericalHarmonics
+
 export SCYlmBasis
 
 struct SCYlmBasis{L, normalisation, static, T} <: SVecPoly4MLBasis
@@ -6,11 +9,14 @@ struct SCYlmBasis{L, normalisation, static, T} <: SVecPoly4MLBasis
 	@reqfields
 end
 
-maxL(basis::SCYlmBasis{L, normalisation, static, T}) where {L, normalisation, static, T} = L
+maxL(basis::SCYlmBasis{L}) where {L} = L
+
 Base.length(basis::SCYlmBasis) = sizeY(maxL(basis))
 
 SCYlmBasis(maxL::Integer, T::Type=Float64) = 
-      SCYlmBasis(SphericalHarmonics(maxL; normalisation = :L2, static = maxL <= 15, T = T))
+      SCYlmBasis( SphericalHarmonics(maxL; normalisation = :L2, 
+											          static = maxL <= 15, 
+														 T = T))
 
 SCYlmBasis(scsh::SphericalHarmonics) = 
       SCYlmBasis(scsh, _make_reqfields()...)
@@ -18,13 +24,15 @@ SCYlmBasis(scsh::SphericalHarmonics) =
 natural_indices(basis::SCYlmBasis) = 
       [ NamedTuple{(:l, :m)}(idx2lm(i)) for i = 1:length(basis) ]
 
-_valtype(sh::SCYlmBasis{L, normalisation, static, T}, ::Type{<: StaticVector{3, S}}) where {L, normalisation, static, T <: Real, S <: Real} = 
+_valtype(sh::SCYlmBasis{L, NRM, STATIC, T}, 
+		   ::Type{<: StaticVector{3, S}}) where {L, NRM, STATIC, T <: Real, S <: Real} = 
 		promote_type(T, S)
 
-_valtype(sh::SCYlmBasis{L, normalisation, static, T}, ::Type{<: StaticVector{3, Hyper{S}}}) where {L, normalisation, static, T <: Real, S <: Real} = 
+_valtype(sh::SCYlmBasis{L, NRM, STATIC, T}, 
+		   ::Type{<: StaticVector{3, Hyper{S}}}) where {L, NRM, STATIC, T <: Real, S <: Real} = 
 		promote_type(T, Hyper{S})
 
-Base.show(io::IO, basis::SCYlmBasis{L, normalisation, static, T}) where {L, normalisation, static, T} = 
+Base.show(io::IO, basis::SCYlmBasis{L, NRM, STATIC, T}) where {L, NRM, STATIC, T} = 
       print(io, "SCYlmBasis(L=$L)")	
 
 # ---------------------- Interfaces
@@ -32,7 +40,6 @@ Base.show(io::IO, basis::SCYlmBasis{L, normalisation, static, T}) where {L, norm
 function evaluate!(Y::AbstractArray, basis::SCYlmBasis, X::SVector{3})
 	Y_temp = reshape(Y, 1, :)
 	compute!(Y_temp, basis.basis, SA[X,])
-	# release!(Y_temp)
 	return Y
 end
 
@@ -40,13 +47,16 @@ function evaluate_ed!(Y::AbstractArray, dY::AbstractArray, basis::SCYlmBasis, X:
 	Y_temp = reshape(Y, 1, :)
 	dY_temp = reshape(dY, 1, :)
 	compute_with_gradients!(Y_temp, dY_temp, basis.basis, SA[X,])
-	# release!(Y_temp)
-	# release!(dY_temp)
 	return Y, dY
 end
 
-evaluate!(Y::AbstractArray, basis::SCYlmBasis, X::AbstractVector{<: SVector{3}}) = compute!(Y,basis.basis,X)
-evaluate_ed!(Y::AbstractArray, dY::AbstractArray, basis::SCYlmBasis, X::AbstractVector{<: SVector{3}}) = compute_with_gradients!(Y,dY,basis.basis,X)
+evaluate!(Y::AbstractArray, 
+		    basis::SCYlmBasis, X::AbstractVector{<: SVector{3}}) = 
+	compute!(Y, basis.basis, X)
+
+evaluate_ed!(Y::AbstractArray, dY::AbstractArray, 
+			    basis::SCYlmBasis, X::AbstractVector{<: SVector{3}}) = 
+	compute_with_gradients!(Y,dY,basis.basis,X)
 
 # rrule
 function ChainRulesCore.rrule(::typeof(evaluate), basis::SCYlmBasis, X)
