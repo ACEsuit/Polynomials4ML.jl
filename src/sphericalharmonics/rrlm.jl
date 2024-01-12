@@ -13,7 +13,7 @@ Sₗ⁻ᵐ = (-1)ᵐ√(8π/2l+1) rˡIm(P̄ₗᵐ(cosθ)/√2 exp(imφ))
 """
 struct RRlmBasis{T} <: SVecPoly4MLBasis
     alp::ALPolynomials{T}
-	 @reqfields
+    @reqfields
 end
 
 RRlmBasis(maxL::Integer, T::Type=Float64) = 
@@ -174,7 +174,7 @@ function rRlm!(Y::AbstractMatrix, L, S::AbstractVector{SphericalCoords{T}}, P::A
         end
  
         for m in 1:L
-            @avx for i = 1:nX
+            @simd ivdep for i = 1:nX
                 cmi = cosmφ[i]
                 smi = sinmφ[i]
                 cosmφ[i] = cmi * cosφ[i] - smi * sinφ[i]
@@ -186,7 +186,7 @@ function rRlm!(Y::AbstractMatrix, L, S::AbstractVector{SphericalCoords{T}}, P::A
                 i_ylm⁺ = index_y(l, m)
                 i_ylm⁻ = index_y(l, -m)
 
-                @avx for i = 1:nX
+                @simd ivdep for i = 1:nX
                     p = P[i, i_plm] * rL[i,l+1] * aL[l+1]
 					Y[i, i_ylm⁻] = -p * sinmφ[i]
                     Y[i, i_ylm⁺] =  p * cosmφ[i]
