@@ -1,7 +1,7 @@
 name = "Polynomials4ML"
 uuid = "03c4bcba-a943-47e9-bfa1-b1661fc2974f"
 authors = ["Christoph Ortner <christophortner@gmail.com> and contributors"]
-version = "0.2.9"
+version = "0.2.10"
 
 [deps]
 ACEbase = "14bae519-eb20-449c-a949-9c58ed33163e"
@@ -46,9 +46,10 @@ StrideArrays = "0.1.25"
 julia = "1.8.0, 1.9.0, 1.10.0"
 SpheriCart = "0.0.3"
 BlockDiagonals = "0.1.42" 
-Printf = "1.8" 
-Random = "1.8"
 SparseArrays = "1.8" 
+LinearAlgebra = "1.8"
+Printf = "1.8"
+Random = "1.8" 
 Test = "1.8"
 
 [extras]
