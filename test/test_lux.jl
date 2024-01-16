@@ -15,7 +15,8 @@ test_bases = [ (chebyshev_basis(10), () -> rand()),
           (MonoBasis(10), ()-> rand()), 
           (legendre_basis(10), () -> rand()), 
           (CYlmBasis(5), () -> randn(SVector{3, Float64})), 
-          (RYlmBasis(5), () -> randn(SVector{3, Float64})) ]
+          (RYlmBasis(5), () -> randn(SVector{3, Float64})),
+          (SCYlmBasis(5), () -> randn(SVector{3, Float64})), ]
 
 for (basis, rnd) in test_bases 
    local B1, B2, x
