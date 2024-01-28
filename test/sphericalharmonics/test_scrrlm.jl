@@ -12,46 +12,20 @@ verbose = false
 
 @info("Testing consistency of Real and Complex SH; SpheriCart convention")
 
-# # SpheriCart R2C transformation
-# function ctran3(L)
-#    AA = zeros(ComplexF64, 2L+1, 2L+1)
-#    for i = 1:2L+1
-#        for j in [i, 2L+2-i]
-#            AA[i,j] = begin 
-#                if i == j == L+1
-#                    1
-#                elseif i > L+1 && j > L+1
-#                    (-1)^(i-L-1)/sqrt(2)
-#                elseif i < L+1 && j < L+1
-#                    im/sqrt(2)
-#                elseif i < L+1 && j > L+1
-#                    (-1)^(i-L)/sqrt(2)*im
-#                elseif i > L+1 && j < L+1
-#                    1/sqrt(2)
-#                end
-#            end
-#        end
-#    end
-#    return sparse(AA)
-# end
-
-# function test_r2c_y(L, cY, rY)
-#    Ts = BlockDiagonal([ ctran3(l)' for l = 0:L ]) |> sparse
-#    return cY ≈ Ts * rY
-# end
-
 ##
 
 _maxL = 20
 cSH = RRlmBasis(_maxL)
 rSH = SCRRlmBasis(_maxL)
 
+_R = rand_sphere()
+_scale = evaluate(cSH, _R) ./ evaluate(rSH, _R)
 for nsamples = 1:30
    local R 
    R = rand_sphere()
    cY = evaluate(cSH, R)
    rY = evaluate(rSH, R)
-   print_tf(@test cY ≈ rY)
+   print_tf(@test cY ./ rY ≈ _scale)
 end
 println()
 
