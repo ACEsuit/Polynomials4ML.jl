@@ -88,7 +88,13 @@ end
 function rrule(::typeof(LuxCore.apply), l::LinearLayer, x::AbstractMatrix, ps, st)
    val = l(x, ps, st)
    function pb(A)
-      return NoTangent(), NoTangent(), ps.W' * A[1], (W = A[1] * x',), NoTangent()
+      T = promote_type(eltype(x), eltype(A[1]), eltype(ps.W))
+      dA = acquire!(st.pool, :dbA, size(x), T); 
+      dW = acquire!(st.pool, :dbW, size(ps.W), T);
+      mul!(unwrap(dA), transpose(PtrArray(ps.W)), unwrap(A[1]))
+      mul!(unwrap(dW), unwrap(A[1]), unwrap(x)')
+      release!(A[1])
+      return NoTangent(), NoTangent(), dA, (W = dW,), NoTangent()
    end
    return val, pb
 end
@@ -96,7 +102,13 @@ end
 function rrule(::typeof(LuxCore.apply), l::LinearLayer{false}, x::AbstractMatrix, ps, st)
    val = l(x, ps, st)
    function pb(A)
-      return NoTangent(), NoTangent(), A[1] * ps.W, (W = transpose(PtrArray(A[1])) * unwrap(x),), NoTangent()
+      T = promote_type(eltype(x), eltype(A[1]), eltype(ps.W))
+      dA = acquire!(st.pool, :dbA, size(x), T);
+      dW = acquire!(st.pool, :dbW, size(ps.W), T);
+      mul!(unwrap(dA), unwrap(A[1]), PtrArray(ps.W))
+      mul!(unwrap(dW), unwrap(A[1])', unwrap(x))
+      release!(A[1])
+      return NoTangent(), NoTangent(), dA, (W = dW,), NoTangent()
    end
    return val, pb
 end
