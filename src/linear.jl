@@ -70,7 +70,13 @@ LuxCore.initialstates(rng::AbstractRNG, l::LinearLayer) = ( l.use_cache ?  (pool
 function rrule(::typeof(LuxCore.apply), l::LinearLayer, x::AbstractMatrix, ps, st)
    val = l(x, ps, st)
    function pb(A)
-      return NoTangent(), NoTangent(), ps.W' * A[1], (W = A[1] * x',), NoTangent()
+      T = promote_type(eltype(x), eltype(A[1]), eltype(ps.W))
+      dA = acquire!(st.pool, :dbA, size(x), T); 
+      dW = acquire!(st.pool, :dbW, size(ps.W), T);
+      mul!(dA, ps.W', A[1])
+      mul!(dW, A[1], x')
+      release!(A[1])
+      return NoTangent(), NoTangent(), dA, (W = dW,), NoTangent()
    end
    return val, pb
 end
@@ -78,7 +84,13 @@ end
 function rrule(::typeof(LuxCore.apply), l::LinearLayer{false}, x::AbstractMatrix, ps, st)
    val = l(x, ps, st)
    function pb(A)
-      return NoTangent(), NoTangent(), A[1] * ps.W, (W = A[1]' * x,), NoTangent()
+      T = promote_type(eltype(x), eltype(A[1]), eltype(ps.W))
+      dA = acquire!(st.pool, :dbA, size(x), T);
+      dW = acquire!(st.pool, :dbW, size(ps.W), T);
+      mul!(dA, A[1], ps.W)
+      mul!(dW, A[1]', x)
+      release!(A[1])
+      return NoTangent(), NoTangent(), dA, (W = dW,), NoTangent()
    end
    return val, pb
 end
