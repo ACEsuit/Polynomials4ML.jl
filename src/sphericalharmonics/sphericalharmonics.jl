@@ -61,7 +61,9 @@ include("rylm.jl")
 include("crlm.jl")
 include("rrlm.jl")
 
+# SpheriCart - https://github.com/lab-cosmo/sphericart
 include("scylm.jl")
+include("scrrlm.jl")
 
 const XlmBasis = Union{RYlmBasis, CYlmBasis, CRlmBasis, RRlmBasis}
 
