@@ -105,19 +105,19 @@ function _allocations_inner(basis, x; ed = true, ed2 = true)
       s = sum(P)
       if ed 
          P1, dP1 = @withalloc evaluate_ed!(basis, x)
-         s1 = s + sum(P1) + sum(dP1)
+         # s += s + sum(P1) + sum(dP1)
       end 
       if ed2 
          P2, dP2, ddP2 = @withalloc evaluate_ed2!(basis, x)
-         s2 = s1 + sum(P2) + sum(dP2) + sum(ddP2)
+         # s2 = s1 + sum(P2) + sum(dP2) + sum(ddP2)
       end
       nothing 
    end
-   return s2 
+   return s 
 end
 
 function test_withalloc(basis, x; allowed_allocs = 0, kwargs...) 
-   nalloc = @allocated ( _allocations_inner(basis, x) )
+   nalloc = @allocated ( _allocations_inner(basis, x; kwargs...) )
    P1 = basis(x) 
    @no_escape begin 
       P2 = @withalloc evaluate!(basis, x)

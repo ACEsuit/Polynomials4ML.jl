@@ -59,6 +59,8 @@ _gradtype(basis::AbstractPoly4MLBasis, BB::Tuple) =
 _alloc(basis::PooledSparseProduct, BB::TupVecMat) = 
       acquire!(basis.pool, :A, (length(basis), ), _valtype(basis, BB) )
 
+_out_size(basis::PooledSparseProduct, BB::TupVecMat) = 
+      length(basis)
 
 # _alloc_d(basis::AbstractPoly4MLBasis, BB::TupVecMat) = 
 #       acquire!(basis.pool, _outsym(BB), (length(basis), ), _gradtype(basis, BB) )
@@ -109,7 +111,7 @@ function evaluate!(A, basis::PooledSparseProduct{NB}, BB::TupVec) where {NB}
       b = ntuple(t -> BB[t][ϕ[t]], NB)
       @inbounds A[iA] += @fastmath prod(b) 
    end
-   return nothing 
+   return A 
 end
 
 
@@ -147,7 +149,7 @@ function evaluate!(A, basis::PooledSparseProduct{NB}, BB::TupMat,
       A[iA] = a
    end
 
-   return nothing
+   return A
 end
 
 

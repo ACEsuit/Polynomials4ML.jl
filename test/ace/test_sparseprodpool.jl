@@ -1,7 +1,8 @@
 
 using BenchmarkTools, Test, Polynomials4ML, ChainRulesCore
 using Polynomials4ML: PooledSparseProduct, evaluate, evaluate!
-using ACEbase.Testing: fdtest, println_slim, print_tf
+using ACEbase.Testing: fdtest, println_slim, print_tf, 
+                       test_withalloc
 
 test_evaluate(basis::PooledSparseProduct, BB::Tuple{Vararg{AbstractVector}}) =
    [prod(BB[j][basis.spec[i][j]] for j = 1:length(BB))
@@ -71,6 +72,16 @@ println()
 
 
 ##
+
+@info("    testing withalloc")
+basis = _generate_basis(; order=3)
+BB = _rand_input1(basis)
+bBB = _rand_input(basis)
+println_slim(@test test_withalloc(basis, BB; ed = false, ed2 = false) )
+println_slim(@test test_withalloc(basis, bBB; ed = false, ed2 = false) )
+
+##
+
 
 @info("Testing rrule")
 using LinearAlgebra: dot
