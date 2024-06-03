@@ -9,7 +9,10 @@ Chebyshev polynomials up to degree `N-1` (inclusive). i.e  basis with length `N`
 ```
 where `x` is input variable. 
 
-The differences between `ChebBasis` and `chebyshev_basis` is that `ChebBasis` computes the basis on the go when it is compiled and it does not store the recursion coefficients as in `chebyshev_basis`.
+The differences between `ChebBasis` and `chebyshev_basis` is that `ChebBasis` 
+computes the basis on the fly when it is compiled and it does not store the 
+recursion coefficients as in `chebyshev_basis`. There might be a small 
+performance benefit from this. 
 
 Warning: `ChebBasis` and `chebyshev_basis` have different normalization.
 """
@@ -27,6 +30,9 @@ natural_indices(basis::ChebBasis) = 0:length(basis)-1
 _valtype(basis::ChebBasis, T::Type{<:Real}) = T
 
 
+whatalloc(::typeof(evaluate!), basis::ChebBasis, x::Real) = 
+      (typeof(x), length(basis))
+
 function evaluate!(P::AbstractVector, basis::ChebBasis, x::Real)
    N = basis.N
    @assert N >= 2
@@ -41,9 +47,11 @@ function evaluate!(P::AbstractVector, basis::ChebBasis, x::Real)
 end
 
 
+whatalloc(::typeof(evaluate!), basis::ChebBasis, x::AbstractVector{<:Real}) = 
+      (eltype(x), length(x), length(basis))
 
 function evaluate!(P::AbstractMatrix, basis::ChebBasis,
-   x::AbstractVector{<:Real})
+                   x::AbstractVector{<:Real})
    N = basis.N
    nX = length(x)
    @assert N >= 2
@@ -65,8 +73,14 @@ function evaluate!(P::AbstractMatrix, basis::ChebBasis,
    return P
 end
 
+
+function whatalloc(::typeof(evaluate_ed!), basis::ChebBasis, x::Real) 
+   T = typeof(x); len = length(basis)
+   return ( (T, len), (T, len), )
+end
+
 function evaluate_ed!(P::AbstractVector, dP::AbstractVector,
-   basis::ChebBasis, x::Real)
+                      basis::ChebBasis, x::Real)
    N = basis.N
    nX = length(x)
    @assert N >= 2
@@ -87,8 +101,13 @@ function evaluate_ed!(P::AbstractVector, dP::AbstractVector,
 end
 
 
+function whatalloc(::typeof(evaluate_ed!), basis::ChebBasis, x::AbstractVector{<:Real})
+   T = eltype(x); len = length(basis); lenx = length(x)
+   return ( (T, lenx, len), (T, lenx, len), )
+end
+
 function evaluate_ed!(P::AbstractMatrix, dP::AbstractMatrix, basis::ChebBasis,
-   x::AbstractVector{<:Real})
+                      x::AbstractVector{<:Real})
    N = basis.N
    nX = length(x)
    @assert N >= 2
@@ -116,8 +135,13 @@ function evaluate_ed!(P::AbstractMatrix, dP::AbstractMatrix, basis::ChebBasis,
 end
 
 
+function whatalloc(::typeof(evaluate_ed2!), basis::ChebBasis, x::Real) 
+   T = typeof(x); len = length(basis)
+   return ( (T, len), (T, len), (T, len), )
+end
+
 function evaluate_ed2!(P::AbstractVector, dP::AbstractVector, ddP::AbstractVector,
-   basis::ChebBasis, x::Real)
+                       basis::ChebBasis, x::Real)
    N = basis.N
    @assert N >= 2
    @assert length(P) >= length(basis) # N
@@ -142,9 +166,12 @@ function evaluate_ed2!(P::AbstractVector, dP::AbstractVector, ddP::AbstractVecto
 end
 
 
-
-function evaluate_ed2!(P::AbstractMatrix, dP::AbstractMatrix, ddP::AbstractMatrix, basis::ChebBasis,
-   x::AbstractVector{<:Real})
+function whatalloc(::typeof(evaluate_ed2!), basis::ChebBasis, x::AbstractVector{<:Real})
+   T = eltype(x); len = length(basis); lenx = length(x)
+   return ( (T, lenx, len), (T, lenx, len), (T, lenx, len), )
+end
+function evaluate_ed2!(P::AbstractMatrix, dP::AbstractMatrix, ddP::AbstractMatrix, 
+                       basis::ChebBasis, x::AbstractVector{<:Real})
    N = basis.N
    nX = length(x)
    @assert N >= 2

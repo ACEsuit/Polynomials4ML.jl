@@ -4,6 +4,10 @@ module Polynomials4ML
 using ObjectPools: acquire!, release!, 
                    FlexArray, FlexArrayCache, TSafe, ArrayPool, unwrap
 
+# ... and the replacement functionality provided by Bumper and WithAlloc 
+
+using Bumper, WithAlloc 
+import WithAlloc: whatalloc 
 
 # -------------- import ACEbase stuff 
 
