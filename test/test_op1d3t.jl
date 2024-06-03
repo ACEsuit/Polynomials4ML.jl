@@ -23,6 +23,8 @@ for ntest = 1:3
 
    x = rand() 
    xx = [ rand() for _ = 1:16] 
+   test_withalloc(basis, x)
+   test_withalloc(basis, xx)
    println_slim(@test test_withalloc(basis, x)  )
    println_slim(@test test_withalloc(basis, xx) )
 end
