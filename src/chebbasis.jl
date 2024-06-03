@@ -30,9 +30,6 @@ natural_indices(basis::ChebBasis) = 0:length(basis)-1
 _valtype(basis::ChebBasis, T::Type{<:Real}) = T
 
 
-whatalloc(::typeof(evaluate!), basis::ChebBasis, x::Real) = 
-      (typeof(x), length(basis))
-
 function evaluate!(P::AbstractVector, basis::ChebBasis, x::Real)
    N = basis.N
    @assert N >= 2
@@ -47,8 +44,6 @@ function evaluate!(P::AbstractVector, basis::ChebBasis, x::Real)
 end
 
 
-whatalloc(::typeof(evaluate!), basis::ChebBasis, x::AbstractVector{<:Real}) = 
-      (eltype(x), length(x), length(basis))
 
 function evaluate!(P::AbstractMatrix, basis::ChebBasis,
                    x::AbstractVector{<:Real})
@@ -74,11 +69,6 @@ function evaluate!(P::AbstractMatrix, basis::ChebBasis,
 end
 
 
-function whatalloc(::typeof(evaluate_ed!), basis::ChebBasis, x::Real) 
-   T = typeof(x); len = length(basis)
-   return ( (T, len), (T, len), )
-end
-
 function evaluate_ed!(P::AbstractVector, dP::AbstractVector,
                       basis::ChebBasis, x::Real)
    N = basis.N
@@ -100,11 +90,6 @@ function evaluate_ed!(P::AbstractVector, dP::AbstractVector,
    return P, dP
 end
 
-
-function whatalloc(::typeof(evaluate_ed!), basis::ChebBasis, x::AbstractVector{<:Real})
-   T = eltype(x); len = length(basis); lenx = length(x)
-   return ( (T, lenx, len), (T, lenx, len), )
-end
 
 function evaluate_ed!(P::AbstractMatrix, dP::AbstractMatrix, basis::ChebBasis,
                       x::AbstractVector{<:Real})
@@ -135,11 +120,6 @@ function evaluate_ed!(P::AbstractMatrix, dP::AbstractMatrix, basis::ChebBasis,
 end
 
 
-function whatalloc(::typeof(evaluate_ed2!), basis::ChebBasis, x::Real) 
-   T = typeof(x); len = length(basis)
-   return ( (T, len), (T, len), (T, len), )
-end
-
 function evaluate_ed2!(P::AbstractVector, dP::AbstractVector, ddP::AbstractVector,
                        basis::ChebBasis, x::Real)
    N = basis.N
@@ -166,10 +146,6 @@ function evaluate_ed2!(P::AbstractVector, dP::AbstractVector, ddP::AbstractVecto
 end
 
 
-function whatalloc(::typeof(evaluate_ed2!), basis::ChebBasis, x::AbstractVector{<:Real})
-   T = eltype(x); len = length(basis); lenx = length(x)
-   return ( (T, lenx, len), (T, lenx, len), (T, lenx, len), )
-end
 function evaluate_ed2!(P::AbstractMatrix, dP::AbstractMatrix, ddP::AbstractMatrix, 
                        basis::ChebBasis, x::AbstractVector{<:Real})
    N = basis.N

@@ -1,6 +1,7 @@
 using Polynomials4ML, Test
 using Polynomials4ML: evaluate, evaluate_d, evaluate_dd
-using Polynomials4ML.Testing: println_slim, print_tf, test_derivatives
+using Polynomials4ML.Testing: println_slim, print_tf, test_derivatives, 
+                              test_withalloc
 
 
 ##
@@ -26,3 +27,9 @@ println()
 @info("      test derivatives")
 generate_x = () -> rand()*2*π - π
 test_derivatives(basis, generate_x)
+
+##
+
+@info("       test withalloc")
+println_slim(@test test_withalloc(basis, 0.5)  )
+println_slim(@test test_withalloc(basis, [ generate_x() for _ = 1:16 ]) )

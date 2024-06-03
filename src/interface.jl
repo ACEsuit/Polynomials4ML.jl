@@ -135,6 +135,27 @@ _alloc_ed2(basis::AbstractPoly4MLBasis, x) =
       _alloc(basis, x), _alloc_d(basis, x), _alloc_dd(basis, x)
 
 # --------------------------------------- 
+# WithAlloc Interface 
+
+function whatalloc(::typeof(evaluate!), basis::AbstractPoly4MLBasis, x)
+   T = _valtype(basis, x)
+   sz = _out_size(basis, x)
+   return (T, sz...) 
+end
+
+function whatalloc(::typeof(evaluate_ed!), basis::AbstractPoly4MLBasis, x)
+   T = _valtype(basis, x)
+   sz = _out_size(basis, x)
+   return (T, sz...), (T, sz...)
+end
+
+function whatalloc(::typeof(evaluate_ed2!), basis::AbstractPoly4MLBasis, x)
+   T = _valtype(basis, x)
+   sz = _out_size(basis, x)
+   return (T, sz...), (T, sz...), (T, sz...)
+end
+
+# --------------------------------------- 
 # evaluation interface 
 
 (basis::AbstractPoly4MLBasis)(x) = evaluate(basis, x)

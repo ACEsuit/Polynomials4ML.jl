@@ -1,7 +1,8 @@
 
 using Polynomials4ML, Test
 using Polynomials4ML: evaluate, evaluate_d, evaluate_dd
-using Polynomials4ML.Testing: println_slim, test_derivatives, print_tf
+using Polynomials4ML.Testing: println_slim, test_derivatives, print_tf, 
+                              test_withalloc
 using LinearAlgebra: I, norm, dot 
 using QuadGK
 using ACEbase.Testing: fdtest
@@ -19,6 +20,11 @@ for ntest = 1:3
    N = rand(5:15)
    basis = OrthPolyBasis1D3T(randn(N), randn(N), randn(N))
    test_derivatives(basis, () -> rand())
+
+   x = rand() 
+   xx = [ rand() for _ = 1:16] 
+   println_slim(@test test_withalloc(basis, x)  )
+   println_slim(@test test_withalloc(basis, xx) )
 end
 
 ##

@@ -1,6 +1,7 @@
 using Polynomials4ML, Test
 using Polynomials4ML: evaluate, evaluate_d, evaluate_dd
-using Polynomials4ML.Testing: println_slim, print_tf, test_derivatives
+using Polynomials4ML.Testing: println_slim, print_tf, test_derivatives, 
+                              test_withalloc 
 
 
 ##
@@ -58,23 +59,9 @@ let basis = basis
 end
 
 ##
-@info("        test allocations")
-function test_allocations(basis, x)
-   @no_escape begin 
-      P = @withalloc evaluate!(basis, x)
-      P1, dP1 = @withalloc evaluate_ed!(basis, x)
-      P2, dP2, ddP2 = @withalloc evaluate_ed2!(basis, x)
-      s = sum(P) + sum(P1) + sum(dP1) #+ sum(P2) + sum(dP2) + sum(ddP2)
-   end
-   return s 
-end
 
-const _xx123 = [ generate_x() for _ = 1:16 ]
-
-alloc = let 
-   x = 0.5
-   basis = ChebBasis(10)   
-   alc1 = @allocated test_allocations(basis, x)
-   alc2 = @allocated test_allocations(basis, _xx123)
-end
-println_slim(@test alloc == 0) 
+@info("        test withalloc")
+println_slim(@test test_withalloc(basis, 0.5)  )
+println_slim(@test test_withalloc(basis, [ generate_x() for _ = 1:16 ]) )
+println_slim(@test test_withalloc(basis2, 0.5)  )
+println_slim(@test test_withalloc(basis2, [ generate_x() for _ = 1:16 ]) )

@@ -4,14 +4,14 @@ using Polynomials4ML: evaluate!, evaluate_ed!, evaluate_ed2!,
                evaluate, evaluate_d, evaluate_ed, evaluate_dd, evaluate_ed2 , 
                _alloc
 
-using Test, ForwardDiff
+using Test, ForwardDiff, Bumper, WithAlloc
 
 using StaticArrays 
 using LinearAlgebra: norm 
 
 using ACEbase.Testing: print_tf, println_slim
 
-
+using ObjectPools: unwrap
 
 function time_standard!(P, basis, X)
    for i = 1:length(X)
@@ -95,6 +95,42 @@ function test_derivatives(basis, generate_x, nX = 32, ntest = 8)
    println_slim(@test bdP3 ≈ bdP1 ≈ bdP4)
    println_slim(@test bddP4 ≈ bddP1)
    
+end
+
+# ------------------------ Test allocations using the WithAlloc interface
+
+function _allocations_inner(basis, x; ed = true, ed2 = true)
+   @no_escape begin 
+      P = @withalloc evaluate!(basis, x)
+      s = sum(P)
+      if ed 
+         P1, dP1 = @withalloc evaluate_ed!(basis, x)
+         s1 = s + sum(P1) + sum(dP1)
+      end 
+      if ed2 
+         P2, dP2, ddP2 = @withalloc evaluate_ed2!(basis, x)
+         s2 = s1 + sum(P2) + sum(dP2) + sum(ddP2)
+      end
+      nothing 
+   end
+   return s2 
+end
+
+function test_withalloc(basis, x; allowed_allocs = 0, kwargs...) 
+   nalloc = @allocated ( _allocations_inner(basis, x) )
+   P1 = basis(x) 
+   @no_escape begin 
+      P2 = @withalloc evaluate!(basis, x)
+      match_P1P2 = (unwrap(P1) ≈ P2)
+      nothing 
+   end
+   if nalloc > allowed_allocs 
+      println("nalloc = $nalloc > $allowed_allocs (allowed)")
+   end
+   if !match_P1P2 
+      println("standard withalloc evaluations don't match")
+   end
+   return (nalloc <= allowed_allocs) && match_P1P2
 end
 
 
