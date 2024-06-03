@@ -1,7 +1,7 @@
 
 # Public API 
 
-This page documents the public API, i.e. the list of bases and functions that are considered relatively stable and for which we aim to strictly impose semver backward compatibility. The basis sets that are considered stable are the following (please see inline documentation for initialization): 
+This page documents the public API for polynomial bases: the list of bases and functions that are considered relatively stable and for which we aim to strictly impose semver backward compatibility. The basis sets that are considered stable are the following (please see inline documentation for initialization): 
 
 * Several classes of orthogonal polynomials [`OrthPolyBasis1D3T`](@ref)
    - General Jacobi [`jacobi_basis`](@ref)
@@ -17,16 +17,10 @@ This page documents the public API, i.e. the list of bases and functions that ar
    - Complex solid harmonics [`CRlmBasis`](@ref)
    - Real solid harmonics [`RRlmBasis`](@ref)
 * Chebyshev polynomials of the first kind [`ChebBasis`](@ref)
-* Cluster Expansion: 
-   - Fused tensor produce and pooling [`PooledSparseProduct`](@ref)
-   - Sparse symmetric product [`SparseSymmProd`](@ref)
-   - Alternative sparse symmetric product implementation [`SparseSymmProdDAG`](@ref) 
-* LinearLayer [`LinearLayer`](@ref)
-* Various quantum chemistry related radial basis functions. (experimental)
 
 ## In-place Evaluation  
 
-This section documents the in-place evaluation interface. The polynomial basis sets implemented in this package should provide this interface as a minimal requirement. The cluster expansion features do not implement these at present. 
+This section documents the in-place evaluation interface. The polynomial basis sets implemented in this package should provide this interface as a minimal requirement. Because these mappings are all low-to-high dimensional, and are almost never a computational bottleneck, we do not current support pullbacks and pushforwards but only classical evaluation and point-wise differentiation, for either single inputs or batches of inputs. 
 
 ```julia
 evaluate!(P, basis, X)
@@ -60,25 +54,11 @@ The output types of `P, dP, ddP` are guaranteed to be `AbstractArray`s but may o
 
 The meaning of the different symbols is exactly the same as described above. The only difference is that the output containers `P`, `dP`, `ddP` are now allocated. 
 Their type should be stable (if not, please file a bug report), but unspecified in the sense that the output type is not semver-stable for the time being. 
-If you need a sem-ver stable output then it is best to follow the above with a `collect`.
+If you need a sem-ver stable output then it is best to follow the above with a `collect` or to wrap the non-allocation versions. 
 
-## Re-using Output Arrays
+## Using the `WithAlloc.jl` Bumper extension 
 
-For many models / bases, pullbacks, etc, the default output arrays are of type `CachedArray`. 
-This means that after they have been used, they can be released back into an array cache from which they have been acquired. (See `ObjectPools.jl` for more details.) This will avoid a new allocation next time a basis is evaluated. The interface for this is 
-```julia
-B = evaluate(basis, X)
-release!(B)
-B, dB = evaluate_ed(basis, X)
-release!(B)
-release!(dB)
-# ... and so forth ... 
-``` 
-The `release!` function can still be applied to output arrays that are not a `CachedArray`, this will then simply be a no-op. 
-
-!!! danger "Usage of `CachedArray` outputs"
-    `CachedArray`s can cause type instabilities when used in unexpected ways. To prevent this, if `B::CachedArray` is an output from a basis (or similar) simply use its unwrapped `PtrArray` instead by calling `unwrap(B)` in `ObjectPools.jl`. This will extract the internally stored array, normally a core Julia `Array` or a `PtrArray` from the package `StrideArrays.jl`. 
-    
+TODO 
 
 ## ChainRules.jl integration 
 

@@ -73,9 +73,11 @@ println()
 
 ##
 
+using StrideArrays
+
 @info("    testing withalloc")
-basis = _generate_basis(; order=3)
-BB = _rand_input1(basis)
+basis = _generate_basis(; order=2)
+BB = PtrArray.(_rand_input1(basis))
 bBB = _rand_input(basis)
 println_slim(@test test_withalloc(basis, BB; ed = false, ed2 = false) )
 println_slim(@test test_withalloc(basis, bBB; ed = false, ed2 = false) )
@@ -108,7 +110,7 @@ println()
 
 ## 
 
-@info("Testing _pb_pb_evaluate for PooledSparseProduct")
+@info("Testing pb_pb_evaluate for PooledSparseProduct")
 import ChainRulesCore: rrule, NoTangent
 
 for ntest = 1:20 
@@ -127,7 +129,7 @@ for ntest = 1:20
    @test ∂_BB isa NTuple{ORDER, <: AbstractMatrix}
    @test all(size(∂_BB[i]) == size(bBB[i]) for i = 1:length(bBB))
 
-   val2, pb2 = rrule(P4ML._pullback_evaluate, ∂A, basis, bBB)
+   val2, pb2 = rrule(P4ML.pullback_evaluate, ∂A, basis, bBB)
    @test val2 == ∂_BB
 
    ∂2 = ntuple(i -> randn(size(∂_BB[i])), length(∂_BB))
@@ -137,11 +139,11 @@ for ntest = 1:20
    _∂A(t) = ∂A + t * bV
 
    F(t) = begin
-      ∂_BB = P4ML._pullback_evaluate(_∂A(t), basis, _BB(t))
+      ∂_BB = P4ML.pullback_evaluate(_∂A(t), basis, _BB(t))
       return sum(dot(∂2[i], ∂_BB[i]) for i = 1:length(∂_BB))
    end
    dF(t) = begin
-      val, pb = rrule(P4ML._pullback_evaluate, ∂A, basis, _BB(t))
+      val, pb = rrule(P4ML.pullback_evaluate, ∂A, basis, _BB(t))
       _, ∂_∂A, _, ∂2_BB = pb(∂2)
       return dot(∂_∂A, bV) + sum(dot(bUU[i], ∂2_BB[i]) for i = 1:ORDER)
    end
@@ -193,7 +195,7 @@ for ntest = 1:10
    basis = _generate_basis(; order=order)
    BB, ΔBB = _rand_input1_pfwd(basis)
    A1, ∂A1 = fwddiff_pfwd(basis, BB, ΔBB)
-   A2, ∂A2 = P4ML.pfwd_evaluate(basis, BB, ΔBB)
+   A2, ∂A2 = P4ML.pushforward_evaluate(basis, BB, ΔBB)
    print_tf(@test A2 ≈ A1)
    print_tf(@test ∂A2 ≈ ∂A1)
 end

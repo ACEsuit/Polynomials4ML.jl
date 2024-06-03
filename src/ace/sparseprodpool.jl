@@ -86,8 +86,7 @@ import Base.Cartesian: @nexprs
 # import Base.Experimental: @aliasscope
 # Adapt.adapt_storage(::ConstAdaptor, a::Array) = Base.Experimental.Const(a)
 # constify(arg) = Adapt.adapt(ConstAdaptor(), arg)
-
-
+# 
 # Valentin Churavy's Version (which we don't really understand)
 # function evaluate!(A, basis::PooledSparseProduct{NB}, BB) where {NB}
 #    @assert length(BB) == NB
@@ -102,39 +101,12 @@ import Base.Cartesian: @nexprs
 #    return nothing 
 # end
 
+
 function evaluate!(A, basis::PooledSparseProduct{NB}, BB::TupVec) where {NB}
-   @assert length(BB) == NB
-   # evaluate the 1p product basis functions and add/write into _A
-   spec = basis.spec
-   fill!(A, 0)
-   for (iA, ϕ) in enumerate(spec)
-      b = ntuple(t -> BB[t][ϕ[t]], NB)
-      @inbounds A[iA] += @fastmath prod(b) 
-   end
-   return A 
+   BB_batch = ntuple(i -> reshape(BB[i], (1, length(BB[i]))), NB)
+   return evaluate!(A, basis, BB_batch)
 end
 
-
-# # BB::tuple of matrices 
-# function evalpool!(A, basis::PooledSparseProduct{NB}, BB, 
-#                    nX = size(BB[1], 1)) where {NB}
-#    @assert all(B->size(B, 1) >= nX, BB)
-#    BB = constify(BB) # Assumes that no B aliases A
-#    spec = constify(basis.spec)
-
-#    @aliasscope begin # No store to A aliases any read from any B
-#       @inbounds for (iA, ϕ) in enumerate(spec)
-#          a = zero(eltype(A))
-#          @simd ivdep for j = 1:nX
-#             a += BB_prod(ϕ, BB, j)
-#          end
-#          A[iA] = a
-#       end
-#    end
-#    return nothing
-# end
-
-# BB::tuple of matrices 
 function evaluate!(A, basis::PooledSparseProduct{NB}, BB::TupMat, 
                    nX = size(BB[1], 1)) where {NB}
    @assert all(B->size(B, 1) >= nX, BB)
@@ -148,123 +120,48 @@ function evaluate!(A, basis::PooledSparseProduct{NB}, BB::TupMat,
       end
       A[iA] = a
    end
+   return A
+end
 
+# special-casing NB = 2 for performance reasons
+function evaluate!(A, basis::PooledSparseProduct{2}, 
+                   BB::Tuple{<: AbstractMatrix, <: AbstractMatrix},
+                   nX = size(BB[1], 1))
+   @assert all(B->size(B, 1) >= nX, BB)
+   BB1, BB2 = BB
+   spec = basis.spec
+   fill!(A, zero(eltype(A)))
+   @inbounds for (iA, ϕ) in enumerate(spec)
+      ϕ1, ϕ2 = ϕ
+      a = zero(eltype(A))
+      @simd ivdep for j = 1:nX
+         b1 = BB1[j, ϕ1]
+         b2 = BB2[j, ϕ2]
+         a = muladd(b1, b2, a)
+      end
+      A[iA] = a
+   end
    return A
 end
 
 
 
-
-# struct LinearBatch
-#    groups::Vector{Int}
-# end
-
-# function linearbatch(target::AbstractVector{<: Integer})
-#    @assert issorted(target)
-#    @assert minimum(target) > 0 
-#    ngroups = target[end] 
-#    groups = zeros(Int, ngroups+1)
-#    gidx = 1 
-#    i = 1
-#    groups[1] = 1 
-#    for gidx = 1:ngroups 
-#       while (i <= length(target)) && (target[i] == gidx)
-#          i += 1
-#       end
-#       groups[gidx+1] = i
-#    end
-#    return LinearBatch(groups)
-# end
-
-# evalpool_batch!(A, basis::PooledSparseProduct, BB, 
-#                    target::AbstractVector{<: Integer}) = 
-#     evalpool_batch!(A, basis, BB, linearbatch(target))
-
-# function evalpool_batch!(A, basis::PooledSparseProduct{NB}, BB, 
-#                          target::LinearBatch) where {NB}
-#    nX = size(BB[1], 1)
-#    nA = size(A, 1)
-#    @assert length(target.groups)-1 <= nA 
-#    @assert all(B->size(B, 1) == nX, BB)
-#    spec = basis.spec
-
-#    @inbounds for (iA, ϕ) in enumerate(spec)
-#       for t = 1:length(target.groups)-1
-#          a_t = zero(eltype(A))
-#          @simd ivdep for j = target.groups[t]:target.groups[t+1]-1
-#             a_t += BB_prod(ϕ, BB, j)
-#          end
-#          A[t, iA] = a_t 
-#       end
-#    end
-#    return nothing
-# end
-
-
-# function evalpool!(A::VA, basis::PooledSparseProduct{2}, BB) where {VA}
-#    nX = size(BB[1], 1)
-#    @assert size(BB[2], 1) >= nX 
-#    @assert length(A) == length(basis)
-#    spec = basis.spec
-#    BB1 = BB[1] 
-#    BB2 = BB[2] 
-
-#    @inbounds for (iA, ϕ) in enumerate(spec)
-#       a = zero(eltype(A))
-#       ϕ1 = ϕ[1]; ϕ2 = ϕ[2]
-#       @simd ivdep for j = 1:nX
-#          a = muladd(BB1[j, ϕ1], BB2[j, ϕ2], a)
-#       end
-#       A[iA] = a
-#    end
-
-#    return nothing
-# end
-
-# this code should never be used, we keep it just for testing 
-# the performance of the generated code. 
-# function prod_and_pool3!(A::VA, basis::PooledSparseProduct{3}, 
-#                      BB::Tuple{TB1, TB2, TB3}) where {VA, TB1, TB2, TB3}
-#    B1 = BB[1]; B2 = BB[2]; B3 = BB[3] 
-#    # VT = promote_type(eltype(B1), eltype(B2), eltype(B3))
-#    nX = size(B1, 1) 
-#    @assert size(B2, 1) == size(B3, 1) == nX 
-#    a = zero(eltype(A))
-
-#    @inbounds for (iA, ϕ) in enumerate(basis.spec)
-#       a *= 0
-#       ϕ1 = ϕ[1]; ϕ2 = ϕ[2]; ϕ3 = ϕ[3]
-#       @avx for j = 1:nX 
-#          a += B1[j, ϕ1] * B2[j, ϕ2] * B3[j, ϕ3]
-#       end
-#       A[iA] = a
-#    end
-#    return A
-# end
-
-
 # -------------------- reverse mode gradient
 
 using StaticArrays
+using Base.Cartesian: @nexprs 
 
 
-function _rrule_evaluate(basis::PooledSparseProduct{NB}, BB::TupMat) where {NB}
-   A = evaluate(basis, BB)
-   return A, ∂A -> _pullback_evaluate(∂A, basis, BB)
-end
-
-
-function _pullback_evaluate(∂A, basis::PooledSparseProduct{NB}, BB::TupMat) where {NB}
+function pullback_evaluate(∂A, basis::PooledSparseProduct{NB}, BB::TupMat) where {NB}
    nX = size(BB[1], 1)
    TA = promote_type(eltype.(BB)..., eltype(∂A))
    ∂BB = ntuple(i -> zeros(TA, size(BB[i])...), NB)
-   _pullback_evaluate!(∂BB, ∂A, basis, BB)
+   pullback_evaluate!(∂BB, ∂A, basis, BB)
    return ∂BB
 end
 
-using Base.Cartesian: @nexprs 
 
-function _pullback_evaluate!(∂BB, ∂A, basis::PooledSparseProduct{NB}, BB::TupMat) where {NB}
+function pullback_evaluate!(∂BB, ∂A, basis::PooledSparseProduct{NB}, BB::TupMat) where {NB}
    nX = size(BB[1], 1)
    @assert all(nX <= size(BB[i], 1) for i = 1:NB)
    @assert all(nX <= size(∂BB[i], 1) for i = 1:NB)
@@ -285,7 +182,7 @@ function _pullback_evaluate!(∂BB, ∂A, basis::PooledSparseProduct{NB}, BB::Tu
          end
       end 
    end
-   return nothing 
+   return ∂BB 
 end
 
 # TODO: interestingly the generic code above does not perform well 
@@ -293,7 +190,7 @@ end
 #       a cruder code generation strategy. This specialized code 
 #       confirms this. 
 
-function _pullback_evaluate!(∂BB, ∂A, basis::PooledSparseProduct{2}, BB::TupMat)
+function pullback_evaluate!(∂BB, ∂A, basis::PooledSparseProduct{2}, BB::TupMat)
    nX = size(BB[1], 1)
    NB = 2 
    @assert length(∂A) == length(basis)
@@ -301,23 +198,25 @@ function _pullback_evaluate!(∂BB, ∂A, basis::PooledSparseProduct{2}, BB::Tup
    @assert all(nX <= size(BB[i], 1) for i = 1:NB)
    @assert all(nX <= size(∂BB[i], 1) for i = 1:NB)
    @assert all(size(∂BB[i], 2) >= size(BB[i], 2) for i = 1:NB)
+   BB1, BB2 = BB
+   ∂BB1, ∂BB2 = ∂BB
    
    @inbounds for (iA, ϕ) in enumerate(basis.spec)
       ∂A_iA = ∂A[iA]
       ϕ1 = ϕ[1]
       ϕ2 = ϕ[2]
       @simd ivdep for j = 1:nX 
-         b1 = BB[1][j, ϕ1]
-         b2 = BB[2][j, ϕ2]
-         ∂BB[1][j, ϕ1] = muladd(∂A_iA, b2, ∂BB[1][j, ϕ1])
-         ∂BB[2][j, ϕ2] = muladd(∂A_iA, b1, ∂BB[2][j, ϕ2])
+         b1 = BB1[j, ϕ1]
+         b2 = BB2[j, ϕ2]
+         ∂BB1[j, ϕ1] = muladd(∂A_iA, b2, ∂BB1[j, ϕ1])
+         ∂BB2[j, ϕ2] = muladd(∂A_iA, b1, ∂BB2[j, ϕ2])
       end 
    end
-   return nothing 
+   return ∂BB 
 end
 
 
-function _pullback_evaluate!(∂BB, ∂A, basis::PooledSparseProduct{3}, BB::TupMat; 
+function pullback_evaluate!(∂BB, ∂A, basis::PooledSparseProduct{3}, BB::TupMat; 
                               sizecheck = true)
    nX = size(BB[1], 1)
    NB = 3 
@@ -348,12 +247,13 @@ function _pullback_evaluate!(∂BB, ∂A, basis::PooledSparseProduct{3}, BB::Tup
          ∂B3[j, ϕ3] = muladd(∂A_iA, b1*b2, ∂B3[j, ϕ3])
       end 
    end
-   return nothing 
+   return ∂BB 
 end
+
 
 import ForwardDiff
 
-function _pb_pb_evaluate(basis::PooledSparseProduct{NB}, ∂2, 
+function pb_pb_evaluate(basis::PooledSparseProduct{NB}, ∂2, 
                          ∂A, BB::TupMat) where {NB}
 
    # ∂2 should be a tuple of length 2
@@ -387,7 +287,7 @@ function _pb_pb_evaluate(basis::PooledSparseProduct{NB}, ∂2,
 end
 
 
-function _pb_pb_evaluate(basis::PooledSparseProduct{1}, ∂2, 
+function pb_pb_evaluate(basis::PooledSparseProduct{1}, ∂2, 
                          ∂A, BB::TupMat)
 
    # ∂2 should be a tuple of length 2
@@ -413,7 +313,9 @@ function _pb_pb_evaluate(basis::PooledSparseProduct{1}, ∂2,
 end
 
 
-function _pb_pb_evaluate(basis::PooledSparseProduct{2}, ∂2, 
+# TODO: revisit this and potentially automate it using 
+#       the ForwardDiff trick!!! 
+function pb_pb_evaluate(basis::PooledSparseProduct{2}, ∂2, 
                          ∂A, BB::TupMat)
 
    # ∂2 should be a tuple of length 2
@@ -445,41 +347,6 @@ end
 
 
 
-
-# function _pullback_evaluate!(∂BB, ∂A, basis::PooledSparseProduct{NB}, 
-#                              BB::Tuple, target::AbstractVector{<: Integer}) where {NB}
-#    nX = size(BB[1], 1)
-#    nT = size(∂A, 1)
-#    mint, maxt = extrema(target)
-#    @assert 0 < mint <= maxt <= nT
-#    @assert all(nX <= size(BB[i], 1) for i = 1:NB)
-#    @assert all(nX <= size(∂BB[i], 1) for i = 1:NB)
-#    @assert all(size(∂BB[i], 2) >= size(BB[i], 2) for i = 1:NB)
-#    @assert size(∂A, 2) == length(basis)
-#    @assert length(BB) == NB 
-#    @assert length(∂BB) == NB 
-
-#    # ∂A_loc = zeros(eltype(∂A), nT)
-
-#    @inbounds for (iA, ϕ) in enumerate(basis.spec)
-#       # @simd ivdep for t = 1:nT 
-#       #    ∂A_loc[t] = ∂A[t, iA]
-#       # end
-#       @simd ivdep for j = 1:nX 
-#          ∂A_iA = ∂A[target[j], iA] # ∂A_loc[target[j] ] 
-#          b = ntuple(Val(NB)) do i 
-#             @inbounds BB[i][j, ϕ[i]] 
-#          end 
-#          g = _prod_grad(b, Val(NB))
-#          for i = 1:NB 
-#             ∂BB[i][j, ϕ[i]] = muladd(∂A_iA, g[i], ∂BB[i][j, ϕ[i]])
-#          end
-#       end 
-#    end
-#    return nothing 
-# end
-
-
 # --------------------- Pushforwards 
 
 # This implementation of the pushforward doesn't yet do batching 
@@ -494,13 +361,14 @@ end
 #      ∂A is size (nA, nX)
 
 _my_promote_type(args...) = promote_type(args...)
+
 _my_promote_type(T1::Type{<: Number}, T2::Type{SVector{N, S}}, args...
                   ) where {N, S} = 
       promote_type(SVector{N, T1}, T2, args...)
 
 
 
-function pfwd_evaluate(basis::PooledSparseProduct, BB, ΔBB)
+function pushforward_evaluate(basis::PooledSparseProduct, BB, ΔBB)
    @assert length(size(BB[1])) == 2
    @assert length(size(ΔBB[1])) == 2
    @assert all(size(BB[t]) == size(ΔBB[t]) for t = 1:length(BB))
@@ -516,10 +384,11 @@ function pfwd_evaluate(basis::PooledSparseProduct, BB, ΔBB)
    ∂A = acquire!(basis.pool, :∂A_pfwd, (nA, nX), T∂A)
    fill!(∂A, zero(T∂A))
 
-   return pfwd_evaluate!(A, ∂A, basis, BB, ΔBB)
+   return pushforward_evaluate!(A, ∂A, basis, BB, ΔBB)
 end   
 
-function pfwd_evaluate!(A, ∂A, basis::PooledSparseProduct{NB}, BB, ΔBB) where {NB}
+
+function pushforward_evaluate!(A, ∂A, basis::PooledSparseProduct{NB}, BB, ΔBB) where {NB}
    nX = size(BB[1], 1)
    for (i, ϕ) in enumerate(basis.spec)
       for j = 1:nX 
@@ -546,24 +415,26 @@ function rrule(::typeof(evaluate), basis::PooledSparseProduct{NB}, BB::TupMat) w
    A = evaluate(basis, BB)
 
    function pb(Δ)
-      ∂BB = _pullback_evaluate(Δ, basis, BB)
+      ∂BB = pullback_evaluate(Δ, basis, BB)
       return NoTangent(), NoTangent(), ∂BB
    end 
 
    return A, pb 
 end
 
-function rrule(::typeof(_pullback_evaluate), Δ, basis::PooledSparseProduct, BB)
-   ∂BB = _pullback_evaluate(Δ, basis, BB)
+
+function rrule(::typeof(pullback_evaluate), Δ, basis::PooledSparseProduct, BB)
+   ∂BB = pullback_evaluate(Δ, basis, BB)
 
    function pb(Δ2)
-      ∂2_Δ, ∂2_BB = _pb_pb_evaluate(basis, Δ2, Δ, BB)
+      ∂2_Δ, ∂2_BB = pb_pb_evaluate(basis, Δ2, Δ, BB)
       return NoTangent(), ∂2_Δ, NoTangent(), ∂2_BB
    end
 
    return ∂BB, pb
 end
 
+# TODO: frules 
 
 
 
