@@ -3,16 +3,17 @@
 
 P4ML also implements a few standard layers that occur in atomic cluster expansion (ACE) models. These are all expressed as (usually symmetric) tensor operations. These are documented here. 
 
+* LinearLayer [`LinearLayer`](@ref)
+* Sparse product
 * Fused tensor product and pooling [`PooledSparseProduct`](@ref)
 * Sparse symmetric product [`SparseSymmProd`](@ref)
-* Faster sparse symmetric product implementation [`SparseSymmProdDAG`](@ref) 
-* LinearLayer [`LinearLayer`](@ref)
+* Recursive sparse symmetric product implementation [`SparseSymmProdDAG`](@ref)
 
 Their usage differs slightly from the polynomial embeddings. Evaluating a layer is the same and can be done both in-place and allocating, e.g., 
 ```julia
 abasis::PooledSparseProduct
 evaluate!(A, abasis, BB)
-A = evaluate(absis, BB)
+A = evaluate(abasis, BB)
 ```
 We refer to the individual documentation for the details of the arguments to each layer.
 
@@ -41,8 +42,6 @@ Second-order pushbacks  ... TODO
 pb_pb_evaluate!(∂X, ∂P, layer, X)
 pb_pb_evaluate!(∂X, ∂P, layer, X) 
 -->
-
-
 
 ## ChainRules integration 
 

@@ -114,7 +114,7 @@ println()
 import ChainRulesCore: rrule, NoTangent
 
 for ntest = 1:20 
-   local basis, val, pb, bBB 
+   local basis, val, pb, bBB, A 
    ORDER = mod1(ntest, 3)+1
    basis = _generate_basis(;order = ORDER)
    bBB = _rand_input(basis)

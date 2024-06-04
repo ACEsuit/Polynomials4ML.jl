@@ -151,31 +151,26 @@ end
 
 import ChainRulesCore: rrule, NoTangent 
 
-function rrule(::typeof(evaluate), basis::SparseSymmProd, A)
-   AA = evaluate(basis, A)
-   return AA, Δ -> (NoTangent(), NoTangent(), _pb_evaluate(basis, Δ, A))
+
+function pullback_evaluate(∂AA, basis::SparseSymmProd, A)
+   T∂A = promote_type(eltype(∂AA), eltype(A))
+   ∂A = zeros(T∂A, size(A))
+   return pullback_evaluate!(∂A, ∂AA, basis, A)
 end
 
-
-@generated function _pb_evaluate(
-                        basis::SparseSymmProd{ORD}, 
-                        Δ,  # differential
-                        A   # input 
-                        ) where {ORD}
-   quote                         
-      TG = promote_type(eltype(Δ), eltype(A))
-      gA = zeros(TG, size(A))
+@generated function pullback_evaluate!(∂A, ∂AA, 
+                                 basis::SparseSymmProd{ORD}, A
+                                 ) where {ORD}
+   quote
       @nexprs $ORD N -> _pb_evaluate_pbAA!(
-                              gA, 
-                              __view_AA(Δ, basis, N), 
+                              ∂A, 
+                              __view_AA(∂AA, basis, N), 
                               basis.specs[N], 
                               A)
-      return gA
+      return ∂A
    end 
 end
 
-# _pb_evaluate_pbAA_const!(gA::AbstractVector) = (gA[1] .= 0; nothing)
-# _pb_evaluate_pbAA_const!(gA::AbstractMatrix) = (gA[:, 1] .= 0; nothing)
 
 function _pb_evaluate_pbAA!(gA::AbstractVector, ΔN::AbstractVector, 
                             spec::Vector{NTuple{N, Int}}, 
@@ -208,14 +203,8 @@ function _pb_evaluate_pbAA!(gA, ΔN::AbstractMatrix,
 end
 
 
-function rrule(::typeof(_pb_evaluate), basis::SparseSymmProd, ΔAA, A)
-   uA = _pb_evaluate(basis, ΔAA, A)
-   return uA, Δ² -> (NoTangent(), NoTangent(), 
-                     _pb_pb_evaluate(basis, Δ², ΔAA, A)...)
-end
 
-
-@generated function _pb_pb_evaluate(basis::SparseSymmProd{ORD}, Δ², ΔAA, A)  where {ORD}
+@generated function pb_pb_evaluate(Δ², ΔAA, basis::SparseSymmProd{ORD}, A)  where {ORD}
    quote 
       TG = promote_type(eltype(Δ²), eltype(ΔAA), eltype(A))
       gΔAA = zeros(TG, size(ΔAA))
@@ -279,7 +268,7 @@ end
 
 # -------------- Pushforwards / frules  
 
-function pfwd_evaluate(basis::SparseSymmProd, 
+function pushforward_evaluate(basis::SparseSymmProd, 
                        A::AbstractVector{<: Number}, 
                        ΔA::AbstractMatrix)
    nAA = length(basis)                       
@@ -288,12 +277,12 @@ function pfwd_evaluate(basis::SparseSymmProd,
    T∂AA = _my_promote_type(TAA, eltype(ΔA))
    ∂AA = acquire!(basis.pool, :∂AA, (nAA, size(ΔA, 2)), T∂AA)
    fill!(∂AA, zero(T∂AA))
-   pfwd_evaluate!(unwrap(AA), unwrap(∂AA), basis, A, ΔA)
+   pushforward_evaluate!(unwrap(AA), unwrap(∂AA), basis, A, ΔA)
    return AA, ∂AA
 end
 
 
-@generated function pfwd_evaluate!(AA, ∂AA, basis::SparseSymmProd{NB}, A, ΔA) where {NB}
+@generated function pushforward_evaluate!(AA, ∂AA, basis::SparseSymmProd{NB}, A, ΔA) where {NB}
    quote 
       if basis.hasconst; error("no implementation with hasconst"); end 
       Base.Cartesian.@nexprs $NB N -> _pfwd_AA_N!(AA, ∂AA, A, ΔA, basis.ranges[N], basis.specs[N])
@@ -313,6 +302,25 @@ function _pfwd_AA_N!(AA, ∂AA, A, ΔA,
       end
    end
 end 
+
+
+# -------------- ChainRules integration 
+
+
+function rrule(::typeof(evaluate), basis::SparseSymmProd, A)
+   AA = evaluate(basis, A)
+   return AA, Δ -> (NoTangent(), NoTangent(), pullback_evaluate(Δ, basis, A))
+end
+
+function rrule(::typeof(pullback_evaluate), ∂AA, basis::SparseSymmProd, A)
+   ∂A = pullback_evaluate(∂AA, basis, A)
+   function _pb(∂²)
+      g∂AA, gA = pb_pb_evaluate(∂², ∂AA, basis, A)
+      return NoTangent(), g∂AA, NoTangent(), gA
+   end 
+   return ∂A, _pb
+end
+
 
 
 # -------------- Lux integration 
