@@ -1,6 +1,4 @@
 
-using LoopVectorization
-
 using ChainRulesCore
 using ChainRulesCore: NoTangent
 
@@ -29,7 +27,7 @@ defines a basis of 9 functions,
 [ A_1, A_2, A_1^2, A_1 A_2, A_2^2, A_1^3, A_1^2 A_2, A_1 A_2^2, A_2^3 ]
 ```
 """
-struct SparseSymmProd{ORD, TS} <: AbstractPoly4MLBasis
+struct SparseSymmProd{ORD, TS} <: AbstractP4MLTensor
    specs::TS
    ranges::NTuple{ORD, UnitRange{Int}}
    hasconst::Bool 
@@ -78,21 +76,17 @@ end
 
 _valtype(basis::SparseSymmProd, ::Type{T}) where {T} = T
 
-(basis::SparseSymmProd)(args...) = evaluate(basis, args...)
-
-function evaluate(basis::SparseSymmProd, A::AbstractVector{T}) where {T}
-   AA = acquire!(basis.pool, :AA, (length(basis),), T)
-   evaluate!(AA, basis, A)
-   return AA
+function whatalloc(::typeof(evaluate!), 
+                   basis::SparseSymmProd, A::AbstractVector{T}) where {T}
+   VT = _valtype(basis, T)
+   return (VT, length(basis))
 end
 
-function evaluate(basis::SparseSymmProd, A::AbstractMatrix{T}) where {T}
-   nX = size(A, 1)
-   AA = acquire!(basis.pool, :AAbatch, (nX, length(basis)), T)
-   evaluate!(AA, basis, A)
-   return AA
+function whatalloc(::typeof(evaluate!), 
+                   basis::SparseSymmProd, A::AbstractMatrix{T}) where {T}
+   VT = _valtype(basis, T)
+   return (VT, size(A, 1), length(basis))
 end
-
 
 # -------------- kernels for simple evaluation 
 
@@ -149,15 +143,20 @@ end
 
 import ChainRulesCore: rrule, NoTangent 
 
-
-function pullback_evaluate(∂AA, basis::SparseSymmProd, A)
+function whatalloc(::typeof(pullback_evaluate!), 
+                   ∂AA, basis::SparseSymmProd, A)
    T∂A = promote_type(eltype(∂AA), eltype(A))
-   ∂A = zeros(T∂A, size(A))
-   return pullback_evaluate!(∂A, ∂AA, basis, A)
+   return (T∂A, size(A)... )
 end
 
-@generated function pullback_evaluate!(∂A, ∂AA, 
-                                 basis::SparseSymmProd{ORD}, A
+# TODO: REMOVE
+# function pullback_evaluate(∂AA, basis::SparseSymmProd, A)
+#    ∂A = zeros(T∂A, size(A))
+#    return pullback_evaluate!(∂A, ∂AA, basis, A)
+# end
+
+@generated function pullback_evaluate!(∂A,  
+                                 ∂AA, basis::SparseSymmProd{ORD}, A
                                  ) where {ORD}
    quote
       @nexprs $ORD N -> _pb_evaluate_pbAA!(
@@ -201,7 +200,7 @@ function _pb_evaluate_pbAA!(gA, ΔN::AbstractMatrix,
 end
 
 
-
+#=
 @generated function pb_pb_evaluate(Δ², ΔAA, basis::SparseSymmProd{ORD}, A)  where {ORD}
    quote 
       TG = promote_type(eltype(Δ²), eltype(ΔAA), eltype(A))
@@ -262,23 +261,31 @@ function _pb_pb_evaluate_AA!(spec::Vector{NTuple{N, Int}},
    end
    return nothing 
 end
+=#
 
 
 # -------------- Pushforwards / frules  
 
-function pushforward_evaluate(basis::SparseSymmProd, 
-                       A::AbstractVector{<: Number}, 
-                       ΔA::AbstractMatrix)
+# TODO: REMOVE
+# function pushforward_evaluate(basis::SparseSymmProd, 
+#                               A::AbstractVector{<: Number}, 
+#                               ΔA::AbstractMatrix)
+#    nAA = length(basis)                       
+#    TAA = eltype(A)
+#    AA = zeros(TAA, nAA)
+#    T∂AA = _my_promote_type(TAA, eltype(ΔA))
+#    ∂AA = zeros(T∂AA, nAA, size(ΔA, 2))
+#    pushforward_evaluate!(AA, ∂AA, basis, A, ΔA)
+#    return AA, ∂AA
+# end
+
+function whatalloc(::typeof(pushforward_evaluate!), 
+                   basis::SparseSymmProd, A, ΔA)
    nAA = length(basis)                       
    TAA = eltype(A)
-   AA = acquire!(basis.pool, :AA, (nAA,), TAA)
    T∂AA = _my_promote_type(TAA, eltype(ΔA))
-   ∂AA = acquire!(basis.pool, :∂AA, (nAA, size(ΔA, 2)), T∂AA)
-   fill!(∂AA, zero(T∂AA))
-   pushforward_evaluate!(unwrap(AA), unwrap(∂AA), basis, A, ΔA)
-   return AA, ∂AA
+   return (TAA, nAA), (T∂AA, nAA, size(ΔA, 2))
 end
-
 
 @generated function pushforward_evaluate!(AA, ∂AA, basis::SparseSymmProd{NB}, A, ΔA) where {NB}
    quote 
@@ -325,15 +332,15 @@ end
 # it needs an extra lux interface reason as in the case of the `basis` 
 # should it not be enough to just overload valtype? 
 
-function evaluate(l::PolyLuxLayer{<: SparseSymmProd}, A::AbstractVector{T}, ps, st) where {T}
-   AA = acquire!(st.pool, :AA, (length(l),), T)
-   evaluate!(AA, l.basis, A)
-   return AA, st
-end
+# function evaluate(l::PolyLuxLayer{<: SparseSymmProd}, A::AbstractVector{T}, ps, st) where {T}
+#    AA = acquire!(st.pool, :AA, (length(l),), T)
+#    evaluate!(AA, l.basis, A)
+#    return AA, st
+# end
 
-function evaluate(l::PolyLuxLayer{<: SparseSymmProd}, A::AbstractMatrix{T}, ps, st) where {T}
-   nX = size(A, 1)
-   AA = acquire!(st.pool, :AAbatch, (nX, length(l)), T)
-   evaluate!(AA, l.basis, A)
-   return AA, st
-end
+# function evaluate(l::PolyLuxLayer{<: SparseSymmProd}, A::AbstractMatrix{T}, ps, st) where {T}
+#    nX = size(A, 1)
+#    AA = acquire!(st.pool, :AAbatch, (nX, length(l)), T)
+#    evaluate!(AA, l.basis, A)
+#    return AA, st
+# end

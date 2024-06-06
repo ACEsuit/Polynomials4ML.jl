@@ -10,7 +10,7 @@ Real trigonometric polynomials up to degree `N` (inclusive). The basis is ordere
 ```
 where `θ` is input variable. 
 """
-struct RTrigBasis <: ScalarPoly4MLBasis
+struct RTrigBasis <: AbstractP4MLBasis
    N::Int
    @reqfields
 end

@@ -10,7 +10,7 @@ constructed in the order
 ```
 where `θ` is input variable. 
 """
-struct CTrigBasis <: AbstractPoly4MLBasis
+struct CTrigBasis <: AbstractP4MLBasis
    N::Int
    @reqfields
 end

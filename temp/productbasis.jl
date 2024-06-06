@@ -4,7 +4,7 @@
 using Lux: WrappedFunction
 using Lux
 
-struct ProductBasis{NB, TR, TY, TS} <: AbstractPoly4MLBasis
+struct ProductBasis{NB, TR, TY, TS} <: AbstractP4MLBasis
    spec1::Vector{TS}
    bRnl::TR
    bYlm::TY

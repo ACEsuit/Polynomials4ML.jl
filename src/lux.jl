@@ -11,7 +11,7 @@ that the basis accepts a number or short vector as input and produces an output
 that is a vector. It also assumes that batched operations are implemented, 
 as well as some other functionality. 
 """
-function lux(basis::AbstractPoly4MLBasis; 
+function lux(basis::AbstractP4MLBasis; 
                use_cache = true,
                name = String(nameof(typeof(basis))), 
                meta = Dict{String, Any}("name" => name),
@@ -21,7 +21,7 @@ function lux(basis::AbstractPoly4MLBasis;
    return PolyLuxLayer(basis, meta, use_cache, release_input)
 end
 """
-a fall-back method for `initalparameters` that all AbstractPoly4MLBasis
+a fall-back method for `initalparameters` that all AbstractP4MLBasis
 should overload 
 """
 _init_luxparams(rng::AbstractRNG, l::Any) = _init_luxparams(l)
@@ -59,7 +59,7 @@ initialstates(rng::AbstractRNG, l::PolyLuxLayer) = _init_luxstate(rng, l)
 (l::PolyLuxLayer)(args...) = evaluate(l, args...)
 
 # # general fallback of evaluate interface if we dont have trainble parameters
-evaluate!(out, basis::AbstractPoly4MLBasis, X, ps) = evaluate!(out, basis, X)
+evaluate!(out, basis::AbstractP4MLBasis, X, ps) = evaluate!(out, basis, X)
 
 # lux evaluation interface
 function evaluate(l::PolyLuxLayer, X, ps, st)

@@ -6,7 +6,7 @@ export SparseProduct
 """
 `SparseProduct` : a model layer to build tensor products
 """
-struct SparseProduct{NB} <: AbstractPoly4MLBasis
+struct SparseProduct{NB} <: AbstractP4MLBasis
    spec::Vector{NTuple{NB, Int}}
    # ---- temporaries & caches
    @reqfields()

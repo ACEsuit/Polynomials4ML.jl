@@ -21,7 +21,7 @@ PooledSparseProduct(spec)
 where `spec` is a list of $(k_1, \dots, k_N)$ tuples or vectors, or 
 `AbstractMatrix` where each column specifies such a tuple. 
 """
-struct PooledSparseProduct{NB} <: AbstractPoly4MLBasis
+struct PooledSparseProduct{NB} <: AbstractP4MLTensor
    spec::Vector{NTuple{NB, Int}}
    # ---- temporaries & caches 
    @reqfields
@@ -49,30 +49,20 @@ function Base.show(io::IO, basis::PooledSparseProduct{NB}) where {NB}
 end
 
 
-# ----------------------- evaluation interfaces 
-_valtype(basis::AbstractPoly4MLBasis, BB::Tuple) = 
+# ----------------------- evaluation and allocation interfaces 
+
+_valtype(basis::PooledSparseProduct, BB::Tuple) = 
       mapreduce(eltype, promote_type, BB)
 
-_gradtype(basis::AbstractPoly4MLBasis, BB::Tuple) = 
+_gradtype(basis::PooledSparseProduct, BB::Tuple) = 
       mapreduce(eltype, promote_type, BB)
 
-_alloc(basis::PooledSparseProduct, BB::TupVecMat) = 
-      acquire!(basis.pool, :A, (length(basis), ), _valtype(basis, BB) )
+function whatalloc(evaluate!, basis::PooledSparseProduct{NB}, BB::TupVecMat) where {NB}
+   TV = _valtype(basis, BB)
+   nA = length(basis)
+   return (TV, nA) 
+end
 
-_out_size(basis::PooledSparseProduct, BB::TupVecMat) = 
-      length(basis)
-
-# _alloc_d(basis::AbstractPoly4MLBasis, BB::TupVecMat) = 
-#       acquire!(basis.pool, _outsym(BB), (length(basis), ), _gradtype(basis, BB) )
-
-# _alloc_dd(basis::AbstractPoly4MLBasis, BB::TupVecMat) = 
-#       acquire!(basis.pool, _outsym(BB), (length(basis), ), _gradtype(basis, BB) )
-
-# _alloc_ed(basis::AbstractPoly4MLBasis, BB::TupVecMat) = 
-#       _alloc(basis, BB), _alloc_d(basis, BB)
-
-# _alloc_ed2(basis::AbstractPoly4MLBasis, BB::TupVecMat) = 
-#       _alloc(basis, BB), _alloc_d(basis, BB), _alloc_dd(basis, BB)
 
 
 
@@ -151,6 +141,11 @@ end
 using StaticArrays
 using Base.Cartesian: @nexprs 
 
+# NOT AT ALL OBVIOUS HOW TO DO THIS ?!?!?
+# function whatalloc(::typeof(pullback_evaluate!), 
+#                    basis::PooledSparseProduct, BB::TupMat)
+   
+# end
 
 function pullback_evaluate(∂A, basis::PooledSparseProduct{NB}, BB::TupMat) where {NB}
    nX = size(BB[1], 1)
@@ -161,7 +156,9 @@ function pullback_evaluate(∂A, basis::PooledSparseProduct{NB}, BB::TupMat) whe
 end
 
 
-function pullback_evaluate!(∂BB, ∂A, basis::PooledSparseProduct{NB}, BB::TupMat) where {NB}
+function pullback_evaluate!(∂BB, # output 
+                            ∂A, basis::PooledSparseProduct{NB}, BB::TupMat # inputs 
+                            ) where {NB}
    nX = size(BB[1], 1)
    @assert all(nX <= size(BB[i], 1) for i = 1:NB)
    @assert all(nX <= size(∂BB[i], 1) for i = 1:NB)
@@ -251,10 +248,17 @@ function pullback_evaluate!(∂BB, ∂A, basis::PooledSparseProduct{3}, BB::TupM
 end
 
 
+#= 
+
+# TODO: revisit this and potentially automate it using 
+#       the ForwardDiff trick!!! 
+
+
 import ForwardDiff
 
-function pb_pb_evaluate(basis::PooledSparseProduct{NB}, ∂2, 
-                         ∂A, BB::TupMat) where {NB}
+function pb_pb_evaluate(∂2, 
+                        ∂A, basis::PooledSparseProduct{NB}, BB::TupMat
+                        ) where {NB}
 
    # ∂2 should be a tuple of length 2
    @assert ∂2 isa NTuple{NB, <: AbstractMatrix}
@@ -313,8 +317,6 @@ function pb_pb_evaluate(basis::PooledSparseProduct{1}, ∂2,
 end
 
 
-# TODO: revisit this and potentially automate it using 
-#       the ForwardDiff trick!!! 
 function pb_pb_evaluate(basis::PooledSparseProduct{2}, ∂2, 
                          ∂A, BB::TupMat)
 
@@ -344,7 +346,7 @@ function pb_pb_evaluate(basis::PooledSparseProduct{2}, ∂2,
    end
    return ∂2_∂A, ∂2_BB 
 end
-
+=#
 
 
 # --------------------- Pushforwards 
@@ -377,11 +379,10 @@ function pushforward_evaluate(basis::PooledSparseProduct, BB, ΔBB)
    nA = length(basis)
    
    TA = promote_type(eltype.(BB)...)
-   A = acquire!(basis.pool, :A, (nA,), TA)
-   fill!(A, zero(TA))
+   A = zeros(TA, nA)
    
    T∂A = _my_promote_type(TA, eltype.(ΔBB)...)
-   ∂A = acquire!(basis.pool, :∂A_pfwd, (nA, nX), T∂A)
+   ∂A = zeros(T∂A, (nA, nX))
    fill!(∂A, zero(T∂A))
 
    return pushforward_evaluate!(A, ∂A, basis, BB, ΔBB)
@@ -407,7 +408,7 @@ end
 
 
 # --------------------- connect with ChainRules 
-# todo ... 
+# can this be generalized again? 
 
 import ChainRulesCore: rrule, NoTangent
 

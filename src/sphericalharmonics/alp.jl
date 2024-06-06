@@ -13,7 +13,7 @@ Important Note: `evaluate_ed!`` does NOT return derivatives, but rather
 produces rescaled derivatives for better numerical stability near the poles. 
 See comments in code for details on how to use the ALP derivatives correctly. 
 """
-struct ALPolynomials{T} <: ScalarPoly4MLBasis
+struct ALPolynomials{T} <: AbstractP4MLBasis
 	L::Int
 	A::Vector{T}
 	B::Vector{T}

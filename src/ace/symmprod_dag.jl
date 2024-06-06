@@ -27,7 +27,7 @@ However, the field `projection` is used only for information, and not
 to actually reduce the output. One could of course use it to compose 
 the output with a projection matrix.
 """
-struct SparseSymmProdDAG <: AbstractPoly4MLBasis
+struct SparseSymmProdDAG <: AbstractP4MLBasis
    nodes::Vector{BinDagNode}
    has0::Bool
    num1::Int

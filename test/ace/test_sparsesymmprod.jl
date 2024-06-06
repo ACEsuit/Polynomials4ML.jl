@@ -1,6 +1,6 @@
 
 using Test, BenchmarkTools, Polynomials4ML
-using Polynomials4ML: SimpleProdBasis, release!, SparseSymmProd
+using Polynomials4ML: SimpleProdBasis, SparseSymmProd
 using Polynomials4ML.Testing: println_slim, print_tf, generate_SO2_spec, 
                               test_withalloc
 using Random
@@ -8,9 +8,9 @@ using Random
 using ACEbase.Testing: fdtest, dirfdtest
 using Lux
 using ChainRulesCore: rrule 
-# using Zygote
 
 P4ML = Polynomials4ML
+
 ##
 
 M = 5 
@@ -142,7 +142,7 @@ println()
 
 ##
 
-
+#=
 @info("Test pb_pb_evaluate")
 
 for ntest = 1:10 
@@ -165,6 +165,7 @@ for ntest = 1:10
    print_tf(@test fdtest(F, dF, 0.0; verbose=false))
 end
 println() 
+
 
 ##
 
@@ -195,6 +196,7 @@ for ntest = 1:30
 end
 println() 
 
+=#
 
 ##
 

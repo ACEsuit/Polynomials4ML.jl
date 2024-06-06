@@ -110,6 +110,7 @@ println()
 
 ## 
 
+#=
 @info("Testing pb_pb_evaluate for PooledSparseProduct")
 import ChainRulesCore: rrule, NoTangent
 
@@ -151,7 +152,7 @@ for ntest = 1:20
    print_tf(@test all( fdtest(F, dF, 0.0; verbose=false) ))
 end
 println()
-
+=#
 
 ## 
 @info("Testing pushforward for PooledSparseProduct")

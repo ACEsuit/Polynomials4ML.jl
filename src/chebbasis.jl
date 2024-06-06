@@ -16,7 +16,7 @@ performance benefit from this.
 
 Warning: `ChebBasis` and `chebyshev_basis` have different normalization.
 """
-struct ChebBasis <: ScalarPoly4MLBasis
+struct ChebBasis <: AbstractP4MLBasis
    N::Int
    @reqfields
 end

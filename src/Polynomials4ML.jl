@@ -45,6 +45,9 @@ export natural_indices,
 # generic fallbacks for a lot of wrapper kind of functionality 
 include("interface.jl")
 
+# static product - used throughout several layers
+include("staticprod.jl")
+
 # polynomials 
 include("orthopolybasis.jl")
 include("discreteweights.jl")
@@ -64,7 +67,6 @@ include("sphericalharmonics/sphericalharmonics.jl")
 include("atomicorbitalsradials/atomicorbitalsradials.jl")
 
 # generating product bases (generalisation of tensor products)
-include("staticprod.jl")
 include("sparseproduct.jl")
 
 # LinearLayer implementation
@@ -77,7 +79,7 @@ include("lux.jl")
 =#
 
 # basis components to implement cluster expansion methods
-# include("ace/ace.jl")
+include("ace/ace.jl")
 
 # some nice utility functions to generate basis sets and other things  
 include("utils/utils.jl")

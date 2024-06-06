@@ -14,7 +14,7 @@ can be either continuous or discrete but must have a density function. See also
 * `chebyshev_basis`
 * `jacobi_basis`
 """
-struct OrthPolyBasis1D3T{T} <: ScalarPoly4MLBasis
+struct OrthPolyBasis1D3T{T} <: AbstractP4MLBasis
    # ----------------- the recursion coefficients
    A::Vector{T}
    B::Vector{T}

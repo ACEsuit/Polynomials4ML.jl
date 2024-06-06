@@ -1,16 +1,28 @@
 using StaticArrays: StaticArray, SVector, StaticVector, similar_type
 using ChainRulesCore
 
-abstract type AbstractPoly4MLBasis end
+abstract type AbstractP4MLLayer end 
 
-abstract type ScalarPoly4MLBasis <: AbstractPoly4MLBasis end
+"""
+`abstract type AbstractP4MLBasis end`
 
-abstract type SVecPoly4MLBasis <: AbstractPoly4MLBasis end
+Annotates types that map a low-dimensional input, scalar or `SVector`,
+to a vector of scalars (feature vector, embedding, basis...). 
+"""
+abstract type AbstractP4MLBasis <: AbstractP4MLLayer end
 
-abstract type AbstractP4MLTensor end 
+"""
+`abstract type AbstractP4MLTensor end`
+
+Annotates layers that map a vector to a vector. Each of the vectors may 
+represent a tensor (hence the name). Future interfaces may generalize the 
+allowed dimensionality of inputs to allow tensorial shapes.
+"""
+abstract type AbstractP4MLTensor <: AbstractP4MLLayer end 
 
 # ---------------------------------------
-# some helpers to deal with the three required arrays: 
+# some helpers to deal with the required fields: 
+# TODO: now that there is only meta, should this be removed? 
 
 using ACEbase: @def 
 
@@ -27,6 +39,7 @@ _make_reqfields() = (_makemeta(), )
 # ---------------------------------------
 
 # SphericalCoords is defined here so it can be part of SINGLE 
+# TODO: retire this as soon as we fully switched to SpheriCart 
 
 """
 `struct SphericalCoords` : a simple datatype storing spherical coordinates
@@ -76,51 +89,54 @@ _laplacetype(basis, x::SINGLE) = _laplacetype(basis, typeof(x))
 _laplacetype(basis, x::BATCH) = _laplacetype(basis, eltype(x))
 
 # default grad types
-_gradtype(basis::AbstractPoly4MLBasis, TX::Type{<:Number}) = 
+_gradtype(basis::AbstractP4MLBasis, TX::Type{<:Number}) = 
       _valtype(basis, TX)
 
-_gradtype(basis::AbstractPoly4MLBasis, Tx::Type{<: StaticArray}) = 
+_gradtype(basis::AbstractP4MLBasis, Tx::Type{<: StaticArray}) = 
       StaticArrays.similar_type(Tx, 
                      promote_type(eltype(Tx), _valtype(basis, Tx)))
 
 # default hessian types 
-_hesstype(basis::AbstractPoly4MLBasis, TX::Type{<:Number}) = 
+_hesstype(basis::AbstractP4MLBasis, TX::Type{<:Number}) = 
       _valtype(basis, TX)
 
-_hesstype(basis::AbstractPoly4MLBasis, ::Type{SVector{N, T}}) where {N, T} = 
+_hesstype(basis::AbstractP4MLBasis, ::Type{SVector{N, T}}) where {N, T} = 
       SMatrix{N, N, promote_type(_valtype(basis, SVector{N, T}), T)}
 
 # laplacian types       
-_laplacetype(basis::AbstractPoly4MLBasis, TX::Type{<: Number}) = 
+_laplacetype(basis::AbstractP4MLBasis, TX::Type{<: Number}) = 
       eltype(_hesstype(basis, TX))
 
-_laplacetype(basis::AbstractPoly4MLBasis, TX::Type{SVector{N, T}}) where {N, T} = 
+_laplacetype(basis::AbstractP4MLBasis, TX::Type{SVector{N, T}}) where {N, T} = 
       eltype(_hesstype(basis, TX))
 
 
 # ------------------------------------------------------------
 # allocation interface & WithAlloc Interface 
 
-_out_size(basis::AbstractPoly4MLBasis, x::SINGLE) = (length(basis),)
+_out_size(basis::AbstractP4MLBasis, x::SINGLE) = (length(basis),)
 
-_out_size(basis::AbstractPoly4MLBasis, X::BATCH) = (length(X), length(basis))
+_out_size(basis::AbstractP4MLBasis, X::BATCH) = (length(X), length(basis))
 
-function whatalloc(::typeof(evaluate!), basis::AbstractPoly4MLBasis, x)
+function whatalloc(::typeof(evaluate!), basis::AbstractP4MLBasis, x)
    T = _valtype(basis, x)
    sz = _out_size(basis, x)
    return (T, sz...) 
 end
 
-function whatalloc(::typeof(evaluate_ed!), basis::AbstractPoly4MLBasis, x)
-   T = _valtype(basis, x)
+function whatalloc(::typeof(evaluate_ed!), basis::AbstractP4MLBasis, x)
+   TV = _valtype(basis, x)
+   TG = _gradtype(basis, x)
    sz = _out_size(basis, x)
-   return (T, sz...), (T, sz...)
+   return (TV, sz...), (TG, sz...)
 end
 
-function whatalloc(::typeof(evaluate_ed2!), basis::AbstractPoly4MLBasis, x)
-   T = _valtype(basis, x)
+function whatalloc(::typeof(evaluate_ed2!), basis::AbstractP4MLBasis, x)
+   TV = _valtype(basis, x)
+   TG = _gradtype(basis, x)
+   TH = _hesstype(basis, x)
    sz = _out_size(basis, x)
-   return (T, sz...), (T, sz...), (T, sz...)
+   return (TV, sz...), (TG, sz...), (TH, sz...)
 end
 
 # a helper that converts all whatalloc outputs to tuple form 
@@ -142,7 +158,7 @@ end
 # --------------------------------------- 
 # allocating evaluation interface 
 
-(basis::AbstractPoly4MLBasis)(args...) = evaluate(basis, args...)
+(basis::AbstractP4MLLayer)(args...) = evaluate(basis, args...)
             
 evaluate(args...) = _with_safe_alloc(evaluate!, args...) 
 
@@ -150,9 +166,9 @@ evaluate_ed(args...) = _with_safe_alloc(evaluate_ed!, args...)
 
 evaluate_ed2(args...) = _with_safe_alloc(evaluate_ed2!, args...)
 
-evaluate_d(basis::AbstractPoly4MLBasis, args...) = evaluate_ed(basis, args...)[2] 
+evaluate_d(basis, args...) = evaluate_ed(basis, args...)[2] 
 
-evaluate_dd(basis::AbstractPoly4MLBasis, args...) = evaluate_ed2(basis, args...)[3] 
+evaluate_dd(basis, args...) = evaluate_ed2(basis, args...)[3] 
 
 pullback_evaluate(args...) = _with_safe_alloc(pullback_evaluate!, args...)
 
@@ -170,13 +186,13 @@ import ChainRulesCore: rrule
 #                 = ∑_ij ∂P_ij * ∂_xa ( P_ij )
 #                 = ∑_ij ∂P_ij * dP_ij δ_ia
 function rrule(::typeof(evaluate), 
-                  basis::ScalarPoly4MLBasis, 
+                  basis::AbstractP4MLBasis, 
                   R::AbstractVector{<: Real})
    P = evaluate(basis, R)
    return P, ∂P -> (NoTangent(), NoTangent(), pullback_evaluate(∂P, basis, R))
 end
 
-function pullback_evaluate(∂P, basis::ScalarPoly4MLBasis, X::AbstractVector{<: Real})
+function pullback_evaluate(∂P, basis::AbstractP4MLBasis, X::AbstractVector{<: Real})
    P, dP = evaluate_ed(basis, X)
    @assert size(∂P) == (length(X), length(basis))
    T∂R = promote_type(eltype(∂P), eltype(dP))
@@ -192,7 +208,7 @@ end
 
 
 function rrule(::typeof(pullback_evaluate),
-               ∂P, basis::ScalarPoly4MLBasis, X::AbstractVector{<: Real})
+               ∂P, basis::AbstractP4MLBasis, X::AbstractVector{<: Real})
    ∂X = pullback_evaluate(∂P, basis, X)
    function _pb(∂2)
       ∂∂P, ∂X = pb_pb_evaluate(∂2, ∂P, basis, X)
@@ -202,7 +218,7 @@ function rrule(::typeof(pullback_evaluate),
 end
 
 
-function pb_pb_evaluate(∂2, ∂P, basis::ScalarPoly4MLBasis, 
+function pb_pb_evaluate(∂2, ∂P, basis::AbstractP4MLBasis, 
                         X::AbstractVector{<: Real})
    # @info("_evaluate_pb2")                        
    Nbasis = length(basis)

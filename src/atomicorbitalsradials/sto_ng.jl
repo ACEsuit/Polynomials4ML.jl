@@ -1,4 +1,4 @@
-mutable struct STO_NG{T} <: ScalarPoly4MLBasis
+mutable struct STO_NG{T} <: AbstractP4MLBasis
     ζ::Tuple{Vector{Vector{T}},Vector{Vector{T}}}
     # ----------------- metadata 
     @reqfields

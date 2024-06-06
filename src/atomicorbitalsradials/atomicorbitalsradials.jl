@@ -10,7 +10,7 @@ using Random: AbstractRNG
 const NLM{T} = NamedTuple{(:n1, :n2, :l, :m), Tuple{T, T, T, T}}
 const NL{T} = NamedTuple{(:n1, :n2, :l), Tuple{T, T, T}}
 
-mutable struct AtomicOrbitalsRadials{TP, TD, TI}  <: ScalarPoly4MLBasis
+mutable struct AtomicOrbitalsRadials{TP, TD, TI}  <: AbstractP4MLBasis
    Pn::TP
    Dn::TD
    spec::Vector{NL{TI}}

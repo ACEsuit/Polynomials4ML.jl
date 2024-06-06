@@ -3,7 +3,7 @@
 """
 Naive implementation of the product basis, intended only for testing
 """
-struct SimpleProdBasis 
+struct SimpleProdBasis  <: AbstractP4MLTensor
    orders::Vector{Int}
    spec::Matrix{Int} 
 end 

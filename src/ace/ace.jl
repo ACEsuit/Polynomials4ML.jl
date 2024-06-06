@@ -11,14 +11,11 @@ import LuxCore: AbstractExplicitLayer, AbstractExplicitContainerLayer,
 
 using Random: AbstractRNG                 
 
-# EXPORT 
-# don't export yet - the new functionality remains experimental for now. 
-
 # pooled sparse product 
 include("sparseprodpool.jl")
 
 # sparse symmetric tensor product 
-include("symmprod_dag.jl")
-include("symmprod_dag_kernels.jl")
+# include("symmprod_dag.jl")
+# include("symmprod_dag_kernels.jl")
 include("simpleprodbasis.jl")
 include("sparsesymmprod.jl")

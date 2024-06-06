@@ -1,4 +1,4 @@
-mutable struct GaussianBasis{T} <: ScalarPoly4MLBasis
+mutable struct GaussianBasis{T} <: AbstractP4MLBasis
     ζ::Vector{T}
     # ----------------- metadata 
     @reqfields
