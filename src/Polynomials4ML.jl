@@ -52,11 +52,11 @@ include("jacobiweights.jl")
 include("monomials.jl")
 include("chebbasis.jl")
 
-#=
 # 2d harmonics / trigonometric polynomials 
 include("trig.jl")
 include("rtrig.jl")
 
+#=
 # 3d harmonics 
 include("sphericalharmonics/sphericalharmonics.jl")
 
@@ -74,13 +74,13 @@ include("linear.jl")
 
 # generic machinery for wrapping poly4ml bases into lux layers 
 include("lux.jl")
+=#
 
 # basis components to implement cluster expansion methods
-include("ace/ace.jl")
+# include("ace/ace.jl")
 
 # some nice utility functions to generate basis sets and other things  
 include("utils/utils.jl")
-=#
 
 # submodule with some useful utilities for writing unit tests 
 include("testing.jl")

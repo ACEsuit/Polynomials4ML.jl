@@ -1,4 +1,3 @@
-using HyperDualNumbers: Hyper
 
 export RTrigBasis
 
@@ -31,6 +30,8 @@ function natural_indices(basis::RTrigBasis)
 end
 
 _valtype(basis::RTrigBasis, T::Type{<: Real}) = T
+
+using HyperDualNumbers: Hyper
 _valtype(::RTrigBasis, T::Type{<: Hyper{<: Real}}) = T
 
 ##

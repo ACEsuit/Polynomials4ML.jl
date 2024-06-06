@@ -8,11 +8,11 @@ using Test
     @testset "DiscreteWeights" begin include("test_discreteweights.jl"); end
     @testset "Chebyshev" begin include("test_cheb.jl"); end 
 
-    #=
     # 2D Harmonics 
     @testset "TrigonometricPolynomials" begin include("test_trig.jl"); end
     @testset "Real Trig Polys" begin include("test_rtrig.jl"); end
 
+    #=
     # 3D Harmonics 
     @testset "Complex SphericalHarmonics" begin include("sphericalharmonics/test_cylm.jl"); end
     @testset "Real Spherical Harmonics" begin include("sphericalharmonics/test_rylm.jl"); end

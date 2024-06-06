@@ -26,6 +26,8 @@ index(basis::CTrigBasis, m::Integer) =
 Base.length(basis::CTrigBasis) = 2 * basis.N + 1 
 
 _valtype(basis::CTrigBasis, T::Type{<: Real}) = complex(T)
+
+using HyperDualNumbers: Hyper 
 _valtype(::CTrigBasis, T::Type{<: Hyper{<: Real}}) = complex(T)
   
 # ----------------- main evaluation code 
