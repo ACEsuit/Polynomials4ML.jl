@@ -1,8 +1,7 @@
 module Testing
 
 using Polynomials4ML: evaluate!, evaluate_ed!, evaluate_ed2!, 
-               evaluate, evaluate_d, evaluate_ed, evaluate_dd, evaluate_ed2 , 
-               _alloc
+               evaluate, evaluate_d, evaluate_ed, evaluate_dd, evaluate_ed2
 
 using Test, ForwardDiff, Bumper, WithAlloc
 
@@ -10,8 +9,6 @@ using StaticArrays
 using LinearAlgebra: norm 
 
 using ACEbase.Testing: print_tf, println_slim
-
-using ObjectPools: unwrap
 
 function time_standard!(P, basis, X)
    for i = 1:length(X)
@@ -78,9 +75,9 @@ function test_derivatives(basis, generate_x, nX = 32, ntest = 8)
    @info("Test consistency of batched evaluation")
 
    X = [ generate_x() for _ = 1:nX ]
-   bP1 = _alloc(basis, X)
-   bdP1 = _alloc(basis, X)
-   bddP1 = _alloc(basis, X)
+   bP1 = zeros(whatalloc(evaluate!, basis, X)...) 
+   bdP1 = deepcopy(bP1)
+   bddP1 = deepcopy(bP1)
    for (i, x) in enumerate(X)
       bP1[i, :] = evaluate(basis, x)
       bdP1[i, :] = evaluate_d(basis, x)
@@ -121,7 +118,7 @@ function test_withalloc(basis, x; allowed_allocs = 0, kwargs...)
    P1 = basis(x) 
    @no_escape begin 
       P2 = @withalloc evaluate!(basis, x)
-      match_P1P2 = (unwrap(P1) ≈ P2)
+      match_P1P2 = P1 ≈ P2
       nothing 
    end
    if nalloc > allowed_allocs 

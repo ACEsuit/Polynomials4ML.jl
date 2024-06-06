@@ -39,7 +39,6 @@ test_derivatives(basis, generate_x)
 ##
 
 using Bumper, WithAlloc, BenchmarkTools, StaticArrays
-using ObjectPools: unwrap
 using WithAlloc: withalloc
 using Polynomials4ML: evaluate!, evaluate_d!, evaluate_ed!
 
@@ -51,10 +50,10 @@ let basis = basis
    @no_escape begin 
       P1 = basis(x) 
       P2 = @withalloc evaluate!(basis, x)
-      println_slim( @test unwrap(P1) ≈ P2 )
+      println_slim( @test P1 ≈ P2 )
       P1b = basis(xx) 
       P2b = @withalloc evaluate!(basis, xx)
-      println_slim( @test unwrap(P1b) ≈ P2b )
+      println_slim( @test P1b ≈ P2b )
    end
 end
 

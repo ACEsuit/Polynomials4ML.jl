@@ -1,20 +1,18 @@
-using HyperDualNumbers: Hyper
 
 export MonoBasis
 
 
 """
-Standard Monomials basis. This should very rarely be used. Possibly useful in combination with a transformation of the inputs, e.g. exponential.
+Standard Monomials basis. This should very rarely be used. Possibly useful 
+in combination with a transformation of the inputs, e.g. exponential. 
 """
 struct MonoBasis <: ScalarPoly4MLBasis
    N::Int
-   pool::POOL
    # ----------------- metadata 
-   meta::Dict{String, Any}
+   @reqfields()
 end
 
-MonoBasis(N::Integer, meta = Dict{String, Any}()) = 
-         MonoBasis(N, _makepool(), meta)
+MonoBasis(N::Integer) = MonoBasis(N, _make_reqfields()...)
 
 
 # ----------------- interface functions 
@@ -27,8 +25,7 @@ index(basis::MonoBasis, m::Integer) = m+1
 
 Base.length(basis::MonoBasis) = basis.N+1
 
-_valtype(basis::MonoBasis, T::Type{<: Real}) = T
-_valtype(basis::MonoBasis, T::Type{<: Hyper{<: Real}}) = T
+_valtype(basis::MonoBasis, T::Type{<: Number}) = T
 
             
 # ----------------- main evaluation code 
@@ -159,95 +156,3 @@ function evaluate_ed2!(P::AbstractArray, dP::AbstractArray, ddP::AbstractArray, 
 
    return P, dP, ddP 
 end
-
-# function evaluate!(P, basis::MonoBasis, X::AbstractVector)
-#    N = basis.N 
-#    nX = length(X) 
-#    @assert size(P, 1) >= length(X) 
-#    @assert size(P, 2) >= length(basis)  # 2N+1
-
-#    @inbounds begin 
-#       for i = 1:nX 
-#          P[i, 1] = 1 
-#          s, c = sincos(X[i])
-#          P[i, 2] = Complex(c, s)
-#          P[i, 3] = Complex(c, -s)
-#       end 
-#       for n = 2:N 
-#          for i = 1:nX 
-#             P[i, 2n] = P[i, 2] * P[i, 2n-2]
-#             P[i, 2n+1] = P[i, 3] * P[i, 2n-1]
-#          end
-#       end
-#    end
-#    return P 
-# end
-
-
-
-# function evaluate_ed!(P, dP, basis::MonoBasis, X::AbstractVector)
-#    N = basis.N 
-#    nX = length(X) 
-#    @assert size(P, 1) >= length(X) 
-#    @assert size(P, 2) >= length(basis)  # 2N+1
-#    @assert size(dP, 1) >= length(X) 
-#    @assert size(dP, 2) >= length(basis)
-
-#    @inbounds begin 
-#       for i = 1:nX 
-#          P[i, 1] = 1 
-#          s, c = sincos(X[i])
-#          P[i, 2] = Complex(c, s)
-#          dP[i, 2] = Complex(-s, c)
-#          P[i, 3] = Complex(c, -s)
-#          dP[i, 3] = Complex(-s, -c)
-#       end 
-#       for n = 2:N 
-#          for i = 1:nX 
-#             P[i, 2n] = P[i, 2] * P[i, 2n-2]
-#             dP[i, 2n] = im * n * P[i, 2n]
-#             P[i, 2n+1] = P[i, 3] * P[i, 2n-1]
-#             dP[i, 2n+1] = - im * n * P[i, 2n+1] 
-#          end
-#       end
-#    end
-#    return P, dP 
-# end
-
-
-
-# function evaluate_ed2!(P, dP, ddP, basis::MonoBasis, X::AbstractVector)
-#    N = basis.N 
-#    nX = length(X) 
-#    @assert size(P, 1) >= length(X) 
-#    @assert size(P, 2) >= length(basis)  # 2N+1
-#    @assert size(dP, 1) >= length(X) 
-#    @assert size(dP, 2) >= length(basis)
-#    @assert size(ddP, 1) >= length(X) 
-#    @assert size(ddP, 2) >= length(basis)
-
-#    @inbounds begin 
-#       for i = 1:nX 
-#          P[i, 1] = 1 
-#          s, c = sincos(X[i])
-#          P[i, 2] = Complex(c, s)
-#          dP[i, 2] = Complex(-s, c)
-#          ddP[i, 2] = Complex(-c, -s)
-#          P[i, 3] = Complex(c, -s)
-#          dP[i, 3] = Complex(-s, -c)
-#          ddP[i, 3] = Complex(-c, s)
-#       end 
-#       for n = 2:N 
-#          for i = 1:nX 
-#             P[i, 2n] = P[i, 2] * P[i, 2n-2]
-#             dP[i, 2n] = im * n * P[i, 2n]
-#             ddP[i, 2n] = im * n * dP[i, 2n]
-#             P[i, 2n+1] = P[i, 3] * P[i, 2n-1]
-#             dP[i, 2n+1] = - im * n * P[i, 2n+1] 
-#             ddP[i, 2n+1] = - im * n * dP[i, 2n+1] 
-#          end
-#       end
-#    end
-#    return P, dP, ddP 
-# end
-

@@ -2,7 +2,6 @@ using Polynomials4ML, Test, StaticArrays, Lux
 using Polynomials4ML: lux
 using Random: default_rng
 using ACEbase.Testing: println_slim
-using ObjectPools
 rng = default_rng()
 
 ##

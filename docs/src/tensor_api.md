@@ -1,7 +1,7 @@
 
 # Tensor Layer API
 
-P4ML also implements a few standard layers that occur in atomic cluster expansion (ACE) models. These are all expressed as (usually symmetric) tensor operations. These are documented here. 
+P4ML also implements a few standard layers that occur in atomic cluster expansion (ACE) models. These are all expressed as (usually symmetric) tensor operations. These are documented here. Some of these operations are quite unique (sparse symmetric tensor contractions) while others are more standard (`LinearLayer') and are provided here for conformity with our interface. 
 
 * LinearLayer [`LinearLayer`](@ref)
 * Sparse product

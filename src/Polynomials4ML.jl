@@ -1,15 +1,12 @@
 module Polynomials4ML
 
-# -------------- Import ObjectPools stuff ---------------
-using ObjectPools: acquire!, release!, 
-                   FlexArray, FlexArrayCache, TSafe, ArrayPool, unwrap
-
-# ... and the replacement functionality provided by Bumper and WithAlloc 
+# -------------- Import Bumper and related things ---------------
 
 using Bumper, WithAlloc 
 import WithAlloc: whatalloc 
 
 # -------------- import ACEbase stuff 
+# not so clear this is still needed? 
 
 import ACEbase
 import ACEbase: evaluate, evaluate_d, evaluate_ed, evaluate_dd, evaluate_ed2, 
@@ -24,10 +21,7 @@ function degree end
 
 # some stuff to allow bases to overload some lux functionality ... 
 # how much of this should go into ACEbase? 
-function _valtype end 
 function lux end 
-function _init_luxparams end 
-function _init_luxstate end 
 
 export natural_indices, 
        index, 
@@ -40,7 +34,11 @@ export natural_indices,
        evaluate_ed!, 
        evaluate_ed2!, 
        orthpolybasis, 
-       degree 
+       degree, 
+       pullback_evaluate!, 
+       pushforward_evaluate!, 
+       pullback_evaluate, 
+       pushforward_evaluate
 
 
 
@@ -52,11 +50,12 @@ include("orthopolybasis.jl")
 include("discreteweights.jl")
 include("jacobiweights.jl")
 include("monomials.jl")
+include("chebbasis.jl")
 
+#=
 # 2d harmonics / trigonometric polynomials 
 include("trig.jl")
 include("rtrig.jl")
-include("chebbasis.jl")
 
 # 3d harmonics 
 include("sphericalharmonics/sphericalharmonics.jl")
@@ -81,6 +80,7 @@ include("ace/ace.jl")
 
 # some nice utility functions to generate basis sets and other things  
 include("utils/utils.jl")
+=#
 
 # submodule with some useful utilities for writing unit tests 
 include("testing.jl")

@@ -1,4 +1,3 @@
-using ObjectPools: ArrayPool, FlexArray
 
 """
 `CYlmBasis(maxL, T=Float64): `

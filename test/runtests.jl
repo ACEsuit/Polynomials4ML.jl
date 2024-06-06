@@ -8,6 +8,7 @@ using Test
     @testset "DiscreteWeights" begin include("test_discreteweights.jl"); end
     @testset "Chebyshev" begin include("test_cheb.jl"); end 
 
+    #=
     # 2D Harmonics 
     @testset "TrigonometricPolynomials" begin include("test_trig.jl"); end
     @testset "Real Trig Polys" begin include("test_rtrig.jl"); end
@@ -32,4 +33,5 @@ using Test
     @testset "Sparse Product" begin include("test_sparseproduct.jl"); end 
     @testset "Lux" begin include("test_lux.jl"); end 
     @testset "Linear lux layer" begin include("test_linear.jl"); end 
+    =#
 end

@@ -1,6 +1,3 @@
-using LoopVectorization
-using ChainRulesCore
-using ChainRulesCore: NoTangent
 
 @doc raw"""
 `OrthPolyBasis1D3T:` defines a basis of polynomials in terms of a 3-term recursion, 
@@ -39,7 +36,7 @@ Base.length(basis::OrthPolyBasis1D3T) = length(basis.A)
 
 
 _valtype(basis::OrthPolyBasis1D3T{T1}, TX::Type{T2}) where {T1, T2} = 
-            promote_type(T1, T2)         
+            promote_type(T1, T2)
 
 # ----------------- main evaluation code 
 
@@ -111,8 +108,7 @@ function evaluate!(P::AbstractArray, basis::OrthPolyBasis1D3T, X::AbstractVector
    N = length(basis.A)
    nX = length(X) 
    # ------- do the bounds checks here 
-   @assert size(P, 2) >= N 
-   @assert size(P, 1) >= nX
+   @assert all( size(P) .>= (nX, N) )
    # ---------------------------------
 
    @inbounds begin
@@ -141,10 +137,8 @@ function evaluate_ed!(P::AbstractArray, dP::AbstractArray, basis::OrthPolyBasis1
    N = length(basis.A)
    nX = length(X) 
    # ------- do the bounds checks here 
-   @assert size(P, 2) >= N 
-   @assert size(P, 1) >= nX
-   @assert size(dP, 2) >= N 
-   @assert size(dP, 1) >= nX
+   @assert all( size(P) .>= (nX, N) )
+   @assert all( size(dP) .>= (nX, N) )
    # ---------------------------------
 
    @inbounds begin 
@@ -178,12 +172,9 @@ function evaluate_ed2!(P::AbstractArray, dP::AbstractArray, ddP::AbstractArray, 
    N = length(basis.A)
    nX = length(X) 
    # ------- do the bounds checks here 
-   @assert size(P, 2) >= N 
-   @assert size(P, 1) >= nX
-   @assert size(dP, 2) >= N 
-   @assert size(dP, 1) >= nX
-   @assert size(ddP, 2) >= N 
-   @assert size(ddP, 1) >= nX
+   @assert all( size(P)   .>= (nX, N) )
+   @assert all( size(dP)  .>= (nX, N) )
+   @assert all( size(ddP) .>= (nX, N) )
    # ---------------------------------
 
    @inbounds begin 
