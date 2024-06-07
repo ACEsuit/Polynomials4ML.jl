@@ -1,11 +1,11 @@
 using LinearAlgebra, StaticArrays, Test, Printf, SparseArrays
 using Polynomials4ML, Polynomials4ML.Testing
-using Polynomials4ML: evaluate, evaluate_d, evaluate_ed 
+using Polynomials4ML: evaluate, evaluate_d, evaluate_ed, 
+                      idx2lm, lm2idx, maxl
 using Polynomials4ML.Testing: print_tf, println_slim 
 using ACEbase.Testing: fdtest
 using HyperDualNumbers: Hyper
 import SpheriCart
-using SpheriCart: idx2lm, lm2idx
 
 ##                  
 
@@ -35,14 +35,44 @@ function explicit_shs(θ, φ)
          Y3m3, Y3m2, Y3m1, Y30, Y31, Y32, Y33]
 end
 
-lmax(::SphericalHarmonics{LMAX}) where {LMAX} = LMAX
-lmax(::SolidHarmonics{LMAX}) where {LMAX} = LMAX
+function explicit_rsh(X)
+   x,y,z = X
+   Y00 = 1
+   Y1m1 = y
+   Y10 = z
+   Y11 = x
+   Y2m2 = sqrt(3)*x*y
+   Y2m1 = sqrt(3)*y*z
+   Y20 = 1/2*(3*z^2-(x^2+y^2+z^2))
+   Y21 = sqrt(3)*x*z
+   Y22 = 1/2*sqrt(3)*(x^2-y^2)
+   Y3m3 = 1/2*sqrt(5/2) * (3*x^2-y^2)*y
+   Y3m2 = sqrt(15)*x*y*z
+   Y3m1 = 1/2*sqrt(3/2)*(5*z^2-(x^2+y^2+z^2))*y
+   Y30 = 1/2*(5*z^2 - 3*(x^2+y^2+z^2))*z
+   Y31 = 1/2*sqrt(3/2)*(5*z^2-(x^2+y^2+z^2))*x
+   Y32 = 1/2*sqrt(15)*(x^2-y^2)*z
+   Y33 = 1/2*sqrt(5/2)*(x^2-3*y^2)*x
+   Y4m4 = 1/2*sqrt(35)*(x^2-y^2)*x*y
+   Y4m3 = 1/2*sqrt(35/2)*(3*x^2-y^2)*y*z
+   Y4m2 = 1/2*sqrt(5)*(7*z^2-(x^2+y^2+z^2))*x*y
+   Y4m1 = 1/2*sqrt(5/2)*(7*z^2 - 3*(x^2+y^2+z^2))*y*z
+   Y40 = 1/8*(35*z^4-30*z^2*(x^2+y^2+z^2)+3*(x^2+y^2+z^2)^2)
+   Y41 = 1/2*sqrt(5/2)*(7*z^2 - 3*(x^2+y^2+z^2))*x*z
+   Y42 = 1/4*sqrt(5)*(7*z^2 - (x^2+y^2+z^2)) *(x^2-y^2)
+   Y43 = 1/2*sqrt(35/2)*(x^2-3*y^2)*x*z
+   Y44 = 1/8*sqrt(35)*(x^4-6*x^2*y^2+y^4)
+   return [Y00, 
+            Y1m1, Y10, Y11, 
+            Y2m2, Y2m1, Y20, Y21, Y22,
+            Y3m3, Y3m2, Y3m1, Y30, Y31, Y32, Y33, 
+            Y4m4, Y4m3, Y4m2, Y4m1, Y40, Y41, Y42, Y43, Y44]
+end
 
- 
-function eval_cY(rbasis, 𝐫)
+function eval_cY_from_rY(rbasis, 𝐫)
    Yr = rbasis(𝐫)
    Yc = zeros(Complex{eltype(Yr)}, length(Yr))
-   LMAX = lmax(rbasis)
+   LMAX = maxl(rbasis)
    for l = 0:LMAX
       # m = 0 
       i_l0 = SpheriCart.lm2idx(l, 0)
@@ -77,25 +107,44 @@ rand_sphere() = ( u = (@SVector randn(3)); u ./ norm(u) )
 # sphericart -> complex spherical harmonics is consistent with 
 # out old implementation.
 
-r_spher = SphericalHarmonics(3)
-r_solid = SolidHarmonics(3)
+r_spher = real_sphericalharmonics(3)  # SphericalHarmonics(3)
+r_solid = real_solidharmonics(3)      # SolidHarmonics(3)
+c_spher = complex_sphericalharmonics(3)  # SphericalHarmonics(3)
+c_solid = complex_solidharmonics(3)      # SolidHarmonics(3)
 
 for ntest = 1:30 
    𝐫, θ, φ = rand_angles() 
    Yr = r_spher(𝐫)
    Zr = r_solid(𝐫)
    Yref = explicit_shs(θ, φ)
-   Yc = eval_cY(r_spher, 𝐫)
+   Yc1 = eval_cY_from_rY(r_spher, 𝐫)
+   Yc2 = c_spher(𝐫)
+   Zc = c_solid(𝐫)
    print_tf(@test Yr ≈ Zr)
-   print_tf(@test Yc ≈ Yref)
+   print_tf(@test Yc1 ≈ Yref ≈ Yc2 ≈ Zc)
 end 
 println() 
 
 ##
 
-@info("Confirm L2-orthonormalization")
+racah = real_solidharmonics(4; normalisation = :racah)
+for ntest = 1:20 
+   𝐫 = @SVector randn(3) 
+   Z1 = racah(𝐫)
+   Z2 = explicit_rsh(𝐫)
+   print_tf(@test Z1 ≈ Z2) 
+end
+
+##
+
+@info("Confirm L2-orthonormalization - real")
 R = [ rand_sphere() for _ = 1:1_000_000 ]
-Y = SpheriCart.compute(r_spher, R)
+Y = r_spher(R)
+G = (Y' * Y) * 4 * π / length(R)
+println_slim(@test norm(G - I, Inf) < 0.1)
+
+@info("Confirm L2-orthonormalization - complex")
+Y = c_spher(R)
 G = (Y' * Y) * 4 * π / length(R)
 println_slim(@test norm(G - I, Inf) < 0.1)
 
@@ -108,53 +157,49 @@ for ntest = 1:30
    𝐫 = r * 𝐫̂
    Yr = Vector(r_spher(𝐫))
    Zr = r_solid(𝐫)
+   Yc = Vector(c_spher(𝐫))
+   Zc = c_solid(𝐫)
    for l = 0:3, m = -l:l
       i = SpheriCart.lm2idx(l, m)
       Yr[i] *= r^l
+      Yc[i] *= r^l
    end
    print_tf(@test Yr ≈ Zr)
+   print_tf(@test Yc ≈ Zc)
 end
 
-
-#=
 ##
 
 @info("Check consistency of serial and batched evaluation")
 
-X = [ rand_sphere() for i = 1:23 ]
-Y1 = evaluate(rSH, X)
-Y2 = similar(Y1) 
-for i = 1:length(X)
-   Y2[i, :] = evaluate(rSH, X[i])
+X = [ rand_sphere() for i = 1:rand(13:25) ]
+for basis in [r_spher, r_solid, c_spher, c_solid, racah]
+   Y1 = evaluate(basis, X)
+   Y2 = similar(Y1)
+   for i = 1:length(X)
+      Y2[i, :] = evaluate(basis, X[i])
+   end
+   println_slim(@test Y1 ≈ Y2)
 end
-println_slim(@test Y1 ≈ Y2)
-
 
 ##
 
-@info("Test: check derivatives of real spherical harmonics")
-for nsamples = 1:30
-   local R, rSH, h 
-   R = @SVector rand(3)
-   rSH = RYlmBasis(5)
-   Y, dY = evaluate_ed(rSH, R)
-   DY = Matrix(transpose(hcat(dY...)))
-   errs = []
-   verbose && @printf("     h    | error \n")
-   for p = 2:10
-      h = 0.1^p
-      DYh = similar(DY)
-      Rh = Vector(R)
-      for i = 1:3
-         Rh[i] += h
-         DYh[:, i] = (evaluate(rSH, SVector(Rh...)) - Y) / h
-         Rh[i] -= h
-      end
-      push!(errs, norm(DY - DYh, Inf))
-      verbose && @printf(" %.2e | %.2e \n", h, errs[end])
+@info("Test: check derivatives of 3D harmonics")
+bases = [ real_sphericalharmonics(10), 
+          real_solidharmonics(11), 
+          real_solidharmonics(12, normalisation = :racah), 
+          complex_sphericalharmonics(9), 
+          complex_solidharmonics(11) ]
+for basis in bases
+   for nsamples = 1:30
+      local 𝐫, Y, dY, Y, F, dF 
+      𝐫 = @SVector rand(3)
+      Y, dY = evaluate_ed(basis, 𝐫)
+      U = randn(length(Y))
+      F(𝐫) = sum(U .* evaluate(basis, SVector{3}(𝐫)))
+      dF(𝐫) = Vector(sum(U .* evaluate_d(basis, SVector{3}(𝐫))))
+      print_tf(@test fdtest(F, dF, Vector(𝐫); verbose = false))
    end
-   success = (minimum(errs[2:end]) < 1e-3 * maximum(errs[1:3])) || (minimum(errs) < 1e-10)
-   print_tf(@test success)
 end
 println()
 
@@ -163,26 +208,26 @@ println()
 
 @info("Check consistency of serial and batched gradients")
 
-rSH = SCYlmBasis(10)
 X = [ rand_sphere() for i = 1:21 ]
+for basis in bases 
+   local Y0, Y1, Y2, dY0, dY1, dY2
+   Y0 = evaluate(basis, X)
+   Y1, dY1 = evaluate_ed(basis, X)
+   Y2 = similar(Y1); dY2 = similar(dY1)
+   for i = 1:length(X)
+      Y2[i, :] = evaluate(basis, X[i])
+      dY2[i, :] = evaluate_ed(basis, X[i])[2]
+   end
+   print_tf(@test Y0 ≈ Y1 ≈ Y2)
+   print_tf(@test dY1 ≈ dY2)
+end 
+println() 
 
+## -- check the laplacian implementation 
+#=
 x2dualwrtj(x, j) = SVector{3}([Hyper(x[i], i == j, i == j, 0) for i = 1:3])
 
 hX = [x2dualwrtj(x, 1) for x in X]
-
-
-Y0 = evaluate(rSH, X)
-Y1, dY1 = evaluate_ed(rSH, X)
-Y2 = similar(Y1); dY2 = similar(dY1)
-for i = 1:length(X)
-   Y2[i, :] = evaluate(rSH, X[i])
-   dY2[i, :] = evaluate_ed(rSH, X[i])[2]
-end
-println_slim(@test Y0 ≈ Y1 ≈ Y2)
-println_slim(@test dY1 ≈ dY2)
-
-
-# ## -- check the laplacian implementation 
 
 # using LinearAlgebra: tr
 # using ForwardDiff
