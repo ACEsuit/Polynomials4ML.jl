@@ -79,17 +79,17 @@ end
 function ChainRulesCore.rrule(::typeof(evaluate), basis::SlaterBasis{T}, R::AbstractVector{<: Real}) where {T}
     A, dR, dζ = evaluate_ed_dp(basis, R)
 
-    ∂R = similar(R)
-    ∂ζ = similar(basis.Dn.ζ)
     function pb(∂A)
-         @assert size(∂A) == (length(R), length(basis))
-         for i = 1:length(R)
+        ∂R = similar(R)
+        ∂ζ = similar(basis.Dn.ζ)
+        @assert size(∂A) == (length(R), length(basis))
+        for i = 1:length(R)
             ∂R[i] = dot(@view(∂A[i, :]), @view(dR[i, :]))
-         end
-         for i = 1:length(basis.Dn.ζ)
+        end
+        for i = 1:length(basis.Dn.ζ)
             ∂ζ[i] = dot(@view(∂A[:, i]), @view(dζ[:, i]))
-         end
-         return NoTangent(), ∂ζ, ∂R
+        end
+        return NoTangent(), ∂ζ, ∂R
     end
     return A, pb
 end

@@ -29,14 +29,15 @@ _valtype(basis::AtomicOrbitalsRadials, T::Type{<: Hyper{<:Real}}) = T
 
 function evaluate!(Rnl, basis::AtomicOrbitalsRadials, R::AbstractVector)
     nR = length(R)
-    Pn = evaluate(basis.Pn, R)           # Pn(r)
-    Dn = evaluate(basis.Dn, R)           # Dn(r)  (ζ are the parameters -> reorganize the Lux way)
-
     fill!(Rnl, zero(eltype(Rnl)))
-    
-    for (i, b) in enumerate(basis.spec)
-        for j = 1:nR
-            Rnl[j, i] = Pn[j, b.n1] * Dn[j, i]
+
+    @no_escape begin 
+        Pn = @withalloc evaluate!(basis.Pn, R)     # Pn(r)
+        Dn = @withalloc evaluate!(basis.Dn, R)      # Dn(r)  (ζ are the parameters -> reorganize the Lux way)
+        for (i, b) in enumerate(basis.spec)
+            for j = 1:nR
+                Rnl[j, i] = Pn[j, b.n1] * Dn[j, i]
+            end
         end
     end
 
@@ -45,37 +46,40 @@ end
 
 function evaluate_ed!(Rnl, dRnl, basis::AtomicOrbitalsRadials{TP, TD, TI}, R::AbstractVector) where {TP, TD, TI}
     nR = length(R)
-    Pn, dPn = evaluate_ed(basis.Pn, R)
-    Dn, dDn = evaluate_ed(basis.Dn, R)
+    fill!(Rnl, zero(eltype(Rnl)))
+    fill!(dRnl, zero(eltype(Rnl))); 
 
-    fill!(Rnl, zero(eltype(Rnl))); fill!(dRnl, zero(eltype(Rnl))); 
-
-    for (i, b) in enumerate(basis.spec)
-        for j = 1:nR
-            Rnl[j, i] += Pn[j, b.n1] * Dn[j, i]
-            dRnl[j, i] += dPn[j, b.n1] * Dn[j, i]
-            dRnl[j, i] += Pn[j, b.n1] * dDn[j, i]
+    @no_escape begin 
+        Pn, dPn = @withalloc evaluate_ed!(basis.Pn, R)
+        Dn, dDn = @withalloc evaluate_ed!(basis.Dn, R)
+        for (i, b) in enumerate(basis.spec)
+            for j = 1:nR
+                Rnl[j, i] += Pn[j, b.n1] * Dn[j, i]
+                dRnl[j, i] += dPn[j, b.n1] * Dn[j, i]
+                dRnl[j, i] += Pn[j, b.n1] * dDn[j, i]
+            end
         end
-    end
-
+    end 
     return Rnl, dRnl 
 end
 
 function evaluate_ed2!(Rnl, dRnl, ddRnl, basis::AtomicOrbitalsRadials, R::AbstractVector)
     nR = length(R)
-    Pn, dPn, ddPn = evaluate_ed2(basis.Pn, R)
-    Dn, dDn, ddDn = evaluate_ed2(basis.Dn, R)
+    fill!(Rnl, zero(eltype(Rnl)))
+    fill!(dRnl, zero(eltype(dRnl)))
+    fill!(ddRnl, zero(eltype(ddRnl)))
 
-    fill!(Rnl, zero(eltype(Rnl))); fill!(dRnl, zero(eltype(dRnl))); fill!(ddRnl, zero(eltype(ddRnl)))
-
-    for (i, b) in enumerate(basis.spec)
-        for j = 1:nR
-            Rnl[j, i] += Pn[j, b.n1] * Dn[j, i]
-            dRnl[j, i] += dPn[j, b.n1] * Dn[j, i] + Pn[j, b.n1] * dDn[j, i]
-            ddRnl[j, i] += ddPn[j, b.n1] * Dn[j, i] + 2 * dPn[j, b.n1] * dDn[j, i] + Pn[j, b.n1] * ddDn[j, i]
+    @no_escape begin
+        Pn, dPn, ddPn = @withalloc evaluate_ed2!(basis.Pn, R)
+        Dn, dDn, ddDn = @withalloc evaluate_ed2!(basis.Dn, R)
+        for (i, b) in enumerate(basis.spec)
+            for j = 1:nR
+                Rnl[j, i] += Pn[j, b.n1] * Dn[j, i]
+                dRnl[j, i] += dPn[j, b.n1] * Dn[j, i] + Pn[j, b.n1] * dDn[j, i]
+                ddRnl[j, i] += ddPn[j, b.n1] * Dn[j, i] + 2 * dPn[j, b.n1] * dDn[j, i] + Pn[j, b.n1] * ddDn[j, i]
+            end
         end
-    end
-
+    end 
     return Rnl, dRnl, ddRnl
 end
 
@@ -90,20 +94,22 @@ evaluate_ed_dp(basis, x) = _with_safe_alloc(evaluate_ed_dp!, basis, x)
 
 function evaluate_ed_dp!(Rnl, dRnl, dpRnl, basis::AtomicOrbitalsRadials, R::AbstractVector)
     nR = length(R)
-    Pn, dPn = evaluate_ed(basis.Pn, R)
-    Dn, dDn, dpDn = evaluate_ed_dp(basis.Dn, R)
+    fill!(Rnl, zero(eltype(Rnl)))
+    fill!(dRnl, zero(eltype(Rnl)))
+    fill!(dpRnl, zero(eltype(Rnl))) 
 
-    fill!(Rnl, zero(eltype(Rnl))); fill!(dRnl, zero(eltype(Rnl))); fill!(dpRnl, zero(eltype(Rnl))); 
-
-    for (i, b) in enumerate(basis.spec)
-        for j = 1:nR
-            Rnl[j, i] += Pn[j, b.n1] * Dn[j, i]
-            dRnl[j, i] += dPn[j, b.n1] * Dn[j, i]
-            dRnl[j, i] += Pn[j, b.n1] * dDn[j, i]
-            dpRnl[j, i] += Pn[j, b.n1] * dpDn[j, i]
+    @no_escape begin 
+        Pn, dPn = @withalloc evaluate_ed!(basis.Pn, R)
+        Dn, dDn, dpDn = @withalloc evaluate_ed_dp!(basis.Dn, R)
+        for (i, b) in enumerate(basis.spec)
+            for j = 1:nR
+                Rnl[j, i] += Pn[j, b.n1] * Dn[j, i]
+                dRnl[j, i] += dPn[j, b.n1] * Dn[j, i]
+                dRnl[j, i] += Pn[j, b.n1] * dDn[j, i]
+                dpRnl[j, i] += Pn[j, b.n1] * dpDn[j, i]
+            end
         end
-    end
-
+    end 
     return Rnl, dRnl, dpRnl
 end
 
