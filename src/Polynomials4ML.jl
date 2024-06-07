@@ -73,7 +73,7 @@ include("trig.jl")
 include("rtrig.jl")
 
 # 3d harmonics 
-# include("sphericalharmonics/sphericalharmonics.jl")
+include("sphericart.jl")
 
 # quantum chemistry 
 include("atomicorbitalsradials/atomicorbitalsradials.jl")
