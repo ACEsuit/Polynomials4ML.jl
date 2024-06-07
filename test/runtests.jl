@@ -19,19 +19,19 @@ using Test
     @testset "Complex Solid Harmonics" begin include("sphericalharmonics/test_crlm.jl"); end
     @testset "Real Solid Harmonics" begin include("sphericalharmonics/test_rrlm.jl"); end
     @testset "Real Spherical Harmonics via SpheriCart" begin include("sphericalharmonics/test_scylm.jl"); end
-
-    # Quantum Chemistry 
-    @testset "Atomic Orbitals Radials" begin include("test_atorbrad.jl"); end
     =#
 
-    # ACE 
-    @testset "SparsePooledProduct" begin include("ace/test_sparseprodpool.jl"); end 
-    # @testset "Sparse Symmetric Product" begin include("ace/test_sparsesymmprod.jl"); end 
-    # @testset "Sparse Symmetric Product - DAG" begin include("ace/test_sparsesymmproddag.jl"); end 
+    # Quantum Chemistry 
+    # @testset "Atomic Orbitals Radials" begin include("test_atorbrad.jl"); end
 
+    # Tensors  
+    # @testset "Linear layer" begin include("test_linear.jl"); end 
+    @testset "SparsePooledProduct" begin include("ace/test_sparseprodpool.jl"); end 
+    @testset "Sparse Symmetric Product" begin include("ace/test_sparsesymmprod.jl"); end 
+    # @testset "Sparse Symmetric Product - DAG" begin include("ace/test_sparsesymmproddag.jl"); end 
+    # @testset "Sparse Product" begin include("test_sparseproduct.jl"); end 
+    
     # Misc
     @testset "Static Prod" begin include("test_staticprod.jl"); end
-    # @testset "Sparse Product" begin include("test_sparseproduct.jl"); end 
-    # @testset "Lux" begin include("test_lux.jl"); end 
-    # @testset "Linear lux layer" begin include("test_linear.jl"); end 
+    @testset "Lux" begin include("test_lux.jl"); end 
 end

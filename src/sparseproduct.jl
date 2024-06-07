@@ -1,5 +1,3 @@
-using ChainRulesCore
-using ChainRulesCore: NoTangent
 
 export SparseProduct
 
@@ -27,7 +25,8 @@ Base.length(basis::SparseProduct) = length(basis.spec)
 
 SparseProduct(spec) = SparseProduct(spec, _make_reqfields()...)
 
-_valtype(basis::SparseProduct{T1}, TX::NTuple{NB, AbstractVecOrMat{T2}}) where {T1, T2, NB} = T2
+_valtype(basis::SparseProduct, BB::Tuple) = 
+      mapreduce(eltype, promote_type, BB)
 
 # ----------------------- evaluation interfaces 
 function _frule_evaluate(basis::SparseProduct, BB::Tuple{Vararg{AbstractVector}}, ∂BB::Tuple{Vararg{AbstractVector}}) 

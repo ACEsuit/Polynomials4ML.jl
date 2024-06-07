@@ -1,5 +1,7 @@
 using StaticArrays: StaticArray, SVector, StaticVector, similar_type
 using ChainRulesCore
+import ChainRulesCore: rrule, frule 
+
 
 abstract type AbstractP4MLLayer end 
 
@@ -20,7 +22,7 @@ allowed dimensionality of inputs to allow tensorial shapes.
 """
 abstract type AbstractP4MLTensor <: AbstractP4MLLayer end 
 
-# ---------------------------------------
+# ---------------------------------------------------------------------------
 # some helpers to deal with the required fields: 
 # TODO: now that there is only meta, should this be removed? 
 
@@ -36,7 +38,7 @@ end
 _make_reqfields() = (_makemeta(), )
 
 
-# ---------------------------------------
+# -------------------------------------------------------------------
 
 # SphericalCoords is defined here so it can be part of SINGLE 
 # TODO: retire this as soon as we fully switched to SpheriCart 
@@ -158,86 +160,124 @@ end
 # --------------------------------------- 
 # allocating evaluation interface 
 
-(basis::AbstractP4MLLayer)(args...) = evaluate(basis, args...)
+(l::AbstractP4MLLayer)(args...) = 
+      evaluate(l, args...)
             
-evaluate(args...) = _with_safe_alloc(evaluate!, args...) 
+evaluate(l::AbstractP4MLLayer, args...) = 
+      _with_safe_alloc(evaluate!, l, args...) 
 
-evaluate_ed(args...) = _with_safe_alloc(evaluate_ed!, args...)
+evaluate_ed(l::AbstractP4MLLayer, args...) = 
+      _with_safe_alloc(evaluate_ed!, l, args...)
 
-evaluate_ed2(args...) = _with_safe_alloc(evaluate_ed2!, args...)
+evaluate_ed2(l::AbstractP4MLLayer, args...) = 
+      _with_safe_alloc(evaluate_ed2!, l, args...)
 
-evaluate_d(basis, args...) = evaluate_ed(basis, args...)[2] 
+evaluate_d(l::AbstractP4MLLayer, args...) = 
+      evaluate_ed(l, args...)[2] 
 
-evaluate_dd(basis, args...) = evaluate_ed2(basis, args...)[3] 
+evaluate_dd(l::AbstractP4MLLayer, args...) = 
+      evaluate_ed2(l, args...)[3] 
 
-pullback_evaluate(args...) = _with_safe_alloc(pullback_evaluate!, args...)
+pullback_evaluate(∂X, l::AbstractP4MLLayer, args...) = 
+      _with_safe_alloc(pullback_evaluate!, ∂X, l, args...)
 
-pushforward_evaluate(args...) = _with_safe_alloc(pushforward_evaluate!, args...)
+pushforward_evaluate(l::AbstractP4MLLayer, args...) = 
+      _with_safe_alloc(pushforward_evaluate!, l, args...)
 
-pb_pb_evaluate(args...) = _with_safe_alloc(pb_pb_evaluate!, args...)
+pb_pb_evaluate(∂P, ∂X, l::AbstractP4MLLayer, args...) = 
+      _with_safe_alloc(pb_pb_evaluate!, ∂P, ∂X, l, args...)
 
 
-# --------------------------------------- 
-# general rrules and frules interface for ChainRulesCore
+# ---------------------------------------------------------------
+# general rrules and frules interface for AbstractP4MLBasis 
 
-import ChainRulesCore: rrule
 
-# ∂_xa ( ∂P : P ) = ∑_ij ∂_xa ( ∂P_ij * P_ij ) 
-#                 = ∑_ij ∂P_ij * ∂_xa ( P_ij )
-#                 = ∑_ij ∂P_ij * dP_ij δ_ia
-function rrule(::typeof(evaluate), 
-                  basis::AbstractP4MLBasis, 
-                  R::AbstractVector{<: Real})
-   P = evaluate(basis, R)
-   return P, ∂P -> (NoTangent(), NoTangent(), pullback_evaluate(∂P, basis, R))
+function whatalloc(::typeof(pullback_evaluate!), 
+                    ∂P, basis::AbstractP4MLBasis, X::AbstractVector)
+   T∂X = promote_type(_gradtype(basis, X), eltype(∂P))
+   return (T∂X, length(X))
 end
 
-function pullback_evaluate(∂P, basis::AbstractP4MLBasis, X::AbstractVector{<: Real})
-   P, dP = evaluate_ed(basis, X)
-   @assert size(∂P) == (length(X), length(basis))
-   T∂R = promote_type(eltype(∂P), eltype(dP))
-   ∂X = zeros(T∂R, length(X))
+function pullback_evaluate!(∂X, 
+                  ∂P, basis::AbstractP4MLBasis, X::AbstractVector; 
+                  dP = evaluate_ed(basis, X)[2] )
+   @assert size(∂P) == size(dP) == (length(X), length(basis))
+   @assert length(∂X) == length(X)
    # manual loops to avoid any broadcasting of StrideArrays 
+   # ∂_xa ( ∂P : P ) = ∑_ij ∂_xa ( ∂P_ij * P_ij ) 
+   #                 = ∑_ij ∂P_ij * ∂_xa ( P_ij )
+   #                 = ∑_ij ∂P_ij * dP_ij δ_ia
    for n = 1:size(dP, 2)
-         @simd ivdep for a = 1:length(X)
-             ∂X[a] += dP[a, n] * ∂P[a, n]
-         end
+      @simd ivdep for a = 1:length(X)
+            ∂X[a] += dP[a, n] * ∂P[a, n]
+      end
    end
    return ∂X
 end
 
-
-function rrule(::typeof(pullback_evaluate),
-               ∂P, basis::AbstractP4MLBasis, X::AbstractVector{<: Real})
-   ∂X = pullback_evaluate(∂P, basis, X)
-   function _pb(∂2)
-      ∂∂P, ∂X = pb_pb_evaluate(∂2, ∂P, basis, X)
-      return NoTangent(), ∂∂P, NoTangent(), ∂X             
-   end
-   return ∂X, _pb 
+function rrule(::typeof(evaluate), 
+                  basis::AbstractP4MLBasis, 
+                  X::AbstractVector)
+   P = evaluate(basis, X)
+   # TODO: here we could do evaluate_ed, but need to think about how this 
+   #       works with the kwarg trick above...
+   return P, ∂P -> (NoTangent(), NoTangent(), pullback_evaluate(∂P, basis, X))
 end
 
 
-function pb_pb_evaluate(∂2, ∂P, basis::AbstractP4MLBasis, 
-                        X::AbstractVector{<: Real})
-   # @info("_evaluate_pb2")                        
+#= 
+function whatalloc(::typeof(pb_pb_evaluate!), 
+                   ∂∂X, ∂P, basis::AbstractP4MLBasis, X::AbstractVector)
    Nbasis = length(basis)
    Nx = length(X)                        
-   P, dP, ddP = evaluate_ed2(basis, X)
-   # ∂2 is the dual to ∂X ∈ ℝ^N, N = length(X) 
-   @assert ∂2 isa AbstractVector 
-   @assert length(∂2) == Nx
+   @assert ∂∂X isa AbstractVector 
+   @assert length(∂∂X) == Nx
    @assert size(∂P) == (Nx, Nbasis)
+   T∂²P = promote_type(_valtype(basis, X), eltype(∂P), eltype(∂∂X))
+   T∂²X = promote_type(_gradtype(basis, X), eltype(∂P), eltype(∂∂X))
+   return (T∂²P, Nx, Nbasis), (T∂²X, Nx)
+end
 
-   ∂2_∂ = zeros(size(∂P))
-   ∂2_X = zeros(length(X))
 
-   for n = 1:Nbasis 
-      @simd ivdep for a = 1:Nx 
-         ∂2_∂[a, n] = ∂2[a] * dP[a, n]
-         ∂2_X[a] += ∂2[a] * ddP[a, n] * ∂P[a, n]
+function pb_pb_evaluate!(∂²P, ∂²X,   # output 
+                         ∂∂X,        # input / perturbation of ∂X
+                         ∂P, basis::AbstractP4MLBasis,   # inputs 
+                         X::AbstractVector{<: Real})
+   @no_escape begin                          
+      P, dP, ddP = @withalloc evaluate_ed2!(basis, X)
+
+      for n = 1:Nbasis 
+         @simd ivdep for a = 1:Nx 
+            ∂²P[a, n] = ∂∂X[a] * dP[a, n]
+            ∂²X[a] += ∂∂X[a] * ddP[a, n] * ∂P[a, n]
+         end
       end
    end
-   return ∂2_∂, ∂2_X
+
+   return ∂²P, ∂²X
+end
+
+
+function rrule(::typeof(pullback_evaluate),
+   ∂P, basis::AbstractP4MLBasis, X::AbstractVector{<: Real})
+∂X = pullback_evaluate(∂P, basis, X)
+function _pb(∂2)
+∂∂P, ∂X = pb_pb_evaluate(∂2, ∂P, basis, X)
+return NoTangent(), ∂∂P, NoTangent(), ∂X             
+end
+return ∂X, _pb 
+end
+=#
+
+
+# -------------------------------------------------------------
+# general rrules and frules for AbstractP4MLTensor 
+
+
+function rrule(::typeof(evaluate), 
+                  basis::AbstractP4MLTensor, 
+                  X)
+   P = evaluate(basis, X)
+   return P, ∂P -> (NoTangent(), NoTangent(), pullback_evaluate(∂P, basis, X))
 end
 

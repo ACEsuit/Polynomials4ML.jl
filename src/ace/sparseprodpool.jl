@@ -57,13 +57,6 @@ _valtype(basis::PooledSparseProduct, BB::Tuple) =
 _gradtype(basis::PooledSparseProduct, BB::Tuple) = 
       mapreduce(eltype, promote_type, BB)
 
-function whatalloc(evaluate!, basis::PooledSparseProduct{NB}, BB::TupVecMat) where {NB}
-   TV = _valtype(basis, BB)
-   nA = length(basis)
-   return (TV, nA) 
-end
-
-
 
 
 # ----------------------- evaluation kernels 
@@ -91,6 +84,11 @@ import Base.Cartesian: @nexprs
 #    return nothing 
 # end
 
+function whatalloc(evaluate!, basis::PooledSparseProduct{NB}, BB::TupVecMat) where {NB}
+   TV = _valtype(basis, BB)
+   nA = length(basis)
+   return (TV, nA) 
+end
 
 function evaluate!(A, basis::PooledSparseProduct{NB}, BB::TupVec) where {NB}
    BB_batch = ntuple(i -> reshape(BB[i], (1, length(BB[i]))), NB)

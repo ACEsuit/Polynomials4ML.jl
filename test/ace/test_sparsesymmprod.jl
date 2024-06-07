@@ -200,6 +200,9 @@ println()
 
 ##
 
+#= 
+# TODO: revive this test 
+
 @info("Testing lux interface")
 
 @info("Test consistency of lux and basis")
@@ -209,6 +212,8 @@ l_AA2, _ = l_basis2(bA, ps, st)
 println_slim(@test l_AA2 ≈ basis2(bA))
 
 println()
+=# 
+
 ##
 
 

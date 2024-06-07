@@ -1,7 +1,4 @@
 
-using ChainRulesCore
-using ChainRulesCore: NoTangent
-
 export SparseSymmProd
 
 @doc raw"""
@@ -307,24 +304,6 @@ function _pfwd_AA_N!(AA, ∂AA, A, ΔA,
       end
    end
 end 
-
-
-# -------------- ChainRules integration 
-
-
-function rrule(::typeof(evaluate), basis::SparseSymmProd, A)
-   AA = evaluate(basis, A)
-   return AA, Δ -> (NoTangent(), NoTangent(), pullback_evaluate(Δ, basis, A))
-end
-
-function rrule(::typeof(pullback_evaluate), ∂AA, basis::SparseSymmProd, A)
-   ∂A = pullback_evaluate(∂AA, basis, A)
-   function _pb(∂²)
-      g∂AA, gA = pb_pb_evaluate(∂², ∂AA, basis, A)
-      return NoTangent(), g∂AA, NoTangent(), gA
-   end 
-   return ∂A, _pb
-end
 
 
 

@@ -2,7 +2,7 @@ module Polynomials4ML
 
 # -------------- Import Bumper and related things ---------------
 
-using Bumper, WithAlloc 
+using Bumper, WithAlloc, StrideArrays
 import WithAlloc: whatalloc 
 
 # -------------- import ACEbase stuff 
@@ -13,11 +13,19 @@ import ACEbase: evaluate, evaluate_d, evaluate_ed, evaluate_dd, evaluate_ed2,
                 evaluate!, evaluate_d!, evaluate_ed!, evaluate_ed2!
 import ACEbase.FIO: read_dict, write_dict
 
+using LuxCore, Random
+import ChainRulesCore: rrule, frule 
+
+
 function natural_indices end   # could rename this get_spec or similar ... 
 function index end
 function orthpolybasis end
 function degree end 
 
+function pullback_evaluate end
+function pullback_evaluate! end
+function pushforward_evaluate end
+function pushforward_evaluate! end
 
 # some stuff to allow bases to overload some lux functionality ... 
 # how much of this should go into ACEbase? 
@@ -59,24 +67,22 @@ include("chebbasis.jl")
 include("trig.jl")
 include("rtrig.jl")
 
-#=
 # 3d harmonics 
-include("sphericalharmonics/sphericalharmonics.jl")
+# include("sphericalharmonics/sphericalharmonics.jl")
 
 # quantum chemistry 
-include("atomicorbitalsradials/atomicorbitalsradials.jl")
+# include("atomicorbitalsradials/atomicorbitalsradials.jl")
 
 # generating product bases (generalisation of tensor products)
-include("sparseproduct.jl")
+# include("sparseproduct.jl")
 
 # LinearLayer implementation
 # this is needed to better play with cached arrays + to give the correct 
 # behaviour when the feature dimension is different from expected. 
-include("linear.jl")
+# include("linear.jl")
 
 # generic machinery for wrapping poly4ml bases into lux layers 
 include("lux.jl")
-=#
 
 # basis components to implement cluster expansion methods
 include("ace/ace.jl")

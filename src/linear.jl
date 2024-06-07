@@ -1,8 +1,4 @@
-import ChainRulesCore: rrule
-using LuxCore
-using Random
 using LinearAlgebra: mul!
-using StrideArrays
 
 export LinearLayer
 
@@ -36,7 +32,6 @@ x = randn(N, in_d) # batch-first
 out, st = l(x, ps, st)
 println(out == x * transpose(W))) # true
 ```
-
 """
 struct LinearLayer{FEATFIRST} <: AbstractExplicitLayer
    in_dim::Integer
