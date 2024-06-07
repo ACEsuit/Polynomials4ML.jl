@@ -11,17 +11,6 @@ Base.length(basis::GaussianBasis) = length(basis.ζ)
 _valtype(::GaussianBasis, T::Type{<: Real}) = T
 _valtype(::GaussianBasis, T::Type{<: Hyper{<:Real}}) = T
 
-_alloc_dp(basis::GaussianBasis, X) = 
-      acquire!(basis.pool, _outsym(X), _out_size(basis, X), _gradtype(basis, X) )
-
-_alloc_ed_dp(basis::GaussianBasis, x) = 
-      _alloc(basis, x), _alloc_d(basis, x), _alloc_dp(basis, x)
-
-function evaluate_ed_dp(basis::GaussianBasis, x) 
-   B, dB, dpB = _alloc_ed_dp(basis, x)
-   evaluate_ed_dp!(unwrap(B), unwrap(dB), unwrap(dpB), basis, x)
-   return B, dB, dpB
-end 
 
 function evaluate!(P, basis::GaussianBasis, x::AbstractVector)
     N = size(P, 2)

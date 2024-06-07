@@ -14,7 +14,12 @@ import ACEbase: evaluate, evaluate_d, evaluate_ed, evaluate_dd, evaluate_ed2,
 import ACEbase.FIO: read_dict, write_dict
 
 using LuxCore, Random
-import ChainRulesCore: rrule, frule 
+import ChainRulesCore: rrule, frule, NoTangent, ZeroTangent
+
+import LuxCore: AbstractExplicitLayer, AbstractExplicitContainerLayer, 
+                 initialparameters, initialstates                 
+
+using Random: AbstractRNG     
 
 
 function natural_indices end   # could rename this get_spec or similar ... 
@@ -71,7 +76,7 @@ include("rtrig.jl")
 # include("sphericalharmonics/sphericalharmonics.jl")
 
 # quantum chemistry 
-# include("atomicorbitalsradials/atomicorbitalsradials.jl")
+include("atomicorbitalsradials/atomicorbitalsradials.jl")
 
 # generating product bases (generalisation of tensor products)
 # include("sparseproduct.jl")
@@ -85,7 +90,11 @@ include("rtrig.jl")
 include("lux.jl")
 
 # basis components to implement cluster expansion methods
-include("ace/ace.jl")
+include("ace/sparseprodpool.jl")
+include("ace/symmprod_dag.jl")
+include("ace/symmprod_dag_kernels.jl")
+include("ace/simpleprodbasis.jl")
+include("ace/sparsesymmprod.jl")
 
 # some nice utility functions to generate basis sets and other things  
 include("utils/utils.jl")
