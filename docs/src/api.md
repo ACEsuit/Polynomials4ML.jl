@@ -58,7 +58,17 @@ If you need a sem-ver stable output then it is best to follow the above with a `
 
 ## Using the `WithAlloc.jl` Bumper extension 
 
-TODO 
+The package `WithAlloc` introduces a function `whatalloc` that allows one to specify the output arrays required for an in-place evaluation. It furthermore provides a macro `@withalloc` to wrap this functionality conveniently. For example, 
+```julia
+@no_escape begin 
+   basis = legendre_basis(10) 
+   X = 2 * rand(100) .- 1
+   P1 = @withalloc evaluate!(basis, X)
+   P2, dP2 = @withalloc evaluate_ed!(basis, X)
+   ;
+end 
+```
+The arrays `P1, P2, dP2` are Bumper-allocated i.e. are not allowed to leave the no-escape block. Please see `[WithAlloc.jl](https://github.com/ACEsuit/WithAlloc.jl)` and `[Bumper.jl](https://github.com/MasonProtter/Bumper.jl)` for more details. If output arrays are to be used outside of the local scope then the allocating functions `evaluate`, `evaluate_ed` etc, should be used or array allocation managed differently. 
 
 ## ChainRules.jl integration 
 
