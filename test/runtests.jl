@@ -28,8 +28,8 @@ using Test
     @testset "SparsePooledProduct" begin include("ace/test_sparseprodpool.jl"); end 
     @testset "Sparse Symmetric Product" begin include("ace/test_sparsesymmprod.jl"); end 
     @testset "Sparse Symmetric Product - DAG" begin include("ace/test_sparsesymmproddag.jl"); end 
+    @testset "Sparse Product" begin include("test_sparseproduct.jl"); end 
     # @testset "Linear layer" begin include("test_linear.jl"); end 
-    # @testset "Sparse Product" begin include("test_sparseproduct.jl"); end 
     
     # Misc
     @testset "Static Prod" begin include("test_staticprod.jl"); end

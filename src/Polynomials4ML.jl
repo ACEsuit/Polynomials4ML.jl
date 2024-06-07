@@ -79,7 +79,7 @@ include("rtrig.jl")
 include("atomicorbitalsradials/atomicorbitalsradials.jl")
 
 # generating product bases (generalisation of tensor products)
-# include("sparseproduct.jl")
+include("sparseproduct.jl")
 
 # LinearLayer implementation
 # this is needed to better play with cached arrays + to give the correct 
