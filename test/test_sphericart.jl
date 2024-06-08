@@ -130,6 +130,7 @@ println()
 
 ##
 
+@info("Test Racah normalization")
 racah = real_solidharmonics(4; normalisation = :racah)
 for ntest = 1:20 
    𝐫 = @SVector randn(3) 
@@ -137,6 +138,7 @@ for ntest = 1:20
    Z2 = explicit_rsh(𝐫)
    print_tf(@test Z1 ≈ Z2) 
 end
+println() 
 
 ##
 

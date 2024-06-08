@@ -1,6 +1,7 @@
 
 using BenchmarkTools, Test, Polynomials4ML, ChainRulesCore
-using Polynomials4ML: PooledSparseProduct, evaluate, evaluate!
+using Polynomials4ML: PooledSparseProduct, evaluate, evaluate!, 
+         _generate_input, _generate_input_1
 using Polynomials4ML.Testing: test_withalloc
 using ACEbase.Testing: fdtest, println_slim, print_tf 
 
@@ -23,16 +24,6 @@ function _generate_basis(; order=3, len = 50)
 end
 
 
-function _rand_input1(basis::PooledSparseProduct{ORDER}) where {ORDER} 
-   NN = [ maximum(b[i] for b in basis.spec) for i = 1:ORDER ]
-   BB = ntuple(i -> randn(NN[i]), ORDER)
-end
-
-function _rand_input(basis::PooledSparseProduct{ORDER}; nX = rand(5:15)) where {ORDER} 
-   NN = [ maximum(b[i] for b in basis.spec) for i = 1:ORDER ]
-   BB = ntuple(i -> randn(nX, NN[i]), ORDER)
-end
-
 ##
 
 @info("Test evaluation with a single input (no pooling)")
@@ -42,7 +33,7 @@ for ntest = 1:30
 
    order = mod1(ntest, 4)
    basis = _generate_basis(; order=order)
-   BB = _rand_input1(basis)
+   BB = _generate_input_1(basis)
    A1 = test_evaluate(basis, BB)
    A2 = evaluate(basis, BB)
    print_tf(@test A1 ≈ A2)
@@ -59,12 +50,11 @@ for ntest = 1:30
 
    order = mod1(ntest, 4)
    basis = _generate_basis(; order=order)
-   bBB = _rand_input(basis)
+   bBB = _generate_input(basis)
    bA1 = test_evaluate(basis, bBB)
    bA2 = evaluate(basis, bBB)
    bA3 = copy(bA2)
    evaluate!(bA3, basis, bBB)
-
    print_tf(@test bA1 ≈ bA2 ≈ bA3)
 end
 
@@ -73,13 +63,12 @@ println()
 
 ##
 
-using StrideArrays
-
 @info("    testing withalloc")
 basis = _generate_basis(; order=2)
-BB = PtrArray.(_rand_input1(basis))
-bBB = _rand_input(basis)
-# test_withalloc(basis; ed = false, ed2 = false)
+BB = _generate_input_1(basis)
+bBB = _generate_input(basis)
+test_withalloc(basis; batch=false)
+
 
 ##
 
@@ -91,9 +80,9 @@ for ntest = 1:30
    local bBB, bA2, u, basis, nX 
    order = mod1(ntest, 4)
    basis = _generate_basis(; order=order)
-   bBB = _rand_input(basis)
+   bBB = _generate_input(basis)
    nX = size(bBB[1], 1)
-   bUU = _rand_input(basis; nX = nX) # same shape and type as bBB 
+   bUU = _generate_input(basis; nX = nX) # same shape and type as bBB 
    _BB(t) = ntuple(i -> bBB[i] + t * bUU[i], order)
    bA2 = evaluate(basis, bBB)
    u = randn(size(bA2))
@@ -209,4 +198,5 @@ end
 # BB, ΔBB = _rand_input1_pfwd(basis)
 # A, ∂A = P4ML.pfwd_evaluate(basis, BB, ΔBB)
 # @btime Polynomials4ML.pfwd_evaluate!($(unwrap(A)), $(unwrap(∂A)), $basis, $BB, $ΔBB)
+
 

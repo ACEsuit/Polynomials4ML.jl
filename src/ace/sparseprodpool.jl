@@ -57,6 +57,21 @@ _valtype(basis::PooledSparseProduct, BB::Tuple) =
 _gradtype(basis::PooledSparseProduct, BB::Tuple) = 
       mapreduce(eltype, promote_type, BB)
 
+function _generate_input_1(basis::PooledSparseProduct{NB}) where {NB} 
+   NN = [ maximum(b[i] for b in basis.spec) for i = 1:NB ]
+   BB = ntuple(i -> randn(NN[i]), NB)
+   return BB 
+end 
+
+function _generate_input(basis::PooledSparseProduct{NB}; nX = rand(5:15)) where {NB} 
+   NN = [ maximum(b[i] for b in basis.spec) for i = 1:NB ]
+   BB = ntuple(i -> randn(nX, NN[i]), NB)
+   return BB 
+end 
+
+function _generate_batch(basis::PooledSparseProduct, args...; kwargs...) 
+   error("PooledSparseProduct is not implemented for batch inputs")
+end
 
 
 # ----------------------- evaluation kernels 
@@ -90,10 +105,18 @@ function whatalloc(evaluate!, basis::PooledSparseProduct{NB}, BB::TupVecMat) whe
    return (TV, nA) 
 end
 
+
 function evaluate!(A, basis::PooledSparseProduct{NB}, BB::TupVec) where {NB}
-   BB_batch = ntuple(i -> reshape(BB[i], (1, length(BB[i]))), NB)
-   return evaluate!(A, basis, BB_batch)
+   spec = basis.spec
+   @assert length(A) >= length(spec)
+   fill!(A, 0)
+   @inbounds for (iA, ϕ) in enumerate(spec)
+      b = ntuple(t -> BB[t][ϕ[t]], NB)
+      A[iA] = @fastmath(prod(b))
+   end
+   return A
 end
+
 
 function evaluate!(A, basis::PooledSparseProduct{NB}, BB::TupMat, 
                    nX = size(BB[1], 1)) where {NB}
@@ -139,19 +162,36 @@ end
 using StaticArrays
 using Base.Cartesian: @nexprs 
 
-# NOT AT ALL OBVIOUS HOW TO DO THIS ?!?!?
-# function whatalloc(::typeof(pullback_evaluate!), 
-#                    basis::PooledSparseProduct, BB::TupMat)
-   
+
+function whatalloc(::typeof(pullback_evaluate!), 
+                   ∂A, basis::PooledSparseProduct{NB}, BB::TupMat) where  {NB}
+   TA = promote_type(eltype.(BB)..., eltype(∂A))
+   return ntuple(i -> (TA, size(BB[i])...), NB)                   
+end
+
+
+# function pullback_evaluate(∂A, basis::PooledSparseProduct{NB}, BB::TupMat) where {NB}
+#    nX = size(BB[1], 1)
+#    TA = promote_type(eltype.(BB)..., eltype(∂A))
+#    ∂BB = ntuple(i -> zeros(TA, size(BB[i])...), NB)
+#    pullback_evaluate!(∂BB, ∂A, basis, BB)
+#    return ∂BB
 # end
 
-function pullback_evaluate(∂A, basis::PooledSparseProduct{NB}, BB::TupMat) where {NB}
-   nX = size(BB[1], 1)
-   TA = promote_type(eltype.(BB)..., eltype(∂A))
-   ∂BB = ntuple(i -> zeros(TA, size(BB[i])...), NB)
-   pullback_evaluate!(∂BB, ∂A, basis, BB)
-   return ∂BB
-end
+# the next three method definitions ensure that we can use the 
+# WithAlloc stuff with the pullback_evaluate! function.
+# TODO: this should probably be replaced with a loop that generates  
+# the code up to a large-ish NB. 
+
+pullback_evaluate!(∂B1, ∂A, basis::PooledSparseProduct{1}, BB::TupMat) = 
+         pullback_evaluate!((∂B1,), ∂A, basis, BB)
+
+pullback_evaluate!(∂B1, ∂B2, ∂A, basis::PooledSparseProduct{2}, BB::TupMat) = 
+         pullback_evaluate!((∂B1, ∂B2,), ∂A, basis, BB)
+
+pullback_evaluate!(∂B1, ∂B2, ∂B3, ∂A, basis::PooledSparseProduct{3}, BB::TupMat) = 
+         pullback_evaluate!((∂B1, ∂B2, ∂B3,), ∂A, basis, BB)
+
 
 
 function pullback_evaluate!(∂BB, # output 

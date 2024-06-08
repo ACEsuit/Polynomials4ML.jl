@@ -40,7 +40,7 @@ _out_size(basis::SparseProduct, BB::Tuple{AbstractMatrix, AbstractMatrix}) = (si
 
 # ----------------------- evaluation kernels 
 
-function whatalloc(::typeof(evaluate!), basis::SparseProduct, BB) where {T}
+function whatalloc(::typeof(evaluate!), basis::SparseProduct, BB)
    VT = _valtype(basis, BB)
    return (VT, _out_size(basis, BB)...)
 end

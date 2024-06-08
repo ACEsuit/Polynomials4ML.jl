@@ -2,7 +2,10 @@ module Testing
 
 using Polynomials4ML: evaluate!, evaluate_ed!, evaluate_ed2!, 
                evaluate, evaluate_d, evaluate_ed, evaluate_dd, evaluate_ed2, 
-               _generate_input, AbstractP4MLBasis
+               pullback_evaluate!,
+               AbstractP4MLBasis, AbstractP4MLTensor, AbstractP4MLLayer
+
+import Polynomials4ML: _generate_input, _generate_batch
 
 using Test, ForwardDiff, Bumper, WithAlloc
 
@@ -116,7 +119,8 @@ end
 
 # ------------------------ Test allocations using the WithAlloc interface
 
-function _allocations_inner(basis, x; ed = true, ed2 = true)
+function _allocations_inner(basis::AbstractP4MLBasis, x; 
+                            ed = true, ed2 = true)
    @no_escape begin 
       P = @withalloc evaluate!(basis, x)
       s = sum(P)
@@ -133,40 +137,113 @@ function _allocations_inner(basis, x; ed = true, ed2 = true)
    return s 
 end
 
+_generate_batch(basis::AbstractP4MLBasis; nbatch = rand(7:16)) = 
+         [ _generate_input(basis) for _ = 1:nbatch ]
+
 function test_withalloc(basis::AbstractP4MLBasis; 
             generate_x = () -> _generate_input(basis),
+            generate_batch = () -> _generate_batch(basis),
             allowed_allocs = 0, 
-            nbatch = 16, 
+            ed = true, ed2 = true, 
             kwargs...) 
-   X = [ generate_x() for _ = 1:nbatch ]
+   X = generate_batch()
    x = generate_x()
-   match_all = true 
    for Y in (x, X, )
-      nalloc1 = _allocations_inner(basis, Y; kwargs...)
-      nalloc = @allocated ( _allocations_inner(basis, Y; kwargs...) )
+      nalloc1 = _allocations_inner(basis, Y; ed=ed, ed2=ed2)
+      nalloc = @allocated ( _allocations_inner(basis, Y; ed=ed, ed2=ed2) )
+      println("nalloc = $nalloc (allowed = $allowed_allocs)")
       print_tf(@test nalloc <= allowed_allocs)
-      P1, dP1, ddP1 = evaluate_ed2(basis, Y)
+      if ed2 
+         P1, dP1, ddP1 = evaluate_ed2(basis, Y)
+      end
       @no_escape begin 
          P2 = @withalloc evaluate!(basis, Y)
          P3, dP3 = @withalloc evaluate_ed!(basis, Y)
-         P4, dP4, ddP4 = @withalloc evaluate_ed2!(basis, Y)
-         match_P1P2 = P1 ≈ P2 ≈ P3 ≈ P4
-         match_dP1dP2 = dP1 ≈ dP3 ≈ dP4
-         match_ddP1ddP2 = ddP1 ≈ ddP4
+         if ed2 
+            P4, dP4, ddP4 = @withalloc evaluate_ed2!(basis, Y)
+         end
+         match_P1P2 = P1 ≈ P2 ≈ P3
+         match_dP1dP2 = dP1 ≈ dP3
+         match_all = match_P1P2 & match_dP1dP2
          print_tf(@test match_P1P2)
          print_tf(@test match_dP1dP2)
-         print_tf(@test match_ddP1ddP2)
+         if ed2
+            match_P1P2 = match_P1P2 & (P1 ≈ P4)
+            match_dP1dP2 = match_dP1dP2 & (dP3 ≈ dP4)
+            match_ddP1ddP2 = ddP1 ≈ ddP4
+            math_all = match_P1P2 & match_dP1dP2 & match_ddP1ddP2
+            print_tf(@test match_ddP1ddP2)
+         end
       end
-      if nalloc > allowed_allocs 
-         println("nalloc = $nalloc > $allowed_allocs (allowed)")
-      end
-      if !match_P1P2 || !match_dP1dP2 || !match_ddP1ddP2
+      if !math_all 
          println("standard withalloc evaluations don't match")
       end
    end
    return nothing 
 end
 
+function _allocations_inner(basis::AbstractP4MLTensor, x; 
+                              pb = true)
+   @no_escape begin 
+      P = @withalloc evaluate!(basis, x)
+      s = sum(P)
+      if pb 
+         T = eltype(P) 
+         sz = size(P)
+         ∂P = @alloc(T, sz...)
+         fill!(∂P, zero(T))
+         ∂x = @withalloc pullback_evaluate!(∂P, basis, x)
+      end 
+      nothing 
+   end
+   return s 
+end
+
+
+function test_withalloc(basis::AbstractP4MLTensor; 
+            generate_single = () -> _generate_input(basis),
+            generate_batch = () -> _generate_batch(basis),
+            allowed_allocs = 0, 
+            pb = true, 
+            batch = true, 
+            single = true, 
+            kwargs...) 
+
+   if single 
+      X = generate_single()
+      nalloc_pre = _allocations_inner(basis, X; pb=pb)
+      nalloc_pre = _allocations_inner(basis, X; pb=pb)
+      nalloc = @allocated ( _allocations_inner(basis, X; pb=pb) )
+      println("single: nalloc = $nalloc (allowed = $allowed_allocs)")
+      println_slim(@test nalloc <= allowed_allocs)
+      A1 = evaluate(basis, X)
+      @no_escape begin 
+         A2 = @withalloc evaluate!(basis, X)
+         match_A1A2 = A1 ≈ A2
+      end
+      if !match_A1A2
+         println("single: standard withalloc evaluations don't match")
+      end      
+   end 
+
+   if batch 
+      X = generate_batch()
+      nalloc_pre = _allocations_inner(basis, X; pb=pb)
+      nalloc = @allocated ( _allocations_inner(basis, X; pb=pb) )
+      println("batch: nalloc = $nalloc (allowed = $allowed_allocs)")
+      println_slim(@test nalloc <= allowed_allocs)
+      A1 = evaluate(basis, X)
+      @no_escape begin 
+         A2 = @withalloc evaluate!(basis, X)
+         match_A1A2 = A1 ≈ A2
+      end
+      if !match_A1A2
+         println("batch: standard withalloc evaluations don't match")
+      end
+   end 
+
+   return nothing 
+end
 
 
 

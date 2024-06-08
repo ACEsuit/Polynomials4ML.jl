@@ -23,6 +23,8 @@ import LuxCore: AbstractExplicitLayer, AbstractExplicitContainerLayer,
 using Random: AbstractRNG     
 
 function _generate_input end 
+function _generate_batch end 
+
 function natural_indices end   # could rename this get_spec or similar ... 
 function index end
 function orthpolybasis end
