@@ -13,15 +13,16 @@ import ACEbase: evaluate, evaluate_d, evaluate_ed, evaluate_dd, evaluate_ed2,
                 evaluate!, evaluate_d!, evaluate_ed!, evaluate_ed2!
 import ACEbase.FIO: read_dict, write_dict
 
-using LuxCore, Random
+using LuxCore, Random, StaticArrays
 import ChainRulesCore: rrule, frule, NoTangent, ZeroTangent
+using HyperDualNumbers: Hyper
 
 import LuxCore: AbstractExplicitLayer, AbstractExplicitContainerLayer, 
                  initialparameters, initialstates                 
 
 using Random: AbstractRNG     
 
-
+function _generate_input end 
 function natural_indices end   # could rename this get_spec or similar ... 
 function index end
 function orthpolybasis end
@@ -52,7 +53,6 @@ export natural_indices,
        pushforward_evaluate!, 
        pullback_evaluate, 
        pushforward_evaluate
-
 
 
 # generic fallbacks for a lot of wrapper kind of functionality 

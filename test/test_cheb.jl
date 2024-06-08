@@ -1,6 +1,7 @@
 using Polynomials4ML, Test
 using Polynomials4ML: evaluate, evaluate_d, evaluate_dd
-using Polynomials4ML.Testing: println_slim, print_tf, test_derivatives, 
+using Polynomials4ML.Testing: println_slim, print_tf, 
+                              test_derivatives, 
                               test_withalloc 
 
 
@@ -33,34 +34,12 @@ println()
 ##
 
 @info("      test derivatives")
-generate_x = () -> 2*rand()-1
-test_derivatives(basis, generate_x)
+test_derivatives(basis)
+test_derivatives(basis2)
 
 ##
 
-using Bumper, WithAlloc, BenchmarkTools, StaticArrays
-using WithAlloc: withalloc
-using Polynomials4ML: evaluate!, evaluate_d!, evaluate_ed!
+@info("     test allocations")
+test_withalloc(basis)
+test_withalloc(basis2)
 
-@info("        test Bumper usage") 
-let basis = basis 
-   x = generate_x()
-   xx = [ generate_x() for _ = 1:32 ]
-
-   @no_escape begin 
-      P1 = basis(x) 
-      P2 = @withalloc evaluate!(basis, x)
-      println_slim( @test P1 ≈ P2 )
-      P1b = basis(xx) 
-      P2b = @withalloc evaluate!(basis, xx)
-      println_slim( @test P1b ≈ P2b )
-   end
-end
-
-##
-
-@info("        test withalloc")
-println_slim(@test test_withalloc(basis, 0.5)  )
-println_slim(@test test_withalloc(basis, [ generate_x() for _ = 1:16 ]) )
-println_slim(@test test_withalloc(basis2, 0.5)  )
-println_slim(@test test_withalloc(basis2, [ generate_x() for _ = 1:16 ]) )

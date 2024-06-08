@@ -27,6 +27,7 @@ Base.length(basis::MonoBasis) = basis.N+1
 
 _valtype(basis::MonoBasis, T::Type{<: Number}) = T
 
+_generate_input(basis::MonoBasis) = 2 * rand() - 1
             
 # ----------------- main evaluation code 
 

@@ -27,9 +27,10 @@ Base.length(basis::CTrigBasis) = 2 * basis.N + 1
 
 _valtype(basis::CTrigBasis, T::Type{<: Real}) = complex(T)
 
-using HyperDualNumbers: Hyper 
 _valtype(::CTrigBasis, T::Type{<: Hyper{<: Real}}) = complex(T)
   
+_generate_input(basis::CTrigBasis) = 2 * π * rand() - π
+
 # ----------------- main evaluation code 
 
 function evaluate!(P::AbstractArray, basis::CTrigBasis, x) 

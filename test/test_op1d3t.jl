@@ -1,6 +1,6 @@
 
 using Polynomials4ML, Test
-using Polynomials4ML: evaluate, evaluate_d, evaluate_dd
+using Polynomials4ML: evaluate, evaluate_d, evaluate_dd, _generate_input
 using Polynomials4ML.Testing: println_slim, test_derivatives, print_tf, 
                               test_withalloc
 using LinearAlgebra: I, norm, dot 
@@ -19,14 +19,8 @@ for ntest = 1:3
    @info("Test a randomly generated polynomial basis - $ntest")
    N = rand(5:15)
    basis = OrthPolyBasis1D3T(randn(N), randn(N), randn(N))
-   test_derivatives(basis, () -> rand())
-
-   x = rand() 
-   xx = [ rand() for _ = 1:16] 
-   test_withalloc(basis, x)
-   test_withalloc(basis, xx)
-   println_slim(@test test_withalloc(basis, x)  )
-   println_slim(@test test_withalloc(basis, xx) )
+   test_derivatives(basis)
+   test_withalloc(basis)
 end
 
 ##
@@ -38,7 +32,8 @@ legendre = legendre_basis(N, normalize=true)
 G = quadgk(x -> legendre(x) * legendre(x)', -1, 1)[1]
 println_slim(@test round.(G, digits=6) ≈ I)
 @info("    derivatives")
-test_derivatives(legendre, () -> 2*rand()-1)
+test_derivatives(legendre)
+test_withalloc(legendre)
 
 ##
 
@@ -54,7 +49,8 @@ for ntest = 1:3
    G = quadgk(x -> (1-x)^α * (x+1)^β * jacobi(x) * jacobi(x)', -1, 1)[1]
    println_slim(@test round.(G, digits=6) ≈ I)
    @info("    derivatives")
-   test_derivatives(legendre, () -> 2*rand()-1)
+   test_derivatives(legendre)
+   test_withalloc(legendre)
 end 
 
 ##
@@ -74,8 +70,10 @@ println_slim(@test all([
 G = quadgk(x -> (1-x)^(-0.5) * (x+1)^(-0.5) * cheb(x) * cheb(x)', -1, 1)[1]
 println_slim(@test round.(G, digits=6) ≈ I)
 @info("     derivatives")
-test_derivatives(cheb, () -> 2*rand()-1)
+test_derivatives(cheb)
+test_withalloc(cheb)
 
+##
 
 @info("Check correctness of Chebyshev Basis (normalize=false)")
 cheb = chebyshev_basis(N, normalize=false)

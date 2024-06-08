@@ -31,8 +31,10 @@ end
 
 _valtype(basis::RTrigBasis, T::Type{<: Real}) = T
 
-using HyperDualNumbers: Hyper
 _valtype(::RTrigBasis, T::Type{<: Hyper{<: Real}}) = T
+
+_generate_input(basis::RTrigBasis) = 2 * π * rand() - π
+
 
 ##
 

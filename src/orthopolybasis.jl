@@ -34,9 +34,10 @@ index(basis::OrthPolyBasis1D3T, m::Integer) = m + 1
 
 Base.length(basis::OrthPolyBasis1D3T) = length(basis.A)
 
-
 _valtype(basis::OrthPolyBasis1D3T{T1}, TX::Type{T2}) where {T1, T2} = 
             promote_type(T1, T2)
+
+_generate_input(basis::OrthPolyBasis1D3T) = 2 * rand() - 1
 
 # ----------------- main evaluation code 
 

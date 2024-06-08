@@ -3,6 +3,7 @@ import SpheriCart: idx2lm, lm2idx
 using SpheriCart: compute, compute_with_gradients, 
 				      compute!, compute_with_gradients!, 
 						SphericalHarmonics, SolidHarmonics
+using LinearAlgebra: norm 
 
 export real_sphericalharmonics, real_solidharmonics, 
 		complex_sphericalharmonics, complex_solidharmonics
@@ -46,6 +47,18 @@ maxl(scbasis::SphericalHarmonics{L}) where {L} = L
 maxl(scbasis::SolidHarmonics{L}) where {L} = L
 
 Base.length(basis::SCWrapper) = SpheriCart.sizeY(maxl(basis))
+
+_generate_input(basis::SCWrapper) = _generate_input(basis.scbasis)
+
+function _generate_input(scbasis::SphericalHarmonics)
+	u = @SVector randn(3)
+	return u / norm(u)
+end
+
+function _generate_input(scbasis::SolidHarmonics)
+	u = @SVector randn(3)
+	return rand() * (u / norm(u))
+end
 
 
 # ---------------------- Nicer output 

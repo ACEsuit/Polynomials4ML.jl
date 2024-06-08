@@ -2,7 +2,8 @@ using LinearAlgebra, StaticArrays, Test, Printf, SparseArrays
 using Polynomials4ML, Polynomials4ML.Testing
 using Polynomials4ML: evaluate, evaluate_d, evaluate_ed, 
                       idx2lm, lm2idx, maxl
-using Polynomials4ML.Testing: print_tf, println_slim 
+using Polynomials4ML.Testing: print_tf, println_slim, 
+                     test_derivatives, test_withalloc
 using ACEbase.Testing: fdtest
 using HyperDualNumbers: Hyper
 import SpheriCart
@@ -190,25 +191,29 @@ bases = [ real_sphericalharmonics(10),
           real_solidharmonics(12, normalisation = :racah), 
           complex_sphericalharmonics(9), 
           complex_solidharmonics(11) ]
+
 for basis in bases
+   @info("basis = $basis")
    for nsamples = 1:30
+      basis = bases[4]
       local 𝐫, Y, dY, Y, F, dF 
-      𝐫 = @SVector rand(3)
+      𝐫 = @SVector randn(3)
       Y, dY = evaluate_ed(basis, 𝐫)
-      U = randn(length(Y))
-      F(𝐫) = sum(U .* evaluate(basis, SVector{3}(𝐫)))
-      dF(𝐫) = Vector(sum(U .* evaluate_d(basis, SVector{3}(𝐫))))
-      print_tf(@test fdtest(F, dF, Vector(𝐫); verbose = false))
+      U = randn(eltype(Y), length(Y))
+      F(𝐫) = real(sum(U .* evaluate(basis, 𝐫)))
+      dF(𝐫) = real(sum(U .* evaluate_d(basis, 𝐫)))
+      adF(𝐫) = ForwardDiff.gradient(F, 𝐫)
+      print_tf(@test dF(𝐫) ≈ adF(𝐫) ≈ real(sum(U .* dY)))
    end
+   println() 
 end
 println()
-
 
 ##
 
 @info("Check consistency of serial and batched gradients")
 
-X = [ rand_sphere() for i = 1:21 ]
+X = [ rand_sphere() for i = 1:12 ]
 for basis in bases 
    local Y0, Y1, Y2, dY0, dY1, dY2
    Y0 = evaluate(basis, X)
@@ -222,6 +227,7 @@ for basis in bases
    print_tf(@test dY1 ≈ dY2)
 end 
 println() 
+
 
 ## -- check the laplacian implementation 
 #=

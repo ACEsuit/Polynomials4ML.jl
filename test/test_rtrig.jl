@@ -25,11 +25,9 @@ println()
 ##
 
 @info("      test derivatives")
-generate_x = () -> rand()*2*π - π
-test_derivatives(basis, generate_x)
+test_derivatives(basis)
 
 ##
 
 @info("       test withalloc")
-println_slim(@test test_withalloc(basis, 0.5)  )
-println_slim(@test test_withalloc(basis, [ generate_x() for _ = 1:16 ]) )
+test_withalloc(basis) 

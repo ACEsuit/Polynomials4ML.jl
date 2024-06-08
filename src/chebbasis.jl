@@ -29,6 +29,8 @@ natural_indices(basis::ChebBasis) = 0:length(basis)-1
 
 _valtype(basis::ChebBasis, T::Type{<:Real}) = T
 
+_generate_input(basis::ChebBasis) = 2 * rand() - 1 
+
 
 function evaluate!(P::AbstractVector, basis::ChebBasis, x::Real)
    N = basis.N
