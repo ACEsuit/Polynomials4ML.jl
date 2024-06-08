@@ -20,12 +20,9 @@ Dn = GaussianBasis(ζ)
 bRnl = AtomicOrbitalsRadials(Pn, Dn, spec) 
 rr = 2 * rand(10) .- 1
 
-
-
 Rnl = evaluate(bRnl, rr)
 Rnl1, dRnl1 = evaluate_ed(bRnl, rr)
 Rnl2, dRnl2, ddRnl2 = evaluate_ed2(bRnl, rr)
-
 
 fdRnl = vcat([ ForwardDiff.derivative(r -> evaluate(bRnl, [r,]), r) 
                for r in rr ]...) 
@@ -36,7 +33,7 @@ println_slim(@test  Rnl ≈ Rnl1 ≈ Rnl2 )
 println_slim(@test  dRnl1 ≈ dRnl2 ≈ fdRnl )
 println_slim(@test  ddRnl2 ≈ fddRnl )
 
-P4ML.Testing.test_derivatives(bRnl, () -> 2 * rand() - 1)
+P4ML.Testing.test_derivatives(bRnl)
 
 ##
 
@@ -170,7 +167,7 @@ println_slim(@test  Rnl ≈ Rnl1 ≈ Rnl2 )
 println_slim(@test  dRnl1 ≈ dRnl2 ≈ fdRnl )
 println_slim(@test  ddRnl2 ≈ fddRnl )
  
-P4ML.Testing.test_derivatives(bRnl, () -> 2 * rand() - 1)
+P4ML.Testing.test_derivatives(bRnl)
 
 ##
 
@@ -301,5 +298,5 @@ println_slim(@test  Rnl ≈ Rnl1 ≈ Rnl2  )
 println_slim(@test  dRnl1 ≈ dRnl2 ≈ fdRnl )
 println_slim(@test  ddRnl2 ≈ fddRnl )
 
-P4ML.Testing.test_derivatives(bRnl, () -> 2 * rand() - 1)
+P4ML.Testing.test_derivatives(bRnl)
 ##

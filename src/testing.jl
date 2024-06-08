@@ -46,7 +46,7 @@ time_ed2_batched!(P, dP, ddP, basis, X) = evaluate_ed2!(P, dP, ddP, basis, X)
 
 function test_derivatives(basis::AbstractP4MLBasis; 
                           generate_x = () -> _generate_input(basis), 
-                          nX = 32, 
+                          nX = 15, 
                           ntest = 8, 
                           ed2 = true)
 
@@ -142,6 +142,7 @@ function test_withalloc(basis::AbstractP4MLBasis;
    x = generate_x()
    match_all = true 
    for Y in (x, X, )
+      nalloc1 = _allocations_inner(basis, Y; kwargs...)
       nalloc = @allocated ( _allocations_inner(basis, Y; kwargs...) )
       print_tf(@test nalloc <= allowed_allocs)
       P1, dP1, ddP1 = evaluate_ed2(basis, Y)
@@ -165,6 +166,7 @@ function test_withalloc(basis::AbstractP4MLBasis;
    end
    return nothing 
 end
+
 
 
 

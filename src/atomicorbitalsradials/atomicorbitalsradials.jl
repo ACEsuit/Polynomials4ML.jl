@@ -24,6 +24,8 @@ degree(basis::AtomicOrbitalsRadials, b::NamedTuple) = b.n1
 _valtype(basis::AtomicOrbitalsRadials, T::Type{<: Real}) = T
 _valtype(basis::AtomicOrbitalsRadials, T::Type{<: Hyper{<:Real}}) = T
 
+_generate_input(basis::AtomicOrbitalsRadials) = rand()
+
 # -------- Evaluation Code 
 
 

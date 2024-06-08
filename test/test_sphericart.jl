@@ -1,4 +1,5 @@
-using LinearAlgebra, StaticArrays, Test, Printf, SparseArrays
+using LinearAlgebra, StaticArrays, Test, Printf, SparseArrays, 
+      ForwardDiff
 using Polynomials4ML, Polynomials4ML.Testing
 using Polynomials4ML: evaluate, evaluate_d, evaluate_ed, 
                       idx2lm, lm2idx, maxl
@@ -114,6 +115,7 @@ c_spher = complex_sphericalharmonics(3)  # SphericalHarmonics(3)
 c_solid = complex_solidharmonics(3)      # SolidHarmonics(3)
 
 for ntest = 1:30 
+   local 𝐫, θ, φ
    𝐫, θ, φ = rand_angles() 
    Yr = r_spher(𝐫)
    Zr = r_solid(𝐫)
@@ -153,6 +155,7 @@ println_slim(@test norm(G - I, Inf) < 0.1)
 
 @info("Check consistency of spherical and solid")
 for ntest = 1:30 
+   local r, 𝐫 
    𝐫̂ = rand_sphere() 
    r = 2 * rand()
    𝐫 = r * 𝐫̂

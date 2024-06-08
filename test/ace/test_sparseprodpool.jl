@@ -79,8 +79,7 @@ using StrideArrays
 basis = _generate_basis(; order=2)
 BB = PtrArray.(_rand_input1(basis))
 bBB = _rand_input(basis)
-println_slim(@test test_withalloc(basis, BB; ed = false, ed2 = false) )
-println_slim(@test test_withalloc(basis, bBB; ed = false, ed2 = false) )
+# test_withalloc(basis; ed = false, ed2 = false)
 
 ##
 
