@@ -76,16 +76,16 @@ end
 
 # ----------------------- evaluation kernels 
 
-import Base.Cartesian: @nexprs
-
+# Valentin Churavy's Version (which we don't really understand)
+#
 # # Stolen from KernelAbstractions
+# import Base.Cartesian: @nexprs
 # import Adapt 
 # struct ConstAdaptor end
 # import Base.Experimental: @aliasscope
 # Adapt.adapt_storage(::ConstAdaptor, a::Array) = Base.Experimental.Const(a)
 # constify(arg) = Adapt.adapt(ConstAdaptor(), arg)
 # 
-# Valentin Churavy's Version (which we don't really understand)
 # function evaluate!(A, basis::PooledSparseProduct{NB}, BB) where {NB}
 #    @assert length(BB) == NB
 #    # evaluate the 1p product basis functions and add/write into _A
@@ -160,7 +160,6 @@ end
 # -------------------- reverse mode gradient
 
 using StaticArrays
-using Base.Cartesian: @nexprs 
 
 
 function whatalloc(::typeof(pullback_evaluate!), 
@@ -170,15 +169,7 @@ function whatalloc(::typeof(pullback_evaluate!),
 end
 
 
-# function pullback_evaluate(∂A, basis::PooledSparseProduct{NB}, BB::TupMat) where {NB}
-#    nX = size(BB[1], 1)
-#    TA = promote_type(eltype.(BB)..., eltype(∂A))
-#    ∂BB = ntuple(i -> zeros(TA, size(BB[i])...), NB)
-#    pullback_evaluate!(∂BB, ∂A, basis, BB)
-#    return ∂BB
-# end
-
-# the next three method definitions ensure that we can use the 
+# the next few method definitions ensure that we can use the 
 # WithAlloc stuff with the pullback_evaluate! function.
 # TODO: this should probably be replaced with a loop that generates  
 # the code up to a large-ish NB. 
@@ -192,6 +183,8 @@ pullback_evaluate!(∂B1, ∂B2, ∂A, basis::PooledSparseProduct{2}, BB::TupMat
 pullback_evaluate!(∂B1, ∂B2, ∂B3, ∂A, basis::PooledSparseProduct{3}, BB::TupMat) = 
          pullback_evaluate!((∂B1, ∂B2, ∂B3,), ∂A, basis, BB)
 
+pullback_evaluate!(∂B1, ∂B2, ∂B3, ∂B4, ∂A, basis::PooledSparseProduct{4}, BB::TupMat) = 
+         pullback_evaluate!((∂B1, ∂B2, ∂B3, ∂B4,), ∂A, basis, BB)
 
 
 function pullback_evaluate!(∂BB, # output 
@@ -209,7 +202,7 @@ function pullback_evaluate!(∂BB, # output
       ∂A_iA = ∂A[iA]
       @simd ivdep for j = 1:nX 
          b = ntuple(Val(NB)) do i 
-            @inbounds BB[i][j, ϕ[i]] 
+            BB[i][j, ϕ[i]] 
          end 
          a, g = _static_prod_ed(b)
          for i = 1:NB 
