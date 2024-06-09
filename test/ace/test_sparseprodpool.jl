@@ -165,24 +165,62 @@ function auto_pb_pb(∂BB, ∂A, basis, BB)
    #        = (∂BB ⋅ ∇_BB) pullback(∂A, basis, BB)
    d = Dual{Float64}(0.0, 1.0)
    BB_d = ntuple(i -> BB[i] .+ d .* ∂BB[i], length(BB))
-   A_d = evaluate(basis, BB_d)
-   ∂BB_d = pullback_evaluate(∂A, basis, BB_d)
-   ∇_∂A = extract_derivative.(Float64, A_d)
-   ∇_BB = ntuple(i -> extract_derivative.(Float64, ∂BB_d[i]), length(∂BB_d))
+   @no_escape begin 
+      A_d = @withalloc evaluate!(basis, BB_d)
+      ∂BB_d = @withalloc pullback_evaluate!(∂A, basis, BB_d)
+      ∇_∂A = extract_derivative.(Float64, A_d)
+      ∇_BB = ntuple(i -> extract_derivative.(Float64, ∂BB_d[i]), length(∂BB_d))
+   end
    return ∇_∂A, ∇_BB
 end
 
-auto_pb_pb(∂2, ∂A, basis, bBB);
+using Bumper, WithAlloc
+
+function auto_pb_pb!(∇_∂A, ∇_BB, ∂BB, ∂A, basis, BB) 
+   @assert all(eltype(BB[i]) == eltype(BB[1]) for i = 2:length(BB))
+   @no_escape begin 
+      T = eltype(BB[1])
+      d = Dual{T}(zero(T), one(T))
+      TD = typeof(d)
+      B1 = BB[1] 
+      B2 = BB[2] 
+      B1_d = @alloc(TD, size(B1)...)
+      B2_d = @alloc(TD, size(B2)...)
+      for t = 1:length(B1)
+         B1_d[t] = B1[t] + d * ∂BB[1][t]
+      end
+      for t = 1:length(B2)
+         B2_d[t] = B2[t] + d * ∂BB[2][t]
+      end
+      BB_d = (B1_d, B2_d)
+      A_d = @withalloc evaluate!(basis, BB_d)
+      ∂BB_d = @withalloc pullback_evaluate!(∂A, basis, BB_d)
+      for i = 1:length(A_d)
+         ∇_∂A[i] = extract_derivative(T, A_d[i])
+      end
+      for i = 1:length(∂BB_d)
+         for j = 1:length(∂BB_d[i])
+            ∇_BB[i][j] = extract_derivative(T, ∂BB_d[i][j])
+         end
+      end
+   end
+   return ∇_∂A, ∇_BB
+end
+
+
+∇_∂A, ∇_BB = auto_pb_pb(∂2, ∂A, basis, bBB);
+auto_pb_pb!(∇_∂A2, ∇_BB2, ∂2, ∂A, basis, bBB)
 @btime auto_pb_pb($∂2, $∂A, $basis, $bBB);
+@btime auto_pb_pb!($∇_∂A2, $∇_BB2, $∂2, $∂A, $basis, $bBB);
 
 ##
 
 ∇_∂A1, ∇_BB1 = auto_pb_pb(∂2, ∂A, basis, bBB)
 ∇_∂A2, ∇_BB2 = P4ML.pb_pb_evaluate(∂2, ∂A, basis, bBB)
-
-∇_∂A1 ≈ ∇_∂A2
-all(∇_BB1 .≈ ∇_BB2)
-
+∇_∂A3 = deepcopy(∇_∂A2); ∇_BB3 = deepcopy(∇_BB2)
+auto_pb_pb!(∇_∂A3, ∇_BB3, ∂2, ∂A, basis, bBB)
+∇_∂A1 ≈ ∇_∂A2 ≈ ∇_∂A3
+all(∇_BB1 .≈ ∇_BB2 .≈ ∇_BB3)
 
 ## 
 @info("Testing pushforward for PooledSparseProduct")

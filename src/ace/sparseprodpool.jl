@@ -228,6 +228,10 @@ function pullback_evaluate!(∂BB, ∂A, basis::PooledSparseProduct{2}, BB::TupM
    @assert all(size(∂BB[i], 2) >= size(BB[i], 2) for i = 1:NB)
    BB1, BB2 = BB
    ∂BB1, ∂BB2 = ∂BB
+
+   for i = 1:length(∂BB)
+      fill!(∂BB[i], zero(eltype(∂BB[i])))
+   end
    
    @inbounds for (iA, ϕ) in enumerate(basis.spec)
       ∂A_iA = ∂A[iA]
@@ -258,6 +262,10 @@ function pullback_evaluate!(∂BB, ∂A, basis::PooledSparseProduct{3}, BB::TupM
       @assert length(∂BB) == NB 
    end
 
+   for i = 1:length(∂BB)
+      fill!(∂BB[i], zero(eltype(∂BB[i])))
+   end
+   
    B1 = BB[1]; B2 = BB[2]; B3 = BB[3]
    ∂B1 = ∂BB[1]; ∂B2 = ∂BB[2]; ∂B3 = ∂BB[3]
    
