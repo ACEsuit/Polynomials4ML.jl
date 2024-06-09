@@ -100,7 +100,6 @@ println()
 
 ## 
 
-#=
 @info("Testing pb_pb_evaluate for PooledSparseProduct")
 import ChainRulesCore: rrule, NoTangent
 
@@ -108,7 +107,7 @@ for ntest = 1:20
    local basis, val, pb, bBB, A 
    ORDER = mod1(ntest, 3)+1
    basis = _generate_basis(;order = ORDER)
-   bBB = _rand_input(basis)
+   bBB = _generate_input(basis)
    ∂A = randn(length(basis))
 
    A = evaluate(basis, bBB)
@@ -124,7 +123,7 @@ for ntest = 1:20
    @test val2 == ∂_BB
 
    ∂2 = ntuple(i -> randn(size(∂_BB[i])), length(∂_BB))
-   bUU = _rand_input(basis; nX = size(bBB[1], 1))
+   bUU = _generate_input(basis; nX = size(bBB[1], 1))
    _BB(t) = ntuple(i -> bBB[i] + t * bUU[i], ORDER)
    bV = randn(size(∂A))
    _∂A(t) = ∂A + t * bV
@@ -142,7 +141,48 @@ for ntest = 1:20
    print_tf(@test all( fdtest(F, dF, 0.0; verbose=false) ))
 end
 println()
-=#
+
+##
+
+ORDER = 2
+basis = _generate_basis(;order = ORDER, len=300)
+bBB = _generate_input(basis)
+∂A = randn(length(basis))
+∂2 = ntuple(i -> randn(size(bBB[i])), length(bBB))
+
+@btime Polynomials4ML.pullback_evaluate($∂A, $basis, $bBB)
+@btime Polynomials4ML.pb_pb_evaluate($∂2, $∂A, $basis, $bBB);
+
+##
+
+using ForwardDiff: Dual, extract_derivative 
+
+function auto_pb_pb(∂BB, ∂A, basis, BB) 
+   # φ = ∂BB ⋅ pullback(∂A, basis, BB)
+   #   = (∂bBB ⋅ ∇_BB) (∂A ⋅ evaluate(basis, BB))
+   # ∇_∂A φ = (∂BB ⋅ ∇_BB) evaluate(basis, BB)
+   # ∇_BB φ = (∂BB ⋅ ∇_BB) ∇_BB (∂A ⋅ evaluate(basis, BB))
+   #        = (∂BB ⋅ ∇_BB) pullback(∂A, basis, BB)
+   d = Dual{Float64}(0.0, 1.0)
+   BB_d = ntuple(i -> BB[i] .+ d .* ∂BB[i], length(BB))
+   A_d = evaluate(basis, BB_d)
+   ∂BB_d = pullback_evaluate(∂A, basis, BB_d)
+   ∇_∂A = extract_derivative.(Float64, A_d)
+   ∇_BB = ntuple(i -> extract_derivative.(Float64, ∂BB_d[i]), length(∂BB_d))
+   return ∇_∂A, ∇_BB
+end
+
+auto_pb_pb(∂2, ∂A, basis, bBB);
+@btime auto_pb_pb($∂2, $∂A, $basis, $bBB);
+
+##
+
+∇_∂A1, ∇_BB1 = auto_pb_pb(∂2, ∂A, basis, bBB)
+∇_∂A2, ∇_BB2 = P4ML.pb_pb_evaluate(∂2, ∂A, basis, bBB)
+
+∇_∂A1 ≈ ∇_∂A2
+all(∇_BB1 .≈ ∇_BB2)
+
 
 ## 
 @info("Testing pushforward for PooledSparseProduct")

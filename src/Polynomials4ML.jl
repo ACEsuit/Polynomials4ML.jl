@@ -59,6 +59,7 @@ export natural_indices,
 
 # generic fallbacks for a lot of wrapper kind of functionality 
 include("interface.jl")
+include("generic_ad.jl")
 
 # static product - used throughout several layers
 include("staticprod.jl")

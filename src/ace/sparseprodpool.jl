@@ -279,16 +279,10 @@ function pullback_evaluate!(∂BB, ∂A, basis::PooledSparseProduct{3}, BB::TupM
 end
 
 
-#= 
+# --------------------------------------------------------
+#  reverse over reverse 
 
-# TODO: revisit this and potentially automate it using 
-#       the ForwardDiff trick!!! 
-
-
-import ForwardDiff
-
-function pb_pb_evaluate(∂2, 
-                        ∂A, basis::PooledSparseProduct{NB}, BB::TupMat
+function pb_pb_evaluate(∂2, ∂A, basis::PooledSparseProduct{NB}, BB::TupMat
                         ) where {NB}
 
    # ∂2 should be a tuple of length 2
@@ -322,8 +316,7 @@ function pb_pb_evaluate(∂2,
 end
 
 
-function pb_pb_evaluate(basis::PooledSparseProduct{1}, ∂2, 
-                         ∂A, BB::TupMat)
+function pb_pb_evaluate(∂2, ∂A, basis::PooledSparseProduct{1}, BB::TupMat)
 
    # ∂2 should be a tuple of length 2
    @assert ∂2 isa Tuple{<: AbstractMatrix}
@@ -348,8 +341,7 @@ function pb_pb_evaluate(basis::PooledSparseProduct{1}, ∂2,
 end
 
 
-function pb_pb_evaluate(basis::PooledSparseProduct{2}, ∂2, 
-                         ∂A, BB::TupMat)
+function pb_pb_evaluate(∂2, ∂A, basis::PooledSparseProduct{2}, BB::TupMat)
 
    # ∂2 should be a tuple of length 2
    @assert ∂2 isa Tuple{<: AbstractMatrix, <: AbstractMatrix}
@@ -377,7 +369,6 @@ function pb_pb_evaluate(basis::PooledSparseProduct{2}, ∂2,
    end
    return ∂2_∂A, ∂2_BB 
 end
-=#
 
 
 # --------------------- Pushforwards 
@@ -459,7 +450,7 @@ function rrule(::typeof(pullback_evaluate), Δ, basis::PooledSparseProduct, BB)
    ∂BB = pullback_evaluate(Δ, basis, BB)
 
    function pb(Δ2)
-      ∂2_Δ, ∂2_BB = pb_pb_evaluate(basis, Δ2, Δ, BB)
+      ∂2_Δ, ∂2_BB = pb_pb_evaluate(Δ2, Δ, basis, BB)
       return NoTangent(), ∂2_Δ, NoTangent(), ∂2_BB
    end
 
