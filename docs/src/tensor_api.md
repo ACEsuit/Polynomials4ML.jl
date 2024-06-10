@@ -22,28 +22,37 @@ All tensor layers can be conveniently used in a non-allocating way from a Bumper
 A = @withalloc evaluate!(absis, BB)
 ```
 
-## Pullbacks and Pushforwards
+## Pullbacks
 
-All tensor layers have hand-written pullbacks implemented via 
+All tensor layers have custom pullbacks implemented that can be accessed via non-allocating or allocating calls: 
 ```julia 
-pullback_evaluate!(∂X, ∂P, layer, X)
-∂X = pullback_evaluate(∂P, layer, X)
-pushforward_evaluate!(P, ∂P, layer, X, ∂X)
-P, ∂P = pushforward_evaluate(layer, X, ∂X)
+pullback!(∂X, ∂P, layer, X)
+∂X = pullback(∂P, layer, X)
 ```
 Using the `WithAlloc.jl` interface these can again be used as follows, 
 ```julia 
-∂X = @withalloc pullback_evaluate!(∂P, layer, X)
-P, ∂P = @withalloc pushforward_evaluate!(layer, X, ∂X)
+∂X = @withalloc pullback!(∂P, layer, X)
+P, ∂P = @withalloc pushforward!(layer, X, ∂X)
 ```
 
-Second-order pushbacks  ... TODO 
-<!--
-pb_pb_evaluate!(∂X, ∂P, layer, X)
-pb_pb_evaluate!(∂X, ∂P, layer, X) 
--->
+## Pushforwards and Second-order derivatives
+
+Pushforwards and reverse-over-reverse are implemented using ForwardDiff. This is quasi-optimal even for reverse-over-reverse due to the fact that it can be interpreted as a directional derivative on evaluate and pullback (after swapping derivatives). As a matter of fact, we generally recommend to not use these directly. ChainRules integration would give an easier use-pattern. For optimal performance the same technique to an entire model architecture rather than to each individual layer. This would avoid several unnecessary intermediate allocations.
+
+The syntax for pushforwards is straightforward:
+```julia
+pushforward!(P, ∂P, layer, X, ∂X)
+P, ∂P = pushforward(layer, X, ∂X)
+```
+
+For second-order pullbacks the syntax is 
+```julia
+∇_∂P, ∇_X = pullback2(∂∂X, ∂P, layer, X)
+pullback2!(∇_∂P, ∇_X, ∂∂X, ∂P, layer, X)
+```
 
 ## ChainRules integration 
+
 
 
 ## Lux integration 

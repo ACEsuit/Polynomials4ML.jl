@@ -78,21 +78,21 @@ function ChainRulesCore.rrule(::typeof(evaluate), basis::SparseProduct{NB},
                               BB::Tuple) where {NB}
    A = evaluate(basis, BB)
    function pb(∂A)
-      return NoTangent(), NoTangent(), pullback_evaluate(∂A, basis, BB)
+      return NoTangent(), NoTangent(), pullback(∂A, basis, BB)
    end
    return A, pb
 end
 
 
-function pullback_evaluate(∂A, basis::SparseProduct{NB}, BB::Tuple) where {NB}
+function pullback(∂A, basis::SparseProduct{NB}, BB::Tuple) where {NB}
    TA = promote_type(eltype.(BB)...)
    ∂BB = ntuple(i -> zeros(TA, size(BB[i])...), NB)
-   pullback_evaluate!(∂BB, ∂A, basis, BB)
+   pullback!(∂BB, ∂A, basis, BB)
    return ∂BB
 end
 
 
-function pullback_evaluate!(∂BB, ∂A, basis::SparseProduct{NB}, BB::Tuple) where {NB}
+function pullback!(∂BB, ∂A, basis::SparseProduct{NB}, BB::Tuple) where {NB}
    nX = size(BB[1], 1)
 
    @assert all(nX <= size(BB[i], 1) for i = 1:NB)
@@ -122,7 +122,7 @@ end
 
 # ----------------------- evaluation interfaces 
 
-function pushforward_evaluate(basis::SparseProduct, 
+function pushforward(basis::SparseProduct, 
                               BB::Tuple{Vararg{AbstractVector}}, 
                               ∂BB::Tuple{Vararg{AbstractVector}}) 
    VT = mapreduce(eltype, promote_type, BB)
@@ -130,11 +130,11 @@ function pushforward_evaluate(basis::SparseProduct,
    # ∂BB: Vector of SVector{3, Float64}
    # dA: Matrix 3 * length(basis)
    dA = zeros(VT, length(∂BB[1][1]), length(basis)) 
-   pushforward_evaluate!(A, dA, basis, BB::Tuple, ∂BB::Tuple)
+   pushforward!(A, dA, basis, BB::Tuple, ∂BB::Tuple)
    return A, dA
 end
 
-function pushforward_evaluate(basis::SparseProduct, 
+function pushforward(basis::SparseProduct, 
                               BB::Tuple{Vararg{AbstractMatrix}}, 
                               ∂BB::Tuple{Vararg{AbstractMatrix}}) 
    VT = mapreduce(eltype, promote_type, BB)
@@ -143,7 +143,7 @@ function pushforward_evaluate(basis::SparseProduct,
    # ∂BB: Matrix of SVector{3, Float64}: Nel * length(basis)
    A = zeros(VT, nX, length(basis))
    dA = [zeros(VT, length(∂BB[1][1])) for i = 1:nX, j = 1:length(basis)]
-   pushforward_evaluate!(A, dA, basis, BB::Tuple, ∂BB::Tuple)
+   pushforward!(A, dA, basis, BB::Tuple, ∂BB::Tuple)
    return A, dA
 end
 
@@ -172,7 +172,7 @@ function _frule_frule_evaluate(basis::SparseProduct, BB::Tuple{Vararg{AbstractMa
 end
 =#
 
-function pushforward_evaluate!(A, dA, basis::SparseProduct{NB}, 
+function pushforward!(A, dA, basis::SparseProduct{NB}, 
                                BB::Tuple{Vararg{AbstractVector}}, 
                                ∂BB::Tuple{Vararg{AbstractVector}}) where {NB}
    @assert length(BB) == NB
@@ -194,7 +194,7 @@ function pushforward_evaluate!(A, dA, basis::SparseProduct{NB},
    return A, dA 
 end
 
-function pushforward_evaluate!(A, dA, basis::SparseProduct{NB}, 
+function pushforward!(A, dA, basis::SparseProduct{NB}, 
                                BB::Tuple{Vararg{AbstractMatrix}}, 
                                ∂BB::Tuple{Vararg{AbstractMatrix}}) where {NB}
    nX = size(BB[1], 1)

@@ -162,7 +162,7 @@ end
 using StaticArrays
 
 
-function whatalloc(::typeof(pullback_evaluate!), 
+function whatalloc(::typeof(pullback!), 
                    ∂A, basis::PooledSparseProduct{NB}, BB::TupMat) where  {NB}
    TA = promote_type(eltype.(BB)..., eltype(∂A))
    return ntuple(i -> (TA, size(BB[i])...), NB)                   
@@ -170,24 +170,24 @@ end
 
 
 # the next few method definitions ensure that we can use the 
-# WithAlloc stuff with the pullback_evaluate! function.
+# WithAlloc stuff with the pullback! function.
 # TODO: this should probably be replaced with a loop that generates  
 # the code up to a large-ish NB. 
 
-pullback_evaluate!(∂B1, ∂A, basis::PooledSparseProduct{1}, BB::TupMat) = 
-         pullback_evaluate!((∂B1,), ∂A, basis, BB)
+pullback!(∂B1, ∂A, basis::PooledSparseProduct{1}, BB::TupMat) = 
+         pullback!((∂B1,), ∂A, basis, BB)
 
-pullback_evaluate!(∂B1, ∂B2, ∂A, basis::PooledSparseProduct{2}, BB::TupMat) = 
-         pullback_evaluate!((∂B1, ∂B2,), ∂A, basis, BB)
+pullback!(∂B1, ∂B2, ∂A, basis::PooledSparseProduct{2}, BB::TupMat) = 
+         pullback!((∂B1, ∂B2,), ∂A, basis, BB)
 
-pullback_evaluate!(∂B1, ∂B2, ∂B3, ∂A, basis::PooledSparseProduct{3}, BB::TupMat) = 
-         pullback_evaluate!((∂B1, ∂B2, ∂B3,), ∂A, basis, BB)
+pullback!(∂B1, ∂B2, ∂B3, ∂A, basis::PooledSparseProduct{3}, BB::TupMat) = 
+         pullback!((∂B1, ∂B2, ∂B3,), ∂A, basis, BB)
 
-pullback_evaluate!(∂B1, ∂B2, ∂B3, ∂B4, ∂A, basis::PooledSparseProduct{4}, BB::TupMat) = 
-         pullback_evaluate!((∂B1, ∂B2, ∂B3, ∂B4,), ∂A, basis, BB)
+pullback!(∂B1, ∂B2, ∂B3, ∂B4, ∂A, basis::PooledSparseProduct{4}, BB::TupMat) = 
+         pullback!((∂B1, ∂B2, ∂B3, ∂B4,), ∂A, basis, BB)
 
 
-function pullback_evaluate!(∂BB, # output 
+function pullback!(∂BB, # output 
                             ∂A, basis::PooledSparseProduct{NB}, BB::TupMat # inputs 
                             ) where {NB}
    nX = size(BB[1], 1)
@@ -218,7 +218,7 @@ end
 #       a cruder code generation strategy. This specialized code 
 #       confirms this. 
 
-function pullback_evaluate!(∂BB, ∂A, basis::PooledSparseProduct{2}, BB::TupMat)
+function pullback!(∂BB, ∂A, basis::PooledSparseProduct{2}, BB::TupMat)
    nX = size(BB[1], 1)
    NB = 2 
    @assert length(∂A) == length(basis)
@@ -247,7 +247,7 @@ function pullback_evaluate!(∂BB, ∂A, basis::PooledSparseProduct{2}, BB::TupM
    return ∂BB 
 end
 
-function pullback_evaluate!(∂BB, ∂A, basis::PooledSparseProduct{3}, BB::TupMat; 
+function pullback!(∂BB, ∂A, basis::PooledSparseProduct{3}, BB::TupMat; 
                               sizecheck = true)
    nX = size(BB[1], 1)
    NB = 3 
@@ -288,23 +288,23 @@ end
 
 # -------- 
 
-function pullback_evaluate_x! end 
+function pullback_x! end 
 
-function whatalloc(::typeof(pullback_evaluate_x!), 
+function whatalloc(::typeof(pullback_x!), 
                    ∂A, basis::PooledSparseProduct{NB}, BB::TupMat) where  {NB}
    TA = promote_type(eltype.(BB)..., eltype(∂A))
    return ((TA, length(basis)), ntuple(i -> (TA, size(BB[i])...), NB)...)
 end
 
-pullback_evaluate_x!(A, ∂B1, ∂B2, ∂A, basis::PooledSparseProduct{2}, BB::TupMat) = 
-   pullback_evaluate_x!(A, (∂B1, ∂B2), ∂A, basis, BB) 
+pullback_x!(A, ∂B1, ∂B2, ∂A, basis::PooledSparseProduct{2}, BB::TupMat) = 
+   pullback_x!(A, (∂B1, ∂B2), ∂A, basis, BB) 
 
-pullback_evaluate_x!(A, ∂B1, ∂B2, ∂B3, ∂A, basis::PooledSparseProduct{3}, BB::TupMat) = 
-   pullback_evaluate_x!(A, (∂B1, ∂B2, ∂B3), ∂A, basis, BB) 
+pullback_x!(A, ∂B1, ∂B2, ∂B3, ∂A, basis::PooledSparseProduct{3}, BB::TupMat) = 
+   pullback_x!(A, (∂B1, ∂B2, ∂B3), ∂A, basis, BB) 
 
 
 # experimental version that also computes the original object 
-function pullback_evaluate_x!(A, ∂BB, ∂A, basis::PooledSparseProduct{2}, BB::TupMat)
+function pullback_x!(A, ∂BB, ∂A, basis::PooledSparseProduct{2}, BB::TupMat)
    nX = size(BB[1], 1)
    NB = 2 
    @assert length(∂A) == length(basis)
@@ -335,7 +335,7 @@ function pullback_evaluate_x!(A, ∂BB, ∂A, basis::PooledSparseProduct{2}, BB:
    return A, ∂BB 
 end
 
-function pullback_evaluate_x!(A, ∂BB, ∂A, basis::PooledSparseProduct{3}, BB::TupMat; 
+function pullback_x!(A, ∂BB, ∂A, basis::PooledSparseProduct{3}, BB::TupMat; 
                               sizecheck = true)
    nX = size(BB[1], 1)
    NB = 3 
@@ -378,7 +378,7 @@ end
 # --------------------------------------------------------
 #  reverse over reverse 
 
-function pb_pb_evaluate(∂2, ∂A, basis::PooledSparseProduct{NB}, BB::TupMat
+function pullback2(∂2, ∂A, basis::PooledSparseProduct{NB}, BB::TupMat
                         ) where {NB}
 
    # ∂2 should be a tuple of length 2
@@ -412,7 +412,7 @@ function pb_pb_evaluate(∂2, ∂A, basis::PooledSparseProduct{NB}, BB::TupMat
 end
 
 
-function pb_pb_evaluate(∂2, ∂A, basis::PooledSparseProduct{1}, BB::TupMat)
+function pullback2(∂2, ∂A, basis::PooledSparseProduct{1}, BB::TupMat)
 
    # ∂2 should be a tuple of length 2
    @assert ∂2 isa Tuple{<: AbstractMatrix}
@@ -437,7 +437,7 @@ function pb_pb_evaluate(∂2, ∂A, basis::PooledSparseProduct{1}, BB::TupMat)
 end
 
 
-function pb_pb_evaluate(∂2, ∂A, basis::PooledSparseProduct{2}, BB::TupMat)
+function pullback2(∂2, ∂A, basis::PooledSparseProduct{2}, BB::TupMat)
 
    # ∂2 should be a tuple of length 2
    @assert ∂2 isa Tuple{<: AbstractMatrix, <: AbstractMatrix}
@@ -488,7 +488,7 @@ _my_promote_type(T1::Type{<: Number}, T2::Type{SVector{N, S}}, args...
 
 
 
-function pushforward_evaluate(basis::PooledSparseProduct, BB, ΔBB)
+function pushforward(basis::PooledSparseProduct, BB, ΔBB)
    @assert length(size(BB[1])) == 2
    @assert length(size(ΔBB[1])) == 2
    @assert all(size(BB[t]) == size(ΔBB[t]) for t = 1:length(BB))
@@ -503,11 +503,11 @@ function pushforward_evaluate(basis::PooledSparseProduct, BB, ΔBB)
    ∂A = zeros(T∂A, (nA, nX))
    fill!(∂A, zero(T∂A))
 
-   return pushforward_evaluate!(A, ∂A, basis, BB, ΔBB)
+   return pushforward!(A, ∂A, basis, BB, ΔBB)
 end   
 
 
-function pushforward_evaluate!(A, ∂A, basis::PooledSparseProduct{NB}, BB, ΔBB) where {NB}
+function pushforward!(A, ∂A, basis::PooledSparseProduct{NB}, BB, ΔBB) where {NB}
    nX = size(BB[1], 1)
    for (i, ϕ) in enumerate(basis.spec)
       for j = 1:nX 
@@ -534,7 +534,7 @@ function rrule(::typeof(evaluate), basis::PooledSparseProduct{NB}, BB::TupMat) w
    A = evaluate(basis, BB)
 
    function pb(Δ)
-      ∂BB = pullback_evaluate(Δ, basis, BB)
+      ∂BB = pullback(Δ, basis, BB)
       return NoTangent(), NoTangent(), ∂BB
    end 
 
@@ -542,11 +542,11 @@ function rrule(::typeof(evaluate), basis::PooledSparseProduct{NB}, BB::TupMat) w
 end
 
 
-function rrule(::typeof(pullback_evaluate), Δ, basis::PooledSparseProduct, BB)
-   ∂BB = pullback_evaluate(Δ, basis, BB)
+function rrule(::typeof(pullback), Δ, basis::PooledSparseProduct, BB)
+   ∂BB = pullback(Δ, basis, BB)
 
    function pb(Δ2)
-      ∂2_Δ, ∂2_BB = pb_pb_evaluate(Δ2, Δ, basis, BB)
+      ∂2_Δ, ∂2_BB = pullback2(Δ2, Δ, basis, BB)
       return NoTangent(), ∂2_Δ, NoTangent(), ∂2_BB
    end
 

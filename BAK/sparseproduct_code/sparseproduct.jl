@@ -315,7 +315,7 @@ end
 function ChainRulesCore.rrule(::typeof(evaluate), basis::SparseProduct{NB}, BB::Tuple) where {NB}
    A = evaluate(basis, BB)
    function pb(∂A)
-      return NoTangent(), NoTangent(), _pullback_evaluate(∂A, basis, BB)
+      return NoTangent(), NoTangent(), _pullback(∂A, basis, BB)
    end
    return A, pb
 end
@@ -323,19 +323,19 @@ end
 
 # function _rrule_evaluate(basis::SparseProduct{NB}, BB::Tuple) where {NB}
 #    A = evaluate(basis, BB)
-#    return A, ∂A -> _pullback_evaluate(∂A, basis, BB)
+#    return A, ∂A -> _pullback(∂A, basis, BB)
 # end
 
 
-function _pullback_evaluate(∂A, basis::SparseProduct{NB}, BB::Tuple) where {NB}
+function _pullback(∂A, basis::SparseProduct{NB}, BB::Tuple) where {NB}
    TA = promote_type(eltype.(BB)...)
    ∂BB = ntuple(i -> zeros(TA, size(BB[i])...), NB)
-   _pullback_evaluate!(∂BB, ∂A, basis, BB)
+   _pullback!(∂BB, ∂A, basis, BB)
    return ∂BB
 end
 
 
-function _pullback_evaluate!(∂BB, ∂A, basis::SparseProduct{NB}, BB::Tuple) where {NB}
+function _pullback!(∂BB, ∂A, basis::SparseProduct{NB}, BB::Tuple) where {NB}
    nX = size(BB[1], 1)
 
    @assert all(nX <= size(BB[i], 1) for i = 1:NB)

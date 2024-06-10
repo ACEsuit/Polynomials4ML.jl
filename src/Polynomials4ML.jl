@@ -1,17 +1,14 @@
 module Polynomials4ML
 
-# -------------- Import Bumper and related things ---------------
-
-using Bumper, WithAlloc, StrideArrays
-import WithAlloc: whatalloc 
-
-# -------------- import ACEbase stuff 
-# not so clear this is still needed? 
+# -------------- import ACEbase, Bumper, WithAlloc, Lux and related
 
 import ACEbase
 import ACEbase: evaluate, evaluate_d, evaluate_ed, evaluate_dd, evaluate_ed2, 
                 evaluate!, evaluate_d!, evaluate_ed!, evaluate_ed2!
 import ACEbase.FIO: read_dict, write_dict
+
+using Bumper, WithAlloc, StrideArrays
+import WithAlloc: whatalloc 
 
 using LuxCore, Random, StaticArrays
 import ChainRulesCore: rrule, frule, NoTangent, ZeroTangent
@@ -20,7 +17,8 @@ using HyperDualNumbers: Hyper
 import LuxCore: AbstractExplicitLayer, AbstractExplicitContainerLayer, 
                  initialparameters, initialstates                 
 
-using Random: AbstractRNG     
+using Random: AbstractRNG   
+
 
 function _generate_input end 
 function _generate_batch end 
@@ -30,32 +28,18 @@ function index end
 function orthpolybasis end
 function degree end 
 
-function pullback_evaluate end
-function pullback_evaluate! end
-function pushforward_evaluate end
-function pushforward_evaluate! end
+function pullback end
+function pullback! end
+function pullback end
+function pullback! end
+function pushforward end
+function pushforward! end
 
 # some stuff to allow bases to overload some lux functionality ... 
 # how much of this should go into ACEbase? 
 function lux end 
 
-export natural_indices, 
-       index, 
-       evaluate, 
-       evaluate_d, 
-       evaluate_dd, 
-       evaluate_ed, 
-       evaluate_ed2, 
-       evaluate!, 
-       evaluate_ed!, 
-       evaluate_ed2!, 
-       orthpolybasis, 
-       degree, 
-       pullback_evaluate!, 
-       pushforward_evaluate!, 
-       pullback_evaluate, 
-       pushforward_evaluate
-
+export orthpolybasis
 
 # generic fallbacks for a lot of wrapper kind of functionality 
 include("interface.jl")

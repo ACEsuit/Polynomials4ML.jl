@@ -1,6 +1,6 @@
 
 using Test, BenchmarkTools, Polynomials4ML
-using Polynomials4ML: SimpleProdBasis, SparseSymmProd
+using Polynomials4ML: SimpleProdBasis, SparseSymmProd, pullback 
 using Polynomials4ML.Testing: println_slim, print_tf, generate_SO2_spec, 
                               test_withalloc
 using Random
@@ -142,7 +142,7 @@ println()
 
 ##
 
-@info("Test pb_pb_evaluate")
+@info("Test pullback2")
 
 for ntest = 1:10 
    local A, AA, Δ, Δ², uA, uΔ, F, dF
@@ -154,9 +154,9 @@ for ntest = 1:10
    uA = randn(length(A)) ./ (1:length(A))
    uΔ = randn(length(AA)) ./ (1:length(AA))
 
-   F(t) = dot(Δ², P4ML.pullback_evaluate(Δ + t * uΔ, basis2, A + t * uA))
+   F(t) = dot(Δ², P4ML.pullback(Δ + t * uΔ, basis2, A + t * uA))
    dF(t) = begin 
-      val, pb = P4ML.rrule(P4ML.pullback_evaluate, Δ + t * uΔ, basis2,  A + t * uA)
+      val, pb = P4ML.rrule(P4ML.pullback, Δ + t * uΔ, basis2,  A + t * uA)
       _, ∇_Δ, _, ∇_A = pb(Δ²)
       return dot(∇_Δ, uΔ) + dot(∇_A, uA)
    end
@@ -182,8 +182,8 @@ function auto_pb_pb(∂∂A,
    d = Dual{Float64}(0.0, 1.0)
    A_d = A .+ d .* ∂∂A
    @no_escape begin 
-      AA_d = @withalloc evaluate!(basis, A_d)
-      ∂A_d = @withalloc pullback_evaluate!(∂AA, basis, A_d)
+      AA_d = @withalloc P4ML.evaluate!(basis, A_d)
+      ∂A_d = @withalloc P4ML.pullback!(∂AA, basis, A_d)
       ∇_∂AA = extract_derivative.(Float64, AA_d)
       ∇_A = extract_derivative.(Float64, ∂A_d)
    end
@@ -203,8 +203,8 @@ function auto_pb_pb!(∇_∂AA, ∇_A,
          A_d[i] = A[i] + d * ∂∂A[i]
       end
 
-      AA_d = @withalloc evaluate!(basis, A_d)
-      ∂A_d = @withalloc pullback_evaluate!(∂AA, basis, A_d)
+      AA_d = @withalloc P4ML.evaluate!(basis, A_d)
+      ∂A_d = @withalloc P4ML.pullback!(∂AA, basis, A_d)
 
       for i = 1:length(AA_d)
          ∇_∂AA[i] = extract_derivative(Float64, AA_d[i])
@@ -226,27 +226,27 @@ basis2 = SparseSymmProd(spec)
 A = randn(2*M+1)
 AA = basis2(A)
 ∂AA = randn(length(AA)) ./ (1:length(AA))
-∂A = pullback_evaluate(∂AA, basis2, A)
+∂A = P4ML.pullback(∂AA, basis2, A)
 
 ∂²∂A = randn(length(∂A)) ./ (1:length(∂A))
-∇_∂AA1, ∇_A1 = Polynomials4ML.pb_pb_evaluate(∂²∂A, ∂AA, basis2, A)
+∇_∂AA1, ∇_A1 = Polynomials4ML.pullback2(∂²∂A, ∂AA, basis2, A)
 ∇_∂AA2, ∇_A2 = auto_pb_pb(∂²∂A, ∂AA, basis2, A)
 @show ∇_∂AA1 ≈ ∇_∂AA2
 @show ∇_A1 ≈ ∇_A2
 
-@info("pb² for SparseSymmProd")
-print("     pullback! : ")
-@btime pullback_evaluate!($∂A, $∂AA, $basis2, $A)
-print("pb_pb_evaluate : ")
-@btime Polynomials4ML.pb_pb_evaluate($∂²∂A, $∂AA, $basis2, $A)
-print("    auto_pb_pb : ")
-@btime auto_pb_pb($∂²∂A, $∂AA, $basis2, $A)
-print("   auto_pb_pb! : ")
-@btime auto_pb_pb!($∇_∂AA1, $∇_A1, $∂²∂A, $∂AA, $basis2, $A)
+# @info("pb² for SparseSymmProd")
+# print("     pullback! : ")
+# @btime P4ML.pullback!($∂A, $∂AA, $basis2, $A)
+# print("pullback2 : ")
+# @btime Polynomials4ML.pullback2($∂²∂A, $∂AA, $basis2, $A)
+# print("    auto_pb_pb : ")
+# @btime auto_pb_pb($∂²∂A, $∂AA, $basis2, $A)
+# print("   auto_pb_pb! : ")
+# @btime auto_pb_pb!($∇_∂AA1, $∇_A1, $∂²∂A, $∂AA, $basis2, $A)
 
 ##
 
-@code_warntype auto_pb_pb!(∇_∂AA1, ∇_A1, ∂²∂A, ∂AA, basis2, A)
+# @code_warntype auto_pb_pb!(∇_∂AA1, ∇_A1, ∂²∂A, ∂AA, basis2, A)
 
 ##
 #=
@@ -266,9 +266,9 @@ for ntest = 1:30
    _Δ(t) = Δ + t * uΔ   
    _X(t) = bA + t * uA
 
-   F(t) = dot(Δ², P4ML.pullback_evaluate(_Δ(t), basis2, _X(t)))
+   F(t) = dot(Δ², P4ML.pullback(_Δ(t), basis2, _X(t)))
    dF(t) = begin
-      val, pb = rrule(P4ML.pullback_evaluate, _Δ(t), basis2, _X(t))
+      val, pb = rrule(P4ML.pullback, _Δ(t), basis2, _X(t))
       _, ∇_Δ, _, ∇_A = pb(Δ²)
       return dot(∇_Δ, uΔ) + dot(∇_A, uA)
    end
@@ -315,7 +315,7 @@ for ntest = 1:10
    basis = SparseSymmProd(spec)
    AA1 = basis(A)
    ∂AA1 = ForwardDiff.jacobian(basis, A) * ΔA
-   AA2, ∂AA2 = P4ML.pushforward_evaluate(basis, A, ΔA)
+   AA2, ∂AA2 = P4ML.pushforward(basis, A, ΔA)
    print_tf( @test AA1 ≈ AA2 )
    print_tf( @test ∂AA1 ≈ ∂AA2 )
 end 

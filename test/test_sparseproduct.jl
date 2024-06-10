@@ -61,7 +61,7 @@ println_slim(@test bA1 ≈ bA2)
 
 ##
 
-@info("Testing pullback_evaluate")
+@info("Testing pullback")
 using LinearAlgebra: dot 
 
 N1 = 10

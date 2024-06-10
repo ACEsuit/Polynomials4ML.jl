@@ -1,6 +1,6 @@
 using LinearAlgebra, StaticArrays, Test, Printf
 using Polynomials4ML, Polynomials4ML.Testing
-using Polynomials4ML: evaluate, evaluate_d, evaluate_ed 
+using Polynomials4ML: evaluate, evaluate_d, evaluate_ed, evaluate_ed2
 using Polynomials4ML.Testing: print_tf, println_slim 
 using ForwardDiff
 using ACEbase.Testing: fdtest

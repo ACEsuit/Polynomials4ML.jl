@@ -2,7 +2,7 @@ module Testing
 
 using Polynomials4ML: evaluate!, evaluate_ed!, evaluate_ed2!, 
                evaluate, evaluate_d, evaluate_ed, evaluate_dd, evaluate_ed2, 
-               pullback_evaluate!,
+               pullback!,
                AbstractP4MLBasis, AbstractP4MLTensor, AbstractP4MLLayer
 
 import Polynomials4ML: _generate_input, _generate_batch
@@ -193,7 +193,7 @@ function _allocations_inner(basis::AbstractP4MLTensor, x;
          sz = size(P)
          ∂P = @alloc(T, sz...)
          fill!(∂P, zero(T))
-         ∂x = @withalloc pullback_evaluate!(∂P, basis, x)
+         ∂x = @withalloc pullback!(∂P, basis, x)
       end 
       nothing 
    end

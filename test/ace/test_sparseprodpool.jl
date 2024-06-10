@@ -100,7 +100,7 @@ println()
 
 ## 
 
-@info("Testing pb_pb_evaluate for PooledSparseProduct")
+@info("Testing pullback2 for PooledSparseProduct")
 import ChainRulesCore: rrule, NoTangent
 
 for ntest = 1:20 
@@ -119,7 +119,7 @@ for ntest = 1:20
    @test ∂_BB isa NTuple{ORDER, <: AbstractMatrix}
    @test all(size(∂_BB[i]) == size(bBB[i]) for i = 1:length(bBB))
 
-   val2, pb2 = rrule(P4ML.pullback_evaluate, ∂A, basis, bBB)
+   val2, pb2 = rrule(P4ML.pullback, ∂A, basis, bBB)
    @test val2 == ∂_BB
 
    ∂2 = ntuple(i -> randn(size(∂_BB[i])), length(∂_BB))
@@ -129,11 +129,11 @@ for ntest = 1:20
    _∂A(t) = ∂A + t * bV
 
    F(t) = begin
-      ∂_BB = P4ML.pullback_evaluate(_∂A(t), basis, _BB(t))
+      ∂_BB = P4ML.pullback(_∂A(t), basis, _BB(t))
       return sum(dot(∂2[i], ∂_BB[i]) for i = 1:length(∂_BB))
    end
    dF(t) = begin
-      val, pb = rrule(P4ML.pullback_evaluate, ∂A, basis, _BB(t))
+      val, pb = rrule(P4ML.pullback, ∂A, basis, _BB(t))
       _, ∂_∂A, _, ∂2_BB = pb(∂2)
       return dot(∂_∂A, bV) + sum(dot(bUU[i], ∂2_BB[i]) for i = 1:ORDER)
    end
@@ -165,9 +165,9 @@ function auto_pb_pb(∂BB, ∂A, basis, BB)
    d = Dual{Float64}(0.0, 1.0)
    BB_d = ntuple(i -> BB[i] .+ d .* ∂BB[i], length(BB))
    @no_escape begin 
-      A_d, ∂BB_d = @withalloc Polynomials4ML.pullback_evaluate_x!(∂A, basis, BB_d)
+      A_d, ∂BB_d = @withalloc Polynomials4ML.pullback_x!(∂A, basis, BB_d)
       # A_d = @withalloc evaluate!(basis, BB_d)
-      # ∂BB_d = @withalloc pullback_evaluate!(∂A, basis, BB_d)
+      # ∂BB_d = @withalloc pullback!(∂A, basis, BB_d)
       ∇_∂A = extract_derivative.(Float64, A_d)
       ∇_BB = ntuple(i -> extract_derivative.(Float64, ∂BB_d[i]), length(∂BB_d))
    end
@@ -194,8 +194,8 @@ function auto_pb_pb!(∇_∂A, ∇_BB, ∂BB, ∂A, basis::PooledSparseProduct{2
       end
       BB_d = (B1_d, B2_d)
       # A_d = @withalloc evaluate!(basis, BB_d)
-      # ∂BB_d = @withalloc pullback_evaluate!(∂A, basis, BB_d)
-      A_d, ∂BB_d = @withalloc Polynomials4ML.pullback_evaluate_x!(∂A, basis, BB_d)      
+      # ∂BB_d = @withalloc pullback!(∂A, basis, BB_d)
+      A_d, ∂BB_d = @withalloc Polynomials4ML.pullback_x!(∂A, basis, BB_d)      
       @inbounds for i = 1:length(A_d)
          ∇_∂A[i] = extract_derivative(T, A_d[i])
       end
@@ -231,8 +231,8 @@ function auto_pb_pb!(∇_∂A, ∇_BB, ∂BB, ∂A, basis::PooledSparseProduct{3
       end
       BB_d = (B1_d, B2_d, B3_d)
       # A_d = @withalloc evaluate!(basis, BB_d)
-      # ∂BB_d = @withalloc pullback_evaluate!(∂A, basis, BB_d)
-      A_d, ∂BB_d = @withalloc Polynomials4ML.pullback_evaluate_x!(∂A, basis, BB_d)      
+      # ∂BB_d = @withalloc pullback!(∂A, basis, BB_d)
+      A_d, ∂BB_d = @withalloc Polynomials4ML.pullback_x!(∂A, basis, BB_d)      
       @inbounds for i = 1:length(A_d)
          ∇_∂A[i] = extract_derivative(T, A_d[i])
       end
@@ -250,20 +250,20 @@ end
 ∇_∂A2 = deepcopy(∇_∂A); ∇_BB2 = deepcopy(∇_BB)
 auto_pb_pb!(∇_∂A2, ∇_BB2, ∂2, ∂A, basis, bBB)
 
-@info("pb² for PooledSparseProduct, order = $ORDER, len = $(length(basis))")
-print("pullback_evaluate : ")
-@btime Polynomials4ML.pullback_evaluate($∂A, $basis, $bBB)
-print("   pb_pb_evaluate : ")
-@btime Polynomials4ML.pb_pb_evaluate($∂2, $∂A, $basis, $bBB);
-print("       auto_pb_pb : ")
-@btime auto_pb_pb($∂2, $∂A, $basis, $bBB);
-print("      auto_pb_pb! : ")
-@btime auto_pb_pb!($∇_∂A2, $∇_BB2, $∂2, $∂A, $basis, $bBB);
+# @info("pb² for PooledSparseProduct, order = $ORDER, len = $(length(basis))")
+# print("pullback : ")
+# @btime Polynomials4ML.pullback($∂A, $basis, $bBB)
+# print("   pullback2 : ")
+# @btime Polynomials4ML.pullback2($∂2, $∂A, $basis, $bBB);
+# print("       auto_pb_pb : ")
+# @btime auto_pb_pb($∂2, $∂A, $basis, $bBB);
+# print("      auto_pb_pb! : ")
+# @btime auto_pb_pb!($∇_∂A2, $∇_BB2, $∂2, $∂A, $basis, $bBB);
 
 ##
 
 ∇_∂A1, ∇_BB1 = auto_pb_pb(∂2, ∂A, basis, bBB)
-∇_∂A2, ∇_BB2 = P4ML.pb_pb_evaluate(∂2, ∂A, basis, bBB)
+∇_∂A2, ∇_BB2 = P4ML.pullback2(∂2, ∂A, basis, bBB)
 ∇_∂A3 = deepcopy(∇_∂A2); ∇_BB3 = deepcopy(∇_BB2)
 auto_pb_pb!(∇_∂A3, ∇_BB3, ∂2, ∂A, basis, bBB)
 ∇_∂A1 ≈ ∇_∂A2 ≈ ∇_∂A3
@@ -311,7 +311,7 @@ for ntest = 1:10
    basis = _generate_basis(; order=order)
    BB, ΔBB = _rand_input1_pfwd(basis)
    A1, ∂A1 = fwddiff_pfwd(basis, BB, ΔBB)
-   A2, ∂A2 = P4ML.pushforward_evaluate(basis, BB, ΔBB)
+   A2, ∂A2 = P4ML.pushforward(basis, BB, ΔBB)
    print_tf(@test A2 ≈ A1)
    print_tf(@test ∂A2 ≈ ∂A1)
 end

@@ -140,14 +140,14 @@ end
 
 import ChainRulesCore: rrule, NoTangent 
 
-function whatalloc(::typeof(pullback_evaluate!), 
+function whatalloc(::typeof(pullback!), 
                    ∂AA, basis::SparseSymmProd, A)
    T∂A = promote_type(eltype(∂AA), eltype(A))
    return (T∂A, size(A)... )
 end
 
 
-@generated function pullback_evaluate!(∂A,  
+@generated function pullback!(∂A,  
                                  ∂AA, basis::SparseSymmProd{ORD}, A
                                  ) where {ORD}
    quote
@@ -192,22 +192,22 @@ function _pb_evaluate_pbAA!(gA, ΔN::AbstractMatrix,
 end
 
 
-function rrule(::typeof(pullback_evaluate), ∂AA, basis::SparseSymmProd, A) 
-   ∂A = pullback_evaluate(∂AA, basis, A)
+function rrule(::typeof(pullback), ∂AA, basis::SparseSymmProd, A) 
+   ∂A = pullback(∂AA, basis, A)
    function pb(∂∂A)
-      ∂²∂AA, ∂²A = pb_pb_evaluate(∂∂A, ∂AA, basis, A)
+      ∂²∂AA, ∂²A = pullback2(∂∂A, ∂AA, basis, A)
       return NoTangent(), ∂²∂AA, NoTangent(), ∂²A
    end
    return ∂A, pb
 end
 
 
-@generated function pb_pb_evaluate(Δ², ΔAA, basis::SparseSymmProd{ORD}, A)  where {ORD}
+@generated function pullback2(Δ², ΔAA, basis::SparseSymmProd{ORD}, A)  where {ORD}
    quote 
       TG = promote_type(eltype(Δ²), eltype(ΔAA), eltype(A))
       gΔAA = zeros(TG, size(ΔAA))
       gA = zeros(TG, size(A))
-      @nexprs $ORD N -> _pb_pb_evaluate_AA!(basis.specs[N], 
+      @nexprs $ORD N -> _pullback2_AA!(basis.specs[N], 
                               __view_AA(gΔAA, basis, N), gA,   # outputs (gradients)
                               Δ²,                              # differential 
                               __view_AA(ΔAA,  basis, N), A,    # inputs 
@@ -216,7 +216,7 @@ end
    end 
 end 
 
-function _pb_pb_evaluate_AA!(spec::Vector{NTuple{N, Int}}, 
+function _pullback2_AA!(spec::Vector{NTuple{N, Int}}, 
                              gΔAA, gA, 
                              Δ², 
                              ΔN::AbstractVector, A::AbstractVector) where {N}
@@ -244,7 +244,7 @@ function _pb_pb_evaluate_AA!(spec::Vector{NTuple{N, Int}},
 end
 
 
-function _pb_pb_evaluate_AA!(spec::Vector{NTuple{N, Int}}, 
+function _pullback2_AA!(spec::Vector{NTuple{N, Int}}, 
                              gΔAA, gA, 
                              Δ², 
                              ΔN::AbstractMatrix, A::AbstractMatrix) where {N}
@@ -268,7 +268,7 @@ end
 # -------------- Pushforwards / frules  
 
 # TODO: REMOVE
-# function pushforward_evaluate(basis::SparseSymmProd, 
+# function pushforward(basis::SparseSymmProd, 
 #                               A::AbstractVector{<: Number}, 
 #                               ΔA::AbstractMatrix)
 #    nAA = length(basis)                       
@@ -276,11 +276,11 @@ end
 #    AA = zeros(TAA, nAA)
 #    T∂AA = _my_promote_type(TAA, eltype(ΔA))
 #    ∂AA = zeros(T∂AA, nAA, size(ΔA, 2))
-#    pushforward_evaluate!(AA, ∂AA, basis, A, ΔA)
+#    pushforward!(AA, ∂AA, basis, A, ΔA)
 #    return AA, ∂AA
 # end
 
-function whatalloc(::typeof(pushforward_evaluate!), 
+function whatalloc(::typeof(pushforward!), 
                    basis::SparseSymmProd, A, ΔA)
    nAA = length(basis)                       
    TAA = eltype(A)
@@ -288,7 +288,7 @@ function whatalloc(::typeof(pushforward_evaluate!),
    return (TAA, nAA), (T∂AA, nAA, size(ΔA, 2))
 end
 
-@generated function pushforward_evaluate!(AA, ∂AA, basis::SparseSymmProd{NB}, A, ΔA) where {NB}
+@generated function pushforward!(AA, ∂AA, basis::SparseSymmProd{NB}, A, ΔA) where {NB}
    quote 
       if basis.hasconst; error("no implementation with hasconst"); end 
       Base.Cartesian.@nexprs $NB N -> _pfwd_AA_N!(AA, ∂AA, A, ΔA, basis.ranges[N], basis.specs[N])

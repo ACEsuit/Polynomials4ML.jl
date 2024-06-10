@@ -177,13 +177,13 @@ evaluate_d(l::AbstractP4MLLayer, args...) =
 evaluate_dd(l::AbstractP4MLLayer, args...) = 
       evaluate_ed2(l, args...)[3] 
 
-pullback_evaluate(∂X, l::AbstractP4MLLayer, args...) = 
-      _with_safe_alloc(pullback_evaluate!, ∂X, l, args...)
+pullback(∂X, l::AbstractP4MLLayer, args...) = 
+      _with_safe_alloc(pullback!, ∂X, l, args...)
 
-pushforward_evaluate(l::AbstractP4MLLayer, args...) = 
-      _with_safe_alloc(pushforward_evaluate!, l, args...)
+pushforward(l::AbstractP4MLLayer, args...) = 
+      _with_safe_alloc(pushforward!, l, args...)
 
-pb_pb_evaluate(∂P, ∂X, l::AbstractP4MLLayer, args...) = 
-      _with_safe_alloc(pb_pb_evaluate!, ∂P, ∂X, l, args...)
+pullback2(∂P, ∂X, l::AbstractP4MLLayer, args...) = 
+      _with_safe_alloc(pullback2!, ∂P, ∂X, l, args...)
 
 

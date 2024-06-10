@@ -2,13 +2,13 @@
 # general rrules and frules interface for AbstractP4MLBasis 
 
 
-function whatalloc(::typeof(pullback_evaluate!), 
+function whatalloc(::typeof(pullback!), 
                     ∂P, basis::AbstractP4MLBasis, X::AbstractVector)
    T∂X = promote_type(_gradtype(basis, X), eltype(∂P))
    return (T∂X, length(X))
 end
 
-function pullback_evaluate!(∂X, 
+function pullback!(∂X, 
                   ∂P, basis::AbstractP4MLBasis, X::AbstractVector; 
                   dP = evaluate_ed(basis, X)[2] )
    @assert size(∂P) == size(dP) == (length(X), length(basis))
@@ -31,12 +31,12 @@ function rrule(::typeof(evaluate),
    P = evaluate(basis, X)
    # TODO: here we could do evaluate_ed, but need to think about how this 
    #       works with the kwarg trick above...
-   return P, ∂P -> (NoTangent(), NoTangent(), pullback_evaluate(∂P, basis, X))
+   return P, ∂P -> (NoTangent(), NoTangent(), pullback(∂P, basis, X))
 end
 
 
 #= 
-function whatalloc(::typeof(pb_pb_evaluate!), 
+function whatalloc(::typeof(pullback2!), 
                    ∂∂X, ∂P, basis::AbstractP4MLBasis, X::AbstractVector)
    Nbasis = length(basis)
    Nx = length(X)                        
@@ -49,7 +49,7 @@ function whatalloc(::typeof(pb_pb_evaluate!),
 end
 
 
-function pb_pb_evaluate!(∂²P, ∂²X,   # output 
+function pullback2!(∂²P, ∂²X,   # output 
                          ∂∂X,        # input / perturbation of ∂X
                          ∂P, basis::AbstractP4MLBasis,   # inputs 
                          X::AbstractVector{<: Real})
@@ -68,11 +68,11 @@ function pb_pb_evaluate!(∂²P, ∂²X,   # output
 end
 
 
-function rrule(::typeof(pullback_evaluate),
+function rrule(::typeof(pullback),
    ∂P, basis::AbstractP4MLBasis, X::AbstractVector{<: Real})
-∂X = pullback_evaluate(∂P, basis, X)
+∂X = pullback(∂P, basis, X)
 function _pb(∂2)
-∂∂P, ∂X = pb_pb_evaluate(∂2, ∂P, basis, X)
+∂∂P, ∂X = pullback2(∂2, ∂P, basis, X)
 return NoTangent(), ∂∂P, NoTangent(), ∂X             
 end
 return ∂X, _pb 
@@ -88,6 +88,6 @@ function rrule(::typeof(evaluate),
                   basis::AbstractP4MLTensor, 
                   X)
    P = evaluate(basis, X)
-   return P, ∂P -> (NoTangent(), NoTangent(), pullback_evaluate(∂P, basis, X))
+   return P, ∂P -> (NoTangent(), NoTangent(), pullback(∂P, basis, X))
 end
 

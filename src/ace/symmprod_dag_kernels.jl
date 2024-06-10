@@ -46,7 +46,7 @@ end
 # Warning (to be documented!!!) : the input must be AA and not A!!!
 #                    A is no longer needed to evaluate the pullback
 
-function unsafe_pullback_evaluate!(∂A, ∂AA::AbstractVector, 
+function unsafe_pullback!(∂A, ∂AA::AbstractVector, 
                                    dag::SparseSymmProdDAG, AA::AbstractVector)
    nodes = dag.nodes
    has0 = dag.has0
@@ -81,14 +81,14 @@ function unsafe_pullback_evaluate!(∂A, ∂AA::AbstractVector,
 end
 
 
-function unsafe_pullback_evaluate(∂AA, dag::SparseSymmProdDAG, AA::AbstractVector)
+function unsafe_pullback(∂AA, dag::SparseSymmProdDAG, AA::AbstractVector)
    # NB actually computes  ∂A. The input AA is provided instead of A to 
    #    accelerate evaluation of the pullback but we don't need to differentiate 
    #    wrt to it. Think of AA as just a buffer. same elsewhere...
 
    T∂A = promote_type(eltype(∂AA), eltype(AA))
    ∂A = zeros(T∂A, length(A))
-   unsafe_pullback_evaluate!(∂A, ∂AA, dag, AA)
+   unsafe_pullback!(∂A, ∂AA, dag, AA)
    return ∂A
 end
 
@@ -134,7 +134,7 @@ end
 
 
 
-function unsafe_pullback_evaluate!(∂A::AbstractMatrix, 
+function unsafe_pullback!(∂A::AbstractMatrix, 
                                    ∂AA::AbstractMatrix, 
                                    dag::SparseSymmProdDAG,
                                    AA::AbstractMatrix)
@@ -182,7 +182,7 @@ function rrule(::typeof(evaluate), dag::SparseSymmProdDAG, A::AbstractArray)
 
    function pb(∂AA)
       ∂A = zeros(eltype(A), size(A))
-      unsafe_pullback_evaluate!(∂A, ∂AA, dag, AA)
+      unsafe_pullback!(∂A, ∂AA, dag, AA)
       return ∂A
    end
 
