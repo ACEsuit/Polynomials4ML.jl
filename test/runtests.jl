@@ -12,14 +12,6 @@ using Test
     @testset "TrigonometricPolynomials" begin include("test_trig.jl"); end
     @testset "Real Trig Polys" begin include("test_rtrig.jl"); end
 
-    #=
-    # 3D Harmonics 
-    @testset "Complex SphericalHarmonics" begin include("sphericalharmonics/test_cylm.jl"); end
-    @testset "Real Spherical Harmonics" begin include("sphericalharmonics/test_rylm.jl"); end
-    @testset "Complex Solid Harmonics" begin include("sphericalharmonics/test_crlm.jl"); end
-    @testset "Real Solid Harmonics" begin include("sphericalharmonics/test_rrlm.jl"); end
-    =#
-
     @testset "SpheriCart Interface" begin include("test_sphericart.jl"); end
 
     # Quantum Chemistry 
