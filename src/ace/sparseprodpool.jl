@@ -247,7 +247,6 @@ function pullback_evaluate!(∂BB, ∂A, basis::PooledSparseProduct{2}, BB::TupM
    return ∂BB 
 end
 
-
 function pullback_evaluate!(∂BB, ∂A, basis::PooledSparseProduct{3}, BB::TupMat; 
                               sizecheck = true)
    nX = size(BB[1], 1)
@@ -284,6 +283,95 @@ function pullback_evaluate!(∂BB, ∂A, basis::PooledSparseProduct{3}, BB::TupM
       end 
    end
    return ∂BB 
+end
+
+
+# -------- 
+
+function pullback_evaluate_x! end 
+
+function whatalloc(::typeof(pullback_evaluate_x!), 
+                   ∂A, basis::PooledSparseProduct{NB}, BB::TupMat) where  {NB}
+   TA = promote_type(eltype.(BB)..., eltype(∂A))
+   return ((TA, length(basis)), ntuple(i -> (TA, size(BB[i])...), NB)...)
+end
+
+pullback_evaluate_x!(A, ∂B1, ∂B2, ∂A, basis::PooledSparseProduct{2}, BB::TupMat) = 
+   pullback_evaluate_x!(A, (∂B1, ∂B2), ∂A, basis, BB) 
+
+pullback_evaluate_x!(A, ∂B1, ∂B2, ∂B3, ∂A, basis::PooledSparseProduct{3}, BB::TupMat) = 
+   pullback_evaluate_x!(A, (∂B1, ∂B2, ∂B3), ∂A, basis, BB) 
+
+
+# experimental version that also computes the original object 
+function pullback_evaluate_x!(A, ∂BB, ∂A, basis::PooledSparseProduct{2}, BB::TupMat)
+   nX = size(BB[1], 1)
+   NB = 2 
+   @assert length(∂A) == length(basis)
+   @assert length(BB) == length(∂BB) == 2
+   @assert all(nX <= size(BB[i], 1) for i = 1:NB)
+   @assert all(nX <= size(∂BB[i], 1) for i = 1:NB)
+   @assert all(size(∂BB[i], 2) >= size(BB[i], 2) for i = 1:NB)
+   BB1, BB2 = BB
+   ∂BB1, ∂BB2 = ∂BB
+
+   for i = 1:length(∂BB)
+      fill!(∂BB[i], zero(eltype(∂BB[i])))
+   end
+   fill!(A, zero(eltype(A)))
+   
+   @inbounds for (iA, ϕ) in enumerate(basis.spec)
+      ∂A_iA = ∂A[iA]
+      ϕ1 = ϕ[1]
+      ϕ2 = ϕ[2]
+      @simd ivdep for j = 1:nX 
+         b1 = BB1[j, ϕ1]
+         b2 = BB2[j, ϕ2]
+         ∂BB1[j, ϕ1] = muladd(∂A_iA, b2, ∂BB1[j, ϕ1])
+         ∂BB2[j, ϕ2] = muladd(∂A_iA, b1, ∂BB2[j, ϕ2])
+         A[j] += b1 * b2 
+      end 
+   end
+   return A, ∂BB 
+end
+
+function pullback_evaluate_x!(A, ∂BB, ∂A, basis::PooledSparseProduct{3}, BB::TupMat; 
+                              sizecheck = true)
+   nX = size(BB[1], 1)
+   NB = 3 
+
+   if sizecheck 
+      @assert all(nX <= size(BB[i], 1) for i = 1:NB)
+      @assert all(nX <= size(∂BB[i], 1) for i = 1:NB)
+      @assert all(size(∂BB[i], 2) >= size(BB[i], 2) for i = 1:NB)
+      @assert length(∂A) == length(basis)
+      @assert length(BB) == NB 
+      @assert length(∂BB) == NB 
+   end
+
+   for i = 1:length(∂BB)
+      fill!(∂BB[i], zero(eltype(∂BB[i])))
+   end
+   
+   B1 = BB[1]; B2 = BB[2]; B3 = BB[3]
+   ∂B1 = ∂BB[1]; ∂B2 = ∂BB[2]; ∂B3 = ∂BB[3]
+   
+   @inbounds for (iA, ϕ) in enumerate(basis.spec)
+      ∂A_iA = ∂A[iA]
+      ϕ1 = ϕ[1]
+      ϕ2 = ϕ[2]
+      ϕ3 = ϕ[3]
+      @simd ivdep for j = 1:nX 
+         b1 = B1[j, ϕ1]
+         b2 = B2[j, ϕ2]
+         b3 = B3[j, ϕ3]
+         ∂B1[j, ϕ1] = muladd(∂A_iA, b2*b3, ∂B1[j, ϕ1])
+         ∂B2[j, ϕ2] = muladd(∂A_iA, b1*b3, ∂B2[j, ϕ2])
+         ∂B3[j, ϕ3] = muladd(∂A_iA, b1*b2, ∂B3[j, ϕ3])
+         A[j] += b1 * b2 * b3
+      end 
+   end
+   return A, ∂BB 
 end
 
 

@@ -146,11 +146,6 @@ function whatalloc(::typeof(pullback_evaluate!),
    return (T∂A, size(A)... )
 end
 
-# TODO: REMOVE
-# function pullback_evaluate(∂AA, basis::SparseSymmProd, A)
-#    ∂A = zeros(T∂A, size(A))
-#    return pullback_evaluate!(∂A, ∂AA, basis, A)
-# end
 
 @generated function pullback_evaluate!(∂A,  
                                  ∂AA, basis::SparseSymmProd{ORD}, A
@@ -197,7 +192,16 @@ function _pb_evaluate_pbAA!(gA, ΔN::AbstractMatrix,
 end
 
 
-#=
+function rrule(::typeof(pullback_evaluate), ∂AA, basis::SparseSymmProd, A) 
+   ∂A = pullback_evaluate(∂AA, basis, A)
+   function pb(∂∂A)
+      ∂²∂AA, ∂²A = pb_pb_evaluate(∂∂A, ∂AA, basis, A)
+      return NoTangent(), ∂²∂AA, NoTangent(), ∂²A
+   end
+   return ∂A, pb
+end
+
+
 @generated function pb_pb_evaluate(Δ², ΔAA, basis::SparseSymmProd{ORD}, A)  where {ORD}
    quote 
       TG = promote_type(eltype(Δ²), eltype(ΔAA), eltype(A))
@@ -258,7 +262,7 @@ function _pb_pb_evaluate_AA!(spec::Vector{NTuple{N, Int}},
    end
    return nothing 
 end
-=#
+
 
 
 # -------------- Pushforwards / frules  

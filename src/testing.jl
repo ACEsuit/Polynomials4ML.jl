@@ -175,10 +175,11 @@ function test_withalloc(basis::AbstractP4MLBasis;
             print_tf(@test match_ddP1ddP2)
          end
       end
-      if !math_all 
-         println("standard withalloc evaluations don't match")
-      end
+      # if !math_all 
+      #    println("standard/withalloc evaluations don't match")
+      # end
    end
+   println()
    return nothing 
 end
 
@@ -220,10 +221,11 @@ function test_withalloc(basis::AbstractP4MLTensor;
       @no_escape begin 
          A2 = @withalloc evaluate!(basis, X)
          match_A1A2 = A1 ≈ A2
+         println_slim(@test match_A1A2)
       end
-      if !match_A1A2
-         println("single: standard withalloc evaluations don't match")
-      end      
+      # if !match_A1A2
+      #    println("single: standard withalloc evaluations don't match")
+      # end      
    end 
 
    if batch 
@@ -236,10 +238,11 @@ function test_withalloc(basis::AbstractP4MLTensor;
       @no_escape begin 
          A2 = @withalloc evaluate!(basis, X)
          match_A1A2 = A1 ≈ A2
+         println_slim(@test match_A1A2)
       end
-      if !match_A1A2
-         println("batch: standard withalloc evaluations don't match")
-      end
+      # if !match_A1A2
+      #    println("batch: standard withalloc evaluations don't match")
+      # end
    end 
 
    return nothing 

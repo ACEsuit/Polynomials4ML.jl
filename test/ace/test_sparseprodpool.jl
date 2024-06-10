@@ -144,18 +144,17 @@ println()
 
 ##
 
-ORDER = 2
+ORDER = 3
 basis = _generate_basis(;order = ORDER, len=300)
 bBB = _generate_input(basis)
 ∂A = randn(length(basis))
 ∂2 = ntuple(i -> randn(size(bBB[i])), length(bBB))
 
-@btime Polynomials4ML.pullback_evaluate($∂A, $basis, $bBB)
-@btime Polynomials4ML.pb_pb_evaluate($∂2, $∂A, $basis, $bBB);
 
 ##
 
 using ForwardDiff: Dual, extract_derivative 
+using Bumper, WithAlloc
 
 function auto_pb_pb(∂BB, ∂A, basis, BB) 
    # φ = ∂BB ⋅ pullback(∂A, basis, BB)
@@ -166,17 +165,18 @@ function auto_pb_pb(∂BB, ∂A, basis, BB)
    d = Dual{Float64}(0.0, 1.0)
    BB_d = ntuple(i -> BB[i] .+ d .* ∂BB[i], length(BB))
    @no_escape begin 
-      A_d = @withalloc evaluate!(basis, BB_d)
-      ∂BB_d = @withalloc pullback_evaluate!(∂A, basis, BB_d)
+      A_d, ∂BB_d = @withalloc Polynomials4ML.pullback_evaluate_x!(∂A, basis, BB_d)
+      # A_d = @withalloc evaluate!(basis, BB_d)
+      # ∂BB_d = @withalloc pullback_evaluate!(∂A, basis, BB_d)
       ∇_∂A = extract_derivative.(Float64, A_d)
       ∇_BB = ntuple(i -> extract_derivative.(Float64, ∂BB_d[i]), length(∂BB_d))
    end
    return ∇_∂A, ∇_BB
 end
 
-using Bumper, WithAlloc
 
-function auto_pb_pb!(∇_∂A, ∇_BB, ∂BB, ∂A, basis, BB) 
+
+function auto_pb_pb!(∇_∂A, ∇_BB, ∂BB, ∂A, basis::PooledSparseProduct{2}, BB) 
    @assert all(eltype(BB[i]) == eltype(BB[1]) for i = 2:length(BB))
    @no_escape begin 
       T = eltype(BB[1])
@@ -186,19 +186,57 @@ function auto_pb_pb!(∇_∂A, ∇_BB, ∂BB, ∂A, basis, BB)
       B2 = BB[2] 
       B1_d = @alloc(TD, size(B1)...)
       B2_d = @alloc(TD, size(B2)...)
-      for t = 1:length(B1)
+      @inbounds for t = 1:length(B1)
          B1_d[t] = B1[t] + d * ∂BB[1][t]
       end
-      for t = 1:length(B2)
+      @inbounds for t = 1:length(B2)
          B2_d[t] = B2[t] + d * ∂BB[2][t]
       end
       BB_d = (B1_d, B2_d)
-      A_d = @withalloc evaluate!(basis, BB_d)
-      ∂BB_d = @withalloc pullback_evaluate!(∂A, basis, BB_d)
-      for i = 1:length(A_d)
+      # A_d = @withalloc evaluate!(basis, BB_d)
+      # ∂BB_d = @withalloc pullback_evaluate!(∂A, basis, BB_d)
+      A_d, ∂BB_d = @withalloc Polynomials4ML.pullback_evaluate_x!(∂A, basis, BB_d)      
+      @inbounds for i = 1:length(A_d)
          ∇_∂A[i] = extract_derivative(T, A_d[i])
       end
-      for i = 1:length(∂BB_d)
+      @inbounds for i = 1:length(∂BB_d)
+         for j = 1:length(∂BB_d[i])
+            ∇_BB[i][j] = extract_derivative(T, ∂BB_d[i][j])
+         end
+      end
+   end
+   return ∇_∂A, ∇_BB
+end
+
+function auto_pb_pb!(∇_∂A, ∇_BB, ∂BB, ∂A, basis::PooledSparseProduct{3}, BB) 
+   @assert all(eltype(BB[i]) == eltype(BB[1]) for i = 2:length(BB))
+   @no_escape begin 
+      T = eltype(BB[1])
+      d = Dual{T}(zero(T), one(T))
+      TD = typeof(d)
+      B1 = BB[1] 
+      B2 = BB[2] 
+      B3 = BB[3] 
+      B1_d = @alloc(TD, size(B1)...)
+      B2_d = @alloc(TD, size(B2)...)
+      B3_d = @alloc(TD, size(B3)...)
+      @inbounds for t = 1:length(B1)
+         B1_d[t] = B1[t] + d * ∂BB[1][t]
+      end
+      @inbounds for t = 1:length(B2)
+         B2_d[t] = B2[t] + d * ∂BB[2][t]
+      end
+      @inbounds for t = 1:length(B3)
+         B3_d[t] = B3[t] + d * ∂BB[3][t]
+      end
+      BB_d = (B1_d, B2_d, B3_d)
+      # A_d = @withalloc evaluate!(basis, BB_d)
+      # ∂BB_d = @withalloc pullback_evaluate!(∂A, basis, BB_d)
+      A_d, ∂BB_d = @withalloc Polynomials4ML.pullback_evaluate_x!(∂A, basis, BB_d)      
+      @inbounds for i = 1:length(A_d)
+         ∇_∂A[i] = extract_derivative(T, A_d[i])
+      end
+      @inbounds for i = 1:length(∂BB_d)
          for j = 1:length(∂BB_d[i])
             ∇_BB[i][j] = extract_derivative(T, ∂BB_d[i][j])
          end
@@ -209,8 +247,17 @@ end
 
 
 ∇_∂A, ∇_BB = auto_pb_pb(∂2, ∂A, basis, bBB);
+∇_∂A2 = deepcopy(∇_∂A); ∇_BB2 = deepcopy(∇_BB)
 auto_pb_pb!(∇_∂A2, ∇_BB2, ∂2, ∂A, basis, bBB)
+
+@info("pb² for PooledSparseProduct, order = $ORDER, len = $(length(basis))")
+print("pullback_evaluate : ")
+@btime Polynomials4ML.pullback_evaluate($∂A, $basis, $bBB)
+print("   pb_pb_evaluate : ")
+@btime Polynomials4ML.pb_pb_evaluate($∂2, $∂A, $basis, $bBB);
+print("       auto_pb_pb : ")
 @btime auto_pb_pb($∂2, $∂A, $basis, $bBB);
+print("      auto_pb_pb! : ")
 @btime auto_pb_pb!($∇_∂A2, $∇_BB2, $∂2, $∂A, $basis, $bBB);
 
 ##
