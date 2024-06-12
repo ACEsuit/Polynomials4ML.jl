@@ -26,18 +26,39 @@ end
 RealSCWrapper(scbasis) = RealSCWrapper(scbasis, _make_reqfields()...)
 ComplexSCWrapper(scbasis) = ComplexSCWrapper(scbasis, _make_reqfields()...)
 
+
+"""
+`real_sphericalharmonics(L; kwargs...)`
+
+Generate a real spherical harmonics basis (wrapper of sphericart implementation)
+"""
 real_sphericalharmonics(L; normalisation = :L2, static=false, kwargs...) = 
 		RealSCWrapper(SphericalHarmonics(L; 
 						  normalisation = normalisation, static = static, kwargs...))
 
+"""
+`real_solidharmonics(L; kwargs...)`
+
+Generate a real solid harmonics basis (wrapper of sphericart implementation)
+"""
 real_solidharmonics(L; normalisation = :L2, static=false, kwargs...) = 
 		RealSCWrapper(SolidHarmonics(L; 
 						  normalisation = normalisation, static = static, kwargs...))
 
+"""
+`complex_sphericalharmonics(L; kwargs...)`
+
+Generate a complex spherical harmonics basis (wrapper of sphericart implementation)
+"""
 complex_sphericalharmonics(L; normalisation = :L2, static=false, kwargs...) = 
 		ComplexSCWrapper(SphericalHarmonics(L; 
 						  normalisation = normalisation, static = static, kwargs...))
 
+"""
+`complex_solidharmonics(L; kwargs...)`
+
+Generate a complex solid harmonics basis (wrapper of sphericart implementation)
+"""
 complex_solidharmonics(L; normalisation = :L2, static=false, kwargs...) = 
 		ComplexSCWrapper(SolidHarmonics(L; 
 						  normalisation = normalisation, static = static, kwargs...))

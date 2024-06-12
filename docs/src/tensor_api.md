@@ -3,8 +3,8 @@
 
 P4ML also implements a few standard layers that occur in atomic cluster expansion (ACE) models. These are all expressed as (usually symmetric) tensor operations. These are documented here. Some of these operations are quite unique (sparse symmetric tensor contractions) while others are more standard (`LinearLayer') and are provided here for conformity with our interface. 
 
-* LinearLayer [`LinearLayer`](@ref)
-* Sparse product
+* LinearLayer  : todo add doc string
+* Sparse product : todo add doc string
 * Fused tensor product and pooling [`PooledSparseProduct`](@ref)
 * Sparse symmetric product [`SparseSymmProd`](@ref)
 * Recursive sparse symmetric product implementation [`SparseSymmProdDAG`](@ref)

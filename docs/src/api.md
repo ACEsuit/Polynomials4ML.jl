@@ -8,15 +8,15 @@ This page documents the public API for polynomial bases: the list of bases and f
    - Legendre [`legendre_basis`](@ref)
    - Chebyshev [`chebyshev_basis`](@ref)
    - Discrete distribution [`orthpolybasis`](@ref) 
+   - Alternative implementation of Chebyshev polynomials of the first kind [`ChebBasis`](@ref)
 * 2D harmonics: 
    - Complex trigonometric polynomials [`CTrigBasis`](@ref)
    - Real trigonometric polynomials [`RTrigBasis`](@ref)
 * 3D harmonics: 
-   - Complex spherical harmonics [`CYlmBasis`](@ref)
-   - Real spherical harmonics [`RYlmBasis`](@ref)
-   - Complex solid harmonics [`CRlmBasis`](@ref)
-   - Real solid harmonics [`RRlmBasis`](@ref)
-* Chebyshev polynomials of the first kind [`ChebBasis`](@ref)
+   - Complex spherical harmonics [`complex_sphericalharmonics`](@ref)
+   - Real spherical harmonics [`real_sphericalharmonics`](@ref)
+   - Complex solid harmonics [`complex_solidharmonics`](@ref)
+   - Real solid harmonics [`real_solidharmonics`](@ref)
 
 ## In-place Evaluation  
 

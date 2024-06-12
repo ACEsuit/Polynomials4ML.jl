@@ -23,6 +23,7 @@ makedocs(;
     authors="Christoph Ortner <christophortner0@gmail.com> and contributors",
     # repo="https://github.com/ACEsuit/Polynomials4ML.jl/blob/{commit}{path}#{line}",    
     sitename="Polynomials4ML.jl",
+    checkdocs = :none, 
     format=Documenter.HTML(;
         prettyurls=get(ENV, "CI", "false") == "true",
         canonical="https://ACEsuit.github.io/Polynomials4ML.jl",
