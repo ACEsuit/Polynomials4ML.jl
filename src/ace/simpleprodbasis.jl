@@ -28,13 +28,6 @@ end
 #   we only provide the evaluate functionality itself to test the DAG 
 #   gradients can just be checked by finite differences
 
-(basis::SimpleProdBasis)(A::AbstractVector) = evaluate(basis, A)
-
-function evaluate(basis::SimpleProdBasis, A::AbstractVector) 
-   AA = zeros(eltype(A), length(basis))
-   evaluate!(AA, basis, A)
-   return AA 
-end
 
 function evaluate!(AA, basis::SimpleProdBasis, A::AbstractVector)
    for i = 1:length(basis) 
