@@ -8,6 +8,8 @@ SlaterBasis(ζ::Vector{T}) where {T} = SlaterBasis(ζ, _make_reqfields()...)
 
 Base.length(basis::SlaterBasis) = length(basis.ζ)
 
+Base.show(io::IO, basis::SlaterBasis) = print(io, "SlaterBasis(...)")
+
 _valtype(::SlaterBasis, T::Type{<: Real}) = T
 _valtype(::SlaterBasis, T::Type{<: Hyper{<:Real}}) = T
 

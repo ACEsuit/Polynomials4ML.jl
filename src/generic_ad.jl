@@ -1,10 +1,17 @@
 # ---------------------------------------------------------------
 # general rrules and frules interface for AbstractP4MLBasis 
 
+_promote_grad_type(::Type{T}, ::Type{S}
+                  ) where {T <: Number, S <: Number} = 
+         promote_type(T, S)
+
+_promote_grad_type(::Type{SVector{D, T}}, ::Type{S}
+                  ) where {D, T, S <: Number} = 
+         SVector{D, promote_type(T, S)}
 
 function whatalloc(::typeof(pullback!), 
                     ∂P, basis::AbstractP4MLBasis, X::AbstractVector)
-   T∂X = promote_type(_gradtype(basis, X), eltype(∂P))
+   T∂X = _promote_grad_type(_gradtype(basis, X), eltype(∂P))
    return (T∂X, length(X))
 end
 

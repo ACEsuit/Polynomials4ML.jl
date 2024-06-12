@@ -26,6 +26,9 @@ _valtype(basis::AtomicOrbitalsRadials, T::Type{<: Hyper{<:Real}}) = T
 
 _generate_input(basis::AtomicOrbitalsRadials) = rand()
 
+Base.show(io::IO, basis::AtomicOrbitalsRadials) = 
+        print(io, "AtomicOrbitalsRadials($(basis.Pn), $(basis.Dn))")
+
 # -------- Evaluation Code 
 
 

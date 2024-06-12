@@ -7,12 +7,14 @@ using Polynomials4ML: evaluate!, evaluate_ed!, evaluate_ed2!,
 
 import Polynomials4ML: _generate_input, _generate_batch
 
+using ChainRulesCore: rrule 
+
 using Test, ForwardDiff, Bumper, WithAlloc
 
 using StaticArrays 
-using LinearAlgebra: norm 
+using LinearAlgebra: norm, dot 
 
-using ACEbase.Testing: print_tf, println_slim
+using ACEbase.Testing: print_tf, println_slim, fdtest 
 
 function time_standard!(P, basis, X)
    for i = 1:length(X)
@@ -46,8 +48,45 @@ time_ed2_batched!(P, dP, ddP, basis, X) = evaluate_ed2!(P, dP, ddP, basis, X)
 
 # ------------------------ Test correctness of derivatives 
 
+function test_derivatives(basis::AbstractP4MLBasis, x::Number; ed2 = true)
+   P, dP = evaluate_ed(basis, x)
+   adP = ForwardDiff.derivative(x -> evaluate(basis, x), x)
+   print_tf(@test adP ≈ dP)
+   
+   if ed2 
+      P, dP, ddP = evaluate_ed2(basis, x)
+      ddP2 = evaluate_dd(basis, x)
+      addP = ForwardDiff.derivative(x -> evaluate_d(basis, x), x)
+      print_tf(@test addP ≈ ddP ≈ ddP2)
+   end
+end
 
-function test_derivatives(basis::AbstractP4MLBasis; 
+
+function test_derivatives(basis::AbstractP4MLBasis, x::AbstractVector; ed2 = true)
+   P, dP = evaluate_ed(basis, x)
+   adP_re = ForwardDiff.jacobian(x -> real.(evaluate(basis, x)), x)
+   adP_im = ForwardDiff.jacobian(x -> imag.(evaluate(basis, x)), x)
+   adP = adP_re + im * adP_im
+   dP2 = [ adP[i, :] for i = 1:size(adP, 1) ]
+   print_tf(@test dP2 ≈ dP)
+   
+   if ed2 
+      @error("ed2 test for vector inputs not yet implemented")
+      # P, dP, ddP = evaluate_ed2(basis, x)
+      # ddP2 = evaluate_dd(basis, x)
+      # addP = ForwardDiff.gradient(x -> evaluate_d(basis, x), x)
+      # print_tf(@test addP ≈ ddP ≈ ddP2)
+   end
+end
+
+"""
+This checks a number of things: 
+- consistency of evaluate, evaluate_ed, evaluate_ed2 
+- consistency with evaluate_d and evaluate_dd 
+- consistency of single-input and batched evaluation 
+- compatibility with ForwardDiff
+"""
+function test_evaluate_xx(basis::AbstractP4MLBasis; 
                           generate_x = () -> _generate_input(basis), 
                           nX = 15, 
                           ntest = 8, 
@@ -73,25 +112,16 @@ function test_derivatives(basis::AbstractP4MLBasis;
 
    @info("Test correctness of derivatives")
    for ntest = 1:ntest 
-      x = generate_x()
-      P, dP = evaluate_ed(basis, x)
-      adP = ForwardDiff.derivative(x -> evaluate(basis, x), x)
-      print_tf(@test adP ≈ dP)
-      
-      if ed2 
-         P, dP, ddP = evaluate_ed2(basis, x)
-         ddP2 = evaluate_dd(basis, x)
-         addP = ForwardDiff.derivative(x -> evaluate_d(basis, x), x)
-         print_tf(@test addP ≈ ddP ≈ ddP2)
-      end
+      test_derivatives(basis, generate_x(); ed2 = ed2)
    end 
    println() 
 
    @info("Test consistency of batched evaluation")
 
    X = [ generate_x() for _ = 1:nX ]
-   bP1 = zeros(whatalloc(evaluate!, basis, X)...) 
-   bdP1 = deepcopy(bP1)
+   alc, alcd = whatalloc(evaluate_ed!, basis, X)
+   bP1 = zeros(alc...) 
+   bdP1 = zeros(alcd...)
    if ed2 
       bddP1 = deepcopy(bP1)
    end
@@ -109,13 +139,41 @@ function test_derivatives(basis::AbstractP4MLBasis;
       bP4, bdP4, bddP4 = evaluate_ed2(basis, X)
    end
       
-   println_slim(@test bP2 ≈ bP1 ≈ bP3 ≈ bP4)
-   println_slim(@test bdP3 ≈ bdP1 ≈ bdP4)
+   println_slim(@test bP2 ≈ bP1 ≈ bP3)
+   println_slim(@test bdP3 ≈ bdP1)
    if ed2 
+      println_slim(@test bP1 ≈ bP4)
+      println_slim(@test bdP1 ≈ bdP4)
       println_slim(@test bddP4 ≈ bddP1)
    end
    
 end
+
+
+function test_chainrules(basis::AbstractP4MLBasis;
+                         generate_x = () -> _generate_input(basis), 
+                         nX = 15, 
+                         ntest = 10)
+   @info("Testing rrule(evaluate) - $basis")
+   for _ = 1:ntest
+      # generate an input batch 
+      X = [ generate_x() for _ = 1:nX ]
+      B = basis(X)
+      # generate a perturbation dX and a tangent ∂B 
+      dX = randn(eltype(X), size(X))
+      ∂B = real.(randn(eltype(B), size(B)))
+      # we want to differentiate 
+      F(t) = sum(∂B .* basis(X + t * dX))
+      dF(t) = begin
+         val, pb = rrule(evaluate, basis, X + t * dX)
+         ∇_X = pb(∂B)[3]
+         return sum( sum(a .* b) for (a, b) in zip(∇_X, dX) )
+      end
+      print_tf(@test fdtest(F, dF, 0.0; verbose = false))
+   end    
+   println()
+end
+
 
 # ------------------------ Test allocations using the WithAlloc interface
 
@@ -153,6 +211,7 @@ function test_withalloc(basis::AbstractP4MLBasis;
       nalloc = @allocated ( _allocations_inner(basis, Y; ed=ed, ed2=ed2) )
       println("nalloc = $nalloc (allowed = $allowed_allocs)")
       print_tf(@test nalloc <= allowed_allocs)
+      P1, dP1 = evaluate_ed(basis, Y)
       if ed2 
          P1, dP1, ddP1 = evaluate_ed2(basis, Y)
       end
@@ -175,11 +234,11 @@ function test_withalloc(basis::AbstractP4MLBasis;
             print_tf(@test match_ddP1ddP2)
          end
       end
+      println() 
       # if !math_all 
       #    println("standard/withalloc evaluations don't match")
       # end
    end
-   println()
    return nothing 
 end
 

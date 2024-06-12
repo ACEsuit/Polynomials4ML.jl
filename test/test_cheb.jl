@@ -2,8 +2,9 @@ using Polynomials4ML, Test
 using Polynomials4ML: evaluate, evaluate_d, evaluate_dd, 
                       natural_indices, index
 using Polynomials4ML.Testing: println_slim, print_tf, 
-                              test_derivatives, 
-                              test_withalloc 
+                              test_evaluate_xx, 
+                              test_withalloc, 
+                              test_chainrules
 
 
 ##
@@ -32,15 +33,12 @@ for ntest = 1:30
 end
 println() 
 
-##
-
-@info("      test derivatives")
-test_derivatives(basis)
-test_derivatives(basis2)
 
 ##
 
-@info("     test allocations")
+test_evaluate_xx(basis)
+test_evaluate_xx(basis2)
 test_withalloc(basis)
 test_withalloc(basis2)
-
+test_chainrules(basis)
+test_chainrules(basis2)

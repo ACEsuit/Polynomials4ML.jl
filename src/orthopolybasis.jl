@@ -34,6 +34,9 @@ index(basis::OrthPolyBasis1D3T, m::Integer) = m + 1
 
 Base.length(basis::OrthPolyBasis1D3T) = length(basis.A)
 
+Base.show(io::IO, basis::OrthPolyBasis1D3T) = 
+   print(io, "OrthPolyBasis1D3T(maxn = $(length(basis.A)))")
+
 _valtype(basis::OrthPolyBasis1D3T{T1}, TX::Type{T2}) where {T1, T2} = 
             promote_type(T1, T2)
 

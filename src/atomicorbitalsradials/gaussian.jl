@@ -8,6 +8,9 @@ GaussianBasis(ζ::Vector{T}) where {T} = GaussianBasis(ζ, _make_reqfields()...)
 
 Base.length(basis::GaussianBasis) = length(basis.ζ)
 
+Base.show(io::IO, basis::GaussianBasis) = 
+    print(io, "GaussianBasis(", length(basis), ")")
+
 _valtype(::GaussianBasis, T::Type{<: Real}) = T
 _valtype(::GaussianBasis, T::Type{<: Hyper{<:Real}}) = T
 

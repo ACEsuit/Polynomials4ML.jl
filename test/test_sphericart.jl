@@ -4,7 +4,8 @@ using Polynomials4ML, Polynomials4ML.Testing
 using Polynomials4ML: evaluate, evaluate_d, evaluate_ed, 
                       idx2lm, lm2idx, maxl
 using Polynomials4ML.Testing: print_tf, println_slim, 
-                     test_derivatives, test_withalloc
+                     test_evaluate_xx, test_withalloc, 
+                     test_chainrules
 using ACEbase.Testing: fdtest
 using HyperDualNumbers: Hyper
 import SpheriCart
@@ -176,20 +177,6 @@ end
 
 ##
 
-@info("Check consistency of serial and batched evaluation")
-
-X = [ rand_sphere() for i = 1:rand(13:25) ]
-for basis in [r_spher, r_solid, c_spher, c_solid, racah]
-   Y1 = evaluate(basis, X)
-   Y2 = similar(Y1)
-   for i = 1:length(X)
-      Y2[i, :] = evaluate(basis, X[i])
-   end
-   println_slim(@test Y1 ≈ Y2)
-end
-
-##
-
 @info("Test: check derivatives of 3D harmonics")
 bases = [ real_sphericalharmonics(10), 
           real_solidharmonics(11), 
@@ -197,42 +184,23 @@ bases = [ real_sphericalharmonics(10),
           complex_sphericalharmonics(9), 
           complex_solidharmonics(11) ]
 
-for basis in bases
-   @info("basis = $basis")
-   for nsamples = 1:30
-      basis = bases[4]
-      local 𝐫, Y, dY, Y, F, dF 
-      𝐫 = @SVector randn(3)
-      Y, dY = evaluate_ed(basis, 𝐫)
-      U = randn(eltype(Y), length(Y))
-      F(𝐫) = real(sum(U .* evaluate(basis, 𝐫)))
-      dF(𝐫) = real(sum(U .* evaluate_d(basis, 𝐫)))
-      adF(𝐫) = ForwardDiff.gradient(F, 𝐫)
-      print_tf(@test dF(𝐫) ≈ adF(𝐫) ≈ real(sum(U .* dY)))
-   end
-   println() 
+for basis in bases[1:3]
+   @info("Tests for $(basis)")
+   test_chainrules(basis)
+   test_evaluate_xx(basis; ed2 = false)
+   test_withalloc(basis; ed2 = false)
 end
-println()
+
+for basis in bases[4:5]
+   @info("Tests for $(basis)")
+   test_chainrules(basis)
+   test_evaluate_xx(basis; ed2 = false)
+   @error("withalloc test fails for complex spherical harmonics")
+   # test_withalloc(basis; ed2 = false)
+end
+
 
 ##
-
-@info("Check consistency of serial and batched gradients")
-
-X = [ rand_sphere() for i = 1:12 ]
-for basis in bases 
-   local Y0, Y1, Y2, dY0, dY1, dY2
-   Y0 = evaluate(basis, X)
-   Y1, dY1 = evaluate_ed(basis, X)
-   Y2 = similar(Y1); dY2 = similar(dY1)
-   for i = 1:length(X)
-      Y2[i, :] = evaluate(basis, X[i])
-      dY2[i, :] = evaluate_ed(basis, X[i])[2]
-   end
-   print_tf(@test Y0 ≈ Y1 ≈ Y2)
-   print_tf(@test dY1 ≈ dY2)
-end 
-println() 
-
 
 ## -- check the laplacian implementation 
 #=

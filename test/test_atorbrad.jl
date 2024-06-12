@@ -18,25 +18,17 @@ spec = [(n1 = n1, n2 = n2, l = l) for n1 = 1:n1 for n2 = 1:n2 for l = 0:n1-1]
 ζ = rand(length(spec))
 Dn = GaussianBasis(ζ)
 bRnl = AtomicOrbitalsRadials(Pn, Dn, spec) 
-rr = 2 * rand(10) .- 1
 
-Rnl = evaluate(bRnl, rr)
-Rnl1, dRnl1 = evaluate_ed(bRnl, rr)
-Rnl2, dRnl2, ddRnl2 = evaluate_ed2(bRnl, rr)
+P4ML.Testing.test_evaluate_xx(bRnl)
+P4ML.Testing.test_chainrules(bRnl)
+@warn("There are some allocations in GaussianBasis - to be test!!!")
+P4ML.Testing.test_withalloc(bRnl; allowed_allocs = 192)
 
-fdRnl = vcat([ ForwardDiff.derivative(r -> evaluate(bRnl, [r,]), r) 
-               for r in rr ]...) 
-fddRnl = vcat([ ForwardDiff.derivative(r -> evaluate_ed(bRnl, [r,])[2], r)
-               for r in rr ]...) 
 
-println_slim(@test  Rnl ≈ Rnl1 ≈ Rnl2 )
-println_slim(@test  dRnl1 ≈ dRnl2 ≈ fdRnl )
-println_slim(@test  ddRnl2 ≈ fddRnl )
-
-P4ML.Testing.test_derivatives(bRnl)
 
 ##
-
+# ----------------------------------------------------
+#   the rest here tests some more specialized functionality. 
 
 using LuxCore
 using Random
@@ -149,25 +141,12 @@ spec = [(n1 = n1, n2 = n2, l = l) for n1 = 1:n1 for n2 = 1:n2 for l = 0:n1-1]
 ζ = rand(length(spec))
 Dn = SlaterBasis(ζ)
 bRnl = AtomicOrbitalsRadials(Pn, Dn, spec) 
-rr = 2 * rand(10) .- 1
 
+P4ML.Testing.test_evaluate_xx(bRnl)
+P4ML.Testing.test_chainrules(bRnl)
+@warn("There are some allocations in AOR - to be test!!!")
+P4ML.Testing.test_withalloc(bRnl; allowed_allocs = 192)
 
-
-Rnl = evaluate(bRnl, rr)
-Rnl1, dRnl1 = evaluate_ed(bRnl, rr)
-Rnl2, dRnl2, ddRnl2 = evaluate_ed2(bRnl, rr)
-
-
-fdRnl = vcat([ ForwardDiff.derivative(r -> evaluate(bRnl, [r,]), r) 
-               for r in rr ]...) 
-fddRnl = vcat([ ForwardDiff.derivative(r -> evaluate_ed(bRnl, [r,])[2], r)
-               for r in rr ]...) 
-
-println_slim(@test  Rnl ≈ Rnl1 ≈ Rnl2 )
-println_slim(@test  dRnl1 ≈ dRnl2 ≈ fdRnl )
-println_slim(@test  ddRnl2 ≈ fddRnl )
- 
-P4ML.Testing.test_derivatives(bRnl)
 
 ##
 
@@ -274,6 +253,7 @@ b(a)
 
 p = Zygote.gradient(p->sum(G(rr,p,st)[1]), ps)[1]
 
+##
 
 @info("Testing STOBasis")
 n1 = 5 # degree
@@ -284,19 +264,12 @@ spec = [(n1 = n1, n2 = n2, l = l) for n1 = 1:n1 for n2 = 1:1 for l = 0:n1-1]
 D = [rand(length(ζ[i])) for i = 1:length(spec)]
 Dn = STO_NG((ζ, D))
 bRnl = AtomicOrbitalsRadials(Pn, Dn, spec) 
-rr = 2 * rand(10) .- 1
-Rnl = evaluate(bRnl, rr)
-Rnl1, dRnl1 = evaluate_ed(bRnl, rr)
-Rnl2, dRnl2, ddRnl2 = evaluate_ed2(bRnl, rr)
 
-fdRnl = vcat([ ForwardDiff.derivative(r -> evaluate(bRnl, [r,]), r) 
-               for r in rr ]...) 
-fddRnl = vcat([ ForwardDiff.derivative(r -> evaluate_ed(bRnl, [r,])[2], r)
-               for r in rr ]...) 
 
-println_slim(@test  Rnl ≈ Rnl1 ≈ Rnl2  )
-println_slim(@test  dRnl1 ≈ dRnl2 ≈ fdRnl )
-println_slim(@test  ddRnl2 ≈ fddRnl )
+P4ML.Testing.test_evaluate_xx(bRnl)
+P4ML.Testing.test_chainrules(bRnl)
+@warn("There are some allocations in AOR - to be test!!!")
+P4ML.Testing.test_withalloc(bRnl; allowed_allocs = 192)
 
-P4ML.Testing.test_derivatives(bRnl)
+
 ##

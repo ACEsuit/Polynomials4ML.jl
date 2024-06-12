@@ -1,8 +1,8 @@
 
 using Polynomials4ML, Test
 using Polynomials4ML: evaluate, evaluate_d, evaluate_dd, _generate_input
-using Polynomials4ML.Testing: println_slim, test_derivatives, print_tf, 
-                              test_withalloc
+using Polynomials4ML.Testing: println_slim, test_evaluate_xx, print_tf, 
+                              test_withalloc, test_chainrules
 using LinearAlgebra: I, norm, dot 
 using QuadGK
 using ACEbase.Testing: fdtest
@@ -19,8 +19,9 @@ for ntest = 1:3
    @info("Test a randomly generated polynomial basis - $ntest")
    N = rand(5:15)
    basis = OrthPolyBasis1D3T(randn(N), randn(N), randn(N))
-   test_derivatives(basis)
+   test_evaluate_xx(basis)
    test_withalloc(basis)
+   test_chainrules(basis)
 end
 
 ##
@@ -32,8 +33,9 @@ legendre = legendre_basis(N, normalize=true)
 G = quadgk(x -> legendre(x) * legendre(x)', -1, 1)[1]
 println_slim(@test round.(G, digits=6) ≈ I)
 @info("    derivatives")
-test_derivatives(legendre)
+test_evaluate_xx(legendre)
 test_withalloc(legendre)
+test_chainrules(legendre)
 
 ##
 
@@ -49,8 +51,9 @@ for ntest = 1:3
    G = quadgk(x -> (1-x)^α * (x+1)^β * jacobi(x) * jacobi(x)', -1, 1)[1]
    println_slim(@test round.(G, digits=6) ≈ I)
    @info("    derivatives")
-   test_derivatives(legendre)
-   test_withalloc(legendre)
+   test_evaluate_xx(jacobi)
+   test_withalloc(jacobi)
+   test_chainrules(jacobi)
 end 
 
 ##
@@ -70,8 +73,10 @@ println_slim(@test all([
 G = quadgk(x -> (1-x)^(-0.5) * (x+1)^(-0.5) * cheb(x) * cheb(x)', -1, 1)[1]
 println_slim(@test round.(G, digits=6) ≈ I)
 @info("     derivatives")
-test_derivatives(cheb)
+test_evaluate_xx(cheb)
 test_withalloc(cheb)
+test_chainrules(cheb)
+
 
 ##
 
@@ -88,27 +93,6 @@ println_slim(@test all([
 @info("    consistency with ChebBasis")
 cheb2 = ChebBasis(N)
 println_slim(@test all( (x = 2*rand()-1; cheb(x) ≈ cheb2(x)) for _=1:30 ))
-
-##
-@info("Testing rrule")
-
-using LinearAlgebra: dot 
-N = 10
-for ntest = 1:30
-   bBB = randn(N)
-   bUU = randn(N)
-   _BB(t) = bBB + t * bUU
-   bA2 = cheb(bBB)
-   u = randn(size(bA2))
-   F(t) = dot(u, Polynomials4ML.evaluate(cheb, _BB(t)))
-   dF(t) = begin
-       val, pb = Zygote.pullback(evaluate, cheb, _BB(t))
-       ∂BB = pb(u)[2] # pb(u)[1] returns NoTangent() for basis argument
-       return sum( dot(∂BB[i], bUU[i]) for i = 1:length(bUU) )
-   end
-   print_tf(@test fdtest(F, dF, 0.0; verbose = false))
-end
-println()
 
 ##
 # ---------------- Double Pullback Test ----------------
