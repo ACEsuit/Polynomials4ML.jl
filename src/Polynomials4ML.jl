@@ -13,6 +13,7 @@ import WithAlloc: whatalloc
 using LuxCore, Random, StaticArrays
 import ChainRulesCore: rrule, frule, NoTangent, ZeroTangent
 using HyperDualNumbers: Hyper
+using ForwardDiff: Dual, extract_derivative
 
 import LuxCore: AbstractExplicitLayer, AbstractExplicitContainerLayer, 
                  initialparameters, initialstates                 
@@ -28,10 +29,10 @@ function index end
 function orthpolybasis end
 function degree end 
 
-function pullback end
 function pullback! end
 function pullback end
-function pullback! end
+function pullback2! end
+function pullback2 end
 function pushforward end
 function pushforward! end
 

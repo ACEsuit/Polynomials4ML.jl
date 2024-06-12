@@ -43,7 +43,7 @@ println()
 ## 
 
 @info("Test pooling of multiple inputs")
-nX = 64
+nX = 17
 
 for ntest = 1:30 
    local bBB, bA1, bA2, bA3, basis 
@@ -76,11 +76,9 @@ test_withalloc(basis; batch=false)
 @info("Testing rrule")
 using LinearAlgebra: dot
 
-@warn("order = 1 tests currently fail in an unexplained way")
-
 for ntest = 1:30
    local bBB, bA2, u, basis, nX 
-   order = mod1(ntest, 3)+1
+   order = mod1(ntest, 4)
    basis = _generate_basis(; order=order)
    bBB = _generate_input(basis)
    nX = size(bBB[1], 1)
@@ -103,9 +101,9 @@ println()
 @info("Testing pullback2 for PooledSparseProduct")
 import ChainRulesCore: rrule, NoTangent
 
-for ntest = 1:20 
+for ntest = 1:20
    local basis, val, pb, bBB, A 
-   ORDER = mod1(ntest, 3)+1
+   ORDER = mod1(ntest, 4)
    basis = _generate_basis(;order = ORDER)
    bBB = _generate_input(basis)
    ∂A = randn(length(basis))
@@ -138,136 +136,12 @@ for ntest = 1:20
       return dot(∂_∂A, bV) + sum(dot(bUU[i], ∂2_BB[i]) for i = 1:ORDER)
    end
 
-   print_tf(@test all( fdtest(F, dF, 0.0; verbose=false) ))
+   print_tf(@test fdtest(F, dF, 0.0; verbose=false) )
+   # print_tf(@test all( fdtest(F, dF, 0.0; verbose=false) ))
+   # fdtest(F, dF, 0.0; verbose=true)
 end
 println()
 
-##
-
-ORDER = 3
-basis = _generate_basis(;order = ORDER, len=300)
-bBB = _generate_input(basis)
-∂A = randn(length(basis))
-∂2 = ntuple(i -> randn(size(bBB[i])), length(bBB))
-
-
-##
-
-using ForwardDiff: Dual, extract_derivative 
-using Bumper, WithAlloc
-
-function auto_pb_pb(∂BB, ∂A, basis, BB) 
-   # φ = ∂BB ⋅ pullback(∂A, basis, BB)
-   #   = (∂bBB ⋅ ∇_BB) (∂A ⋅ evaluate(basis, BB))
-   # ∇_∂A φ = (∂BB ⋅ ∇_BB) evaluate(basis, BB)
-   # ∇_BB φ = (∂BB ⋅ ∇_BB) ∇_BB (∂A ⋅ evaluate(basis, BB))
-   #        = (∂BB ⋅ ∇_BB) pullback(∂A, basis, BB)
-   d = Dual{Float64}(0.0, 1.0)
-   BB_d = ntuple(i -> BB[i] .+ d .* ∂BB[i], length(BB))
-   @no_escape begin 
-      A_d, ∂BB_d = @withalloc Polynomials4ML.pullback_x!(∂A, basis, BB_d)
-      # A_d = @withalloc evaluate!(basis, BB_d)
-      # ∂BB_d = @withalloc pullback!(∂A, basis, BB_d)
-      ∇_∂A = extract_derivative.(Float64, A_d)
-      ∇_BB = ntuple(i -> extract_derivative.(Float64, ∂BB_d[i]), length(∂BB_d))
-   end
-   return ∇_∂A, ∇_BB
-end
-
-
-
-function auto_pb_pb!(∇_∂A, ∇_BB, ∂BB, ∂A, basis::PooledSparseProduct{2}, BB) 
-   @assert all(eltype(BB[i]) == eltype(BB[1]) for i = 2:length(BB))
-   @no_escape begin 
-      T = eltype(BB[1])
-      d = Dual{T}(zero(T), one(T))
-      TD = typeof(d)
-      B1 = BB[1] 
-      B2 = BB[2] 
-      B1_d = @alloc(TD, size(B1)...)
-      B2_d = @alloc(TD, size(B2)...)
-      @inbounds for t = 1:length(B1)
-         B1_d[t] = B1[t] + d * ∂BB[1][t]
-      end
-      @inbounds for t = 1:length(B2)
-         B2_d[t] = B2[t] + d * ∂BB[2][t]
-      end
-      BB_d = (B1_d, B2_d)
-      # A_d = @withalloc evaluate!(basis, BB_d)
-      # ∂BB_d = @withalloc pullback!(∂A, basis, BB_d)
-      A_d, ∂BB_d = @withalloc Polynomials4ML.pullback_x!(∂A, basis, BB_d)      
-      @inbounds for i = 1:length(A_d)
-         ∇_∂A[i] = extract_derivative(T, A_d[i])
-      end
-      @inbounds for i = 1:length(∂BB_d)
-         for j = 1:length(∂BB_d[i])
-            ∇_BB[i][j] = extract_derivative(T, ∂BB_d[i][j])
-         end
-      end
-   end
-   return ∇_∂A, ∇_BB
-end
-
-function auto_pb_pb!(∇_∂A, ∇_BB, ∂BB, ∂A, basis::PooledSparseProduct{3}, BB) 
-   @assert all(eltype(BB[i]) == eltype(BB[1]) for i = 2:length(BB))
-   @no_escape begin 
-      T = eltype(BB[1])
-      d = Dual{T}(zero(T), one(T))
-      TD = typeof(d)
-      B1 = BB[1] 
-      B2 = BB[2] 
-      B3 = BB[3] 
-      B1_d = @alloc(TD, size(B1)...)
-      B2_d = @alloc(TD, size(B2)...)
-      B3_d = @alloc(TD, size(B3)...)
-      @inbounds for t = 1:length(B1)
-         B1_d[t] = B1[t] + d * ∂BB[1][t]
-      end
-      @inbounds for t = 1:length(B2)
-         B2_d[t] = B2[t] + d * ∂BB[2][t]
-      end
-      @inbounds for t = 1:length(B3)
-         B3_d[t] = B3[t] + d * ∂BB[3][t]
-      end
-      BB_d = (B1_d, B2_d, B3_d)
-      # A_d = @withalloc evaluate!(basis, BB_d)
-      # ∂BB_d = @withalloc pullback!(∂A, basis, BB_d)
-      A_d, ∂BB_d = @withalloc Polynomials4ML.pullback_x!(∂A, basis, BB_d)      
-      @inbounds for i = 1:length(A_d)
-         ∇_∂A[i] = extract_derivative(T, A_d[i])
-      end
-      @inbounds for i = 1:length(∂BB_d)
-         for j = 1:length(∂BB_d[i])
-            ∇_BB[i][j] = extract_derivative(T, ∂BB_d[i][j])
-         end
-      end
-   end
-   return ∇_∂A, ∇_BB
-end
-
-
-∇_∂A, ∇_BB = auto_pb_pb(∂2, ∂A, basis, bBB);
-∇_∂A2 = deepcopy(∇_∂A); ∇_BB2 = deepcopy(∇_BB)
-auto_pb_pb!(∇_∂A2, ∇_BB2, ∂2, ∂A, basis, bBB)
-
-# @info("pb² for PooledSparseProduct, order = $ORDER, len = $(length(basis))")
-# print("pullback : ")
-# @btime Polynomials4ML.pullback($∂A, $basis, $bBB)
-# print("   pullback2 : ")
-# @btime Polynomials4ML.pullback2($∂2, $∂A, $basis, $bBB);
-# print("       auto_pb_pb : ")
-# @btime auto_pb_pb($∂2, $∂A, $basis, $bBB);
-# print("      auto_pb_pb! : ")
-# @btime auto_pb_pb!($∇_∂A2, $∇_BB2, $∂2, $∂A, $basis, $bBB);
-
-##
-
-∇_∂A1, ∇_BB1 = auto_pb_pb(∂2, ∂A, basis, bBB)
-∇_∂A2, ∇_BB2 = P4ML.pullback2(∂2, ∂A, basis, bBB)
-∇_∂A3 = deepcopy(∇_∂A2); ∇_BB3 = deepcopy(∇_BB2)
-auto_pb_pb!(∇_∂A3, ∇_BB3, ∂2, ∂A, basis, bBB)
-∇_∂A1 ≈ ∇_∂A2 ≈ ∇_∂A3
-all(∇_BB1 .≈ ∇_BB2 .≈ ∇_BB3)
 
 ## 
 @info("Testing pushforward for PooledSparseProduct")
