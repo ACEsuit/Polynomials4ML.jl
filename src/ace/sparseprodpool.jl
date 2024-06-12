@@ -400,6 +400,7 @@ pullback2!(∇_∂A, ∇_BB1, ∇_BB2, ∇_BB3, ∂∂BB, ∂A, basis::PooledSpa
 pullback2!(∇_∂A, ∇_BB1, ∇_BB2, ∇_BB3, ∇_BB4, ∂∂BB, ∂A, basis::PooledSparseProduct{4}, BB) = 
       pullback2!(∇_∂A, (∇_BB1, ∇_BB2, ∇_BB3, ∇_BB4), ∂∂BB, ∂A, basis, BB) 
 
+
 function pullback2!(∇_∂A, ∇_BB::Tuple,  # outputs 
                     ∂∂BB,    # perturbation 
                     ∂A, basis::PooledSparseProduct{NB}, BB)  where {NB}
@@ -435,6 +436,39 @@ end
 
 # ---------------------------------------------------------------
 #  Pushforward  
+
+using ForwardDiff: value
+
+function whatalloc(::typeof(pushforward!), 
+                   basis::PooledSparseProduct{NB}, BB, ∂BB) where {NB}
+   TA = promote_type(eltype.(BB)...) 
+   T∂A = promote_type(TA, eltype.(∂BB)...)
+   return (TA, length(basis)), (T∂A, length(basis))
+end
+
+function pushforward!(A, ∂A, basis::PooledSparseProduct{NB}, BB, ∂BB) where {NB}
+
+   function _dual(i)
+      T = promote_type(eltype(BB[i]), eltype(∂BB[i]))
+      return Dual{T}(zero(T), one(T))
+   end
+
+   @no_escape begin 
+      dd = ntuple(_dual, NB)
+      BB_d = ntuple(i -> @alloc(typeof(dd[i]), size(BB[i])...), NB)
+      for i = 1:NB
+         @inbounds for t = 1:length(BB[i])
+            BB_d[i][t] = BB[i][t] + dd[i] * ∂BB[i][t]
+         end
+      end
+      A_d = @withalloc evaluate!(basis, BB_d)
+      for t = 1:length(A_d)
+         A[t] = value(eltype(A), A_d[t])
+         ∂A[t] = extract_derivative(eltype(∂A), A_d[t])
+      end
+   end
+   return A, ∂A 
+end
 
 
 

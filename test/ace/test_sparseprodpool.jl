@@ -137,8 +137,6 @@ for ntest = 1:20
    end
 
    print_tf(@test fdtest(F, dF, 0.0; verbose=false) )
-   # print_tf(@test all( fdtest(F, dF, 0.0; verbose=false) ))
-   # fdtest(F, dF, 0.0; verbose=true)
 end
 println()
 
@@ -146,58 +144,19 @@ println()
 ## 
 @info("Testing pushforward for PooledSparseProduct")
 
-using ForwardDiff
+using Polynomials4ML: pushforward
 
-function _rand_input1_pfwd(basis::PooledSparseProduct{ORDER}; 
-                      nX = rand(7:12)) where {ORDER} 
-   NN = [ maximum(b[i] for b in basis.spec) for i = 1:ORDER ]
-   BB = ntuple(i -> randn(nX, NN[i]), ORDER)
-   ΔBB = ntuple(i -> randn(nX, NN[i]), ORDER)
-   return BB, ΔBB
-end
-
-function fwddiff1_pfwd(basis::PooledSparseProduct{NB}, BB, ΔBB) where {NB}
-   A1 = basis(BB)
-   sub_i(t, ti, i) = ntuple(a -> a == i ? ti : t[a], length(t))
-   ∂A1_i = [  ForwardDiff.jacobian(B -> basis(sub_i(BB, B, i)), BB[i])
-              for i = 1:NB ]
-   ∂A1 = sum(∂A1_i[i] * ΔBB[i] for i = 1:NB)            
-   return A1, ∂A1   
-end
-
-function fwddiff_pfwd(basis::PooledSparseProduct{NB}, BB, ΔBB) where {NB}
-   nX = size(BB[1], 1)
-   Aj_∂Aj = [ fwddiff1_pfwd(basis, 
-                         ntuple(t ->  BB[t][j,:], NB), 
-                         ntuple(t -> ΔBB[t][j,:], NB), ) 
-               for j = 1:nX ] 
-   Aj = [ x[1] for x in Aj_∂Aj ] 
-   ∂Aj = [ x[2] for x in Aj_∂Aj ] 
-   A = sum(Aj) 
-   ∂A = reduce(hcat, ∂Aj)               
-   return A, ∂A
-end
-
-
-for ntest = 1:10 
+for ntest = 1:20 
    local order, basis, BB, ΔBB, A1, ∂A1, A2, ∂A2 
-   order = rand(2:4)
+   order = mod1(ntest, 4)
    basis = _generate_basis(; order=order)
-   BB, ΔBB = _rand_input1_pfwd(basis)
-   A1, ∂A1 = fwddiff_pfwd(basis, BB, ΔBB)
-   A2, ∂A2 = P4ML.pushforward(basis, BB, ΔBB)
-   print_tf(@test A2 ≈ A1)
-   print_tf(@test ∂A2 ≈ ∂A1)
+   BB = _generate_input(basis) 
+   ΔBB = ntuple(i -> randn(Float64, size(BB[i])), order) 
+   _BB(t) = ntuple(i -> BB[i] + t * ΔBB[i], order)
+   U = randn(length(basis)) ./ (1:length(basis))
+   A, ∂A = pushforward(basis, BB, ΔBB)
+   print_tf(@test A ≈ basis(BB))
+   F(t) = dot(U, evaluate(basis, _BB(t)))
+   dF(t) = dot(U, pushforward(basis, _BB(t), ΔBB)[2])
+   print_tf(@test fdtest(F, dF, 0.0; verbose=false))
 end
-
-##
-
-# # quick performance and allocation check
-# using ObjectPools: unwrap 
-# order = 3
-# basis = _generate_basis(; order=order)
-# BB, ΔBB = _rand_input1_pfwd(basis)
-# A, ∂A = P4ML.pfwd_evaluate(basis, BB, ΔBB)
-# @btime Polynomials4ML.pfwd_evaluate!($(unwrap(A)), $(unwrap(∂A)), $basis, $BB, $ΔBB)
-
-
