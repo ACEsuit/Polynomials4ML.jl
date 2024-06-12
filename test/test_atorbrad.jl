@@ -67,7 +67,7 @@ for ntest = 1:30
 end
 println()
 
-X = rr
+X = rr = rand(length(spec))
 using Optimisers
 W0, re = destructure(ps)
 Fp = w -> sum(G(X, re(w), st)[1])

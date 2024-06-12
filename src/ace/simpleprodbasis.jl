@@ -28,6 +28,16 @@ end
 #   we only provide the evaluate functionality itself to test the DAG 
 #   gradients can just be checked by finite differences
 
+_valtype(basis::SimpleProdBasis, ::Type{T}) where {T} = T
+
+function whatalloc(::typeof(evaluate!), 
+                   basis::SimpleProdBasis, A::AbstractVector{T}) where {T}
+   VT = _valtype(basis, T)
+   return (VT, length(basis))
+end
+
+
+
 
 function evaluate!(AA, basis::SimpleProdBasis, A::AbstractVector)
    for i = 1:length(basis) 
