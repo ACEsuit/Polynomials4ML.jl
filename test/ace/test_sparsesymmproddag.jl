@@ -1,6 +1,7 @@
 
 using Test, BenchmarkTools, Polynomials4ML, ChainRulesCore
-using Polynomials4ML: SimpleProdBasis, SparseSymmProdDAG
+using Polynomials4ML: SimpleProdBasis, SparseSymmProdDAG, 
+                      evaluate, evaluate_d, evaluate_dd
 using Polynomials4ML.Testing: println_slim, print_tf, generate_SO2_spec
 using Random
 

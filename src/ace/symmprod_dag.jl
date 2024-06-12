@@ -42,6 +42,9 @@ end
 
 length(dag::SparseSymmProdDAG) = length(dag.nodes)
 
+Base.show(io::IO, dag::SparseSymmProdDAG) = 
+         print(io, "SparseSymmProdDAG(len = $(length(dag)))")
+
 # ==(dag1::SparseSymmProdDAG, dag2::SparseSymmProdDAG) = ACE1._allfieldsequal(dag1, dag2)
 
 SparseSymmProdDAG() = SparseSymmProdDAG(Vector{BinDagNode}(undef, 0), false, 0, 0)

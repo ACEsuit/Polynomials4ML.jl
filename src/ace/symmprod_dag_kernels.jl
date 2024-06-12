@@ -38,6 +38,7 @@ function evaluate!(AA, dag::SparseSymmProdDAG, A::AbstractVector)
 end
 
 
+
 # this is the simplest case for the pull-back, when the cotangent is just a 
 # scalar and there is only a single input. 
 # note that in executing this, we are changing ∂AAdag. This means that the 
