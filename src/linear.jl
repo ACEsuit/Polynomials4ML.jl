@@ -33,7 +33,7 @@ out, st = l(x, ps, st)
 println(out == x * transpose(W))) # true
 ```
 """
-struct LinearLayer{FEATFIRST} <: AbstractP4MLLayer
+struct LinearLayer{FEATFIRST} <: AbstractP4MLTensor
    in_dim::Integer
    out_dim::Integer
    @reqfields()

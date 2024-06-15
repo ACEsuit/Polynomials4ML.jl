@@ -34,7 +34,7 @@ for (feat, in_size, out_fun) in zip(feature_arr, in_size_arr, out_fun_arr)
    if !feat 
       @info("Testing evaluate on vector input vs batch input")
       for ntest = 1:30 
-         X = randn(N, in_d) 
+         X = randn(N, in_d)
          Y1, _ = l(X, ps, st)
          Y2 = hcat([l(X[i,:], ps, st)[1] for i = 1:N]...)'
          Y3 = hcat([ps.W * X[i,:] for i = 1:N]...)'
@@ -52,7 +52,7 @@ for (feat, in_size, out_fun) in zip(feature_arr, in_size_arr, out_fun_arr)
          u = randn(size(val))
          F(t) = dot(u, l(_BB(t), ps, st)[1])
          dF(t) = begin
-            val, pb = Zygote.pullback(LuxCore.apply, l, _BB(t), ps, st)
+            val, pb = Zygote.pullback(P4ML.evaluate, l, _BB(t), ps, st)
             ∂BB = pb((u, st))[2]
             return dot(∂BB, bu)
          end
@@ -79,7 +79,7 @@ for (feat, in_size, out_fun) in zip(feature_arr, in_size_arr, out_fun_arr)
       u = randn(size(val))
       F(t) = dot(u, l(_BB(t), ps, st)[1])
       dF(t) = begin
-         val, pb = Zygote.pullback(LuxCore.apply, l, _BB(t), ps, st)
+         val, pb = Zygote.pullback(P4ML.evaluate, l, _BB(t), ps, st)
          ∂BB = pb((u, st))[2]
          return dot(∂BB, bu)
       end
@@ -99,7 +99,7 @@ for (feat, in_size, out_fun) in zip(feature_arr, in_size_arr, out_fun_arr)
       u = randn(size(val))
       F(t) = dot(u, l(x, re([_BB(t)...]), st)[1])
       dF(t) = begin
-         val, pb = Zygote.pullback(LuxCore.apply, l, x, re([_BB(t)...]), st)
+         val, pb = Zygote.pullback(P4ML.evaluate, l, x, re([_BB(t)...]), st)
          ∂BB = pb((u, st))[3]
          return dot(∂BB[1], bu)
       end
@@ -113,21 +113,16 @@ for (feat, in_size, out_fun) in zip(feature_arr, in_size_arr, out_fun_arr)
    # test_rrule(LuxCore.apply, l, x, ps, st)
 end
 
-##
-
+#
 
 # check which matmul it is calling
 # l = P4ML.LinearLayer(in_d, out_d; feature_first = false)
 # ps, st = LuxCore.setup(MersenneTwister(1234), l)
 # X = rand(N, in_d)
-# using ObjectPools
-# release!(X)
-# X = rand(N,in_d)
 
 # @profview let l = l, ps = ps, st = st, X = X
 #    for _ = 1:100_000
-#       out = l(X, ps, st)[1]
-#       release!(out)
+#       l(X, ps, st)
 #    end
 # end
 
