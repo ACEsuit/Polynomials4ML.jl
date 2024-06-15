@@ -33,13 +33,16 @@ out, st = l(x, ps, st)
 println(out == x * transpose(W))) # true
 ```
 """
-struct LinearLayer{FEATFIRST} <: AbstractP4MLTensor
+struct LinearLayer{FEATFIRST} <: AbstractExplicitLayer
    in_dim::Integer
    out_dim::Integer
    @reqfields()
 end
 
 LinearLayer(in_dim::Int, out_dim::Int; feature_first = false) = LinearLayer{feature_first}(in_dim, out_dim, _make_reqfields()...)
+
+LuxCore.initialparameters(rng::AbstractRNG, l::LinearLayer) = ( W = randn(rng, l.out_dim, l.in_dim), )
+LuxCore.initialstates(rng::AbstractRNG, l::LinearLayer) = NamedTuple()
 
 # ----------------------- evaluation and allocation interfaces 
 
@@ -50,8 +53,8 @@ _out_size(l::LinearLayer, x::AbstractVector, ps, st) = (l.out_dim, )
 _out_size(l::LinearLayer{true}, x::AbstractMatrix, ps, st) = (l.out_dim, size(x, 2))
 _out_size(l::LinearLayer{false}, x::AbstractMatrix, ps, st) = (size(x, 1), l.out_dim)
 
-LuxCore.initialparameters(rng::AbstractRNG, l::LinearLayer) = ( W = randn(rng, l.out_dim, l.in_dim), )
-LuxCore.initialstates(rng::AbstractRNG, l::LinearLayer) = NamedTuple()
+(l::LinearLayer)(args...) = evaluate(l, args...)
+evaluate(l::LinearLayer, args...) = _with_safe_alloc(evaluate!, l, args...) 
 
 function whatalloc(::typeof(evaluate!), l::LinearLayer, x::AbstractArray, ps, st)
    TV = _valtype(l, x, ps, st)
