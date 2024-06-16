@@ -53,8 +53,8 @@ initialstates(rng::AbstractRNG, l::PolyLuxLayer) = _init_luxstate(rng, l)
 
 (l::PolyLuxLayer)(args...) = evaluate(l, args...)
 
-# # general fallback of evaluate interface if we dont have trainble parameters
-evaluate!(out, basis::AbstractP4MLBasis, X, ps) = evaluate!(out, basis, X, ps)
+# general fallback of evaluate interface if we dont have trainble parameters in PolyLuxLayer
+evaluate!(out, l::PolyLuxLayer, X, args...) = evaluate!(out, l.basis, X)
 
 # lux evaluation interface
 evaluate(l::PolyLuxLayer, X, ps, st) = evaluate(l.basis, X), st 

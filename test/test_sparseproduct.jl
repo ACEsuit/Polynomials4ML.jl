@@ -1,100 +1,92 @@
-using Test
-using Polynomials4ML.Testing: println_slim, print_tf
-using Printf
-using Polynomials4ML: SparseProduct, evaluate
-using LinearAlgebra: norm
-using Polynomials4ML
-using ACEbase.Testing: fdtest
-using Zygote
-using HyperDualNumbers: Hyper
+
+using BenchmarkTools, Test, Polynomials4ML, ChainRulesCore
+using Polynomials4ML: SparseProduct, evaluate, evaluate!, 
+         _generate_input, _generate_input_1
+using Polynomials4ML.Testing: test_withalloc
+using ACEbase.Testing: fdtest, println_slim, print_tf 
 
 test_evaluate(basis::SparseProduct, BB::Tuple{Vararg{AbstractVector}}) = 
-       [ prod(BB[j][basis.spec[i][j]] for j = 1:length(BB)) 
-            for i = 1:length(basis) ]
+      [ prod(BB[j][basis.spec[i][j]] for j = 1:length(BB)) 
+      for i = 1:length(basis) ]
 
-test_evaluate(basis::SparseProduct, BB::Tuple) = 
-       [ prod(BB[j][basis.spec[i][j]] for j = 1:length(BB)) 
-            for i = 1:length(basis) ]
+test_evaluate(basis::SparseProduct, BB::Tuple{Vararg{AbstractMatrix}}) = 
+      [ prod(BB[j][k, basis.spec[i][j]] for j = 1:length(BB)) 
+      for k = 1:size(BB[1], 1), i = 1:length(basis)]
 
-# test_evaluate(basis::SparseProduct, BB::Tuple{Vararg{AbstractMatrix}}) = 
-#         [ test_evaluate(basis, ntuple(i -> BB[i][j, :], length(BB)))
-#          for j = 1:size(BB[1], 1) )            
-
-
-##
-NB = 3 # For _rrule_evaluate test we need NB = 3, fix later by generalizing the test case
-N = [i * 4 for i = 1:NB]
-B = [randn(N[i]) for i = 1:NB]
-hB = [Hyper.(bb, 1.0, 1.0, 0) for bb in B]
-
-spec = sort([ Tuple([rand(1:N[i]) for i = 1:NB]) for _ = 1:6])
-basis = SparseProduct(spec)
-
+function _generate_basis(; order=3, len = 50)
+   NN = [ rand(10:30) for _ = 1:order ]
+   spec = sort([ ntuple(t -> rand(1:NN[t]), order) for _ = 1:len])
+   return SparseProduct(spec)
+end
+             
 ##
 
 @info("Test serial evaluation")
 
-BB = Tuple(B)
-hBB = Tuple(hB)
-
-A1 = test_evaluate(basis, BB)
-A2 = evaluate(basis, BB)
-hA2 = evaluate(basis, hBB)
-hA2_val = [x.value for x in hA2]
-
-println_slim(@test A1 ≈ A2 )
-println_slim(@test A2 ≈ hA2_val )
-
-##
-
-@info("Test batch evaluation")
-nX = 5
-bBB = Tuple([randn(nX, N[i]) for i = 1:NB])
-bA1 = zeros(ComplexF64, nX, length(basis))
-for j = 1:nX
-    bA1[j, :] = evaluate(basis, Tuple([bBB[i][j, :] for i = 1:NB]))
-end
-
-bA2 = evaluate(basis, bBB)
-
-println_slim(@test bA1 ≈ bA2)
-
-##
-
-@info("Testing pullback")
-using LinearAlgebra: dot 
-
-N1 = 10
-N2 = 20
-N3 = 30
-
 for ntest = 1:30
-    local bBB
-    local bUU
-    local bA2
-    local u
-    bBB = ( randn(nX, N1), randn(nX, N2), randn(nX, N3) )
-    bUU = ( randn(nX, N1), randn(nX, N2), randn(nX, N3) )
-    _BB(t) = ( bBB[1] + t * bUU[1], bBB[2] + t * bUU[2], bBB[3] + t * bUU[3] )
-    bA2 = Polynomials4ML.evaluate(basis, bBB)
-    u = randn(size(bA2))
-    F(t) = dot(u, Polynomials4ML.evaluate(basis, _BB(t)))
-    dF(t) = begin
-        val, pb = Zygote.pullback(evaluate, basis, _BB(t))
-        ∂BB = pb(u)[2] # pb(u)[1] returns NoTangent() for basis argument
-        return sum( dot(∂BB[i], bUU[i]) for i = 1:length(bUU) )
-    end
-    print_tf(@test fdtest(F, dF, 0.0; verbose=false))
+   local BB, A1, A2, basis
+   order = mod1(ntest, 4)
+   basis = _generate_basis(; order=order)
+   BB = _generate_input_1(basis)
+   A1 = test_evaluate(basis, BB)
+   A2 = evaluate(basis, BB)
+   print_tf(@test A1 ≈ A2)
 end
+
+# TODO: revive HyperDualNumbers test later
+# A1 = test_evaluate(basis, BB)
+# A2 = evaluate(basis, BB)
+# hA2 = evaluate(basis, hBB)
+# hA2_val = [x.value for x in hA2]
+
+# println_slim(@test A1 ≈ A2 )
+# println_slim(@test A2 ≈ hA2_val )
+
 println()
 
 ##
 
-# try with rrule
-u, pb = Zygote.pullback(evaluate, basis, bBB)
-ll = pb(u)
+@info("Test batch evaluation")
 
+for ntest = 1:30 
+   local bBB, bA1, bA2, bA3, basis 
 
-# TODO: look into why this is failing
-# using ChainRulesTestUtils
-# test_rrule(evaluate, basis, bBB)
+   order = mod1(ntest, 4)
+   basis = _generate_basis(; order=order)
+   bBB = _generate_input(basis)
+   bA1 = test_evaluate(basis, bBB)
+   bA2 = evaluate(basis, bBB)
+   bA3 = copy(bA2)
+   evaluate!(bA3, basis, bBB)
+   print_tf(@test bA1 ≈ bA2 ≈ bA3)
+end
+
+println()
+
+##
+
+@info("Testing rrule")
+using LinearAlgebra: dot 
+
+for ntest = 1:30
+   local bBB, bUU, bA2, nX, basis
+   local bA2
+   local u
+   order = mod1(ntest, 4)
+   basis = _generate_basis(; order=order)
+   bBB = _generate_input(basis)
+   bUU = _generate_input(basis, nX = size(bBB[1], 1))
+   _BB(t) = ntuple(i -> bBB[i] + t * bUU[i], order)
+   bA2 = evaluate(basis, bBB)
+   u = randn(size(bA2))
+   F(t) = dot(u, evaluate(basis, _BB(t)))
+   dF(t) = begin
+      val, pb = rrule(evaluate, basis, _BB(t))
+      ∂BB = pb(u)[3]
+      return sum( dot(∂BB[i], bUU[i]) for i = 1:length(bUU) )
+   end
+   print_tf(@test fdtest(F, dF, 0.0; verbose=false))
+end
+println()
+
+##

@@ -62,6 +62,8 @@ function whatalloc(::typeof(evaluate!), l::LinearLayer, x::AbstractArray, ps, st
    return (TV, sz...)
 end
 
+# -------------- kernels
+
 function evaluate!(out, l::LinearLayer, x::AbstractVecOrMat, ps, st)
    mul!(out, ps.W, x)
    return out, st
@@ -72,6 +74,27 @@ function evaluate!(out, l::LinearLayer{false}, x::AbstractMatrix, ps, st)
    return out, st
 end
 
+# -------------------- reverse mode gradient
+
+function pullback(∂A, l::LinearLayer, x, ps)
+   TA = promote_type(eltype(x), eltype(ps.W))
+   ∂x, ∂W = zeros(TA, size(x)), zeros(TA, size(ps.W))
+   pullback!(∂x, ∂W, ∂A, l, x, ps)
+   return ∂x, (W = ∂W,)
+end
+
+function pullback!(∂x, ∂W, ∂A, l::LinearLayer, x, ps)
+   mul!(∂x, ps.W', ∂A)
+   mul!(∂W, ∂A, x')
+   return ∂x, ∂W
+end
+
+function pullback!(∂x, ∂W, ∂A, l::LinearLayer{false}, x::AbstractMatrix, ps)
+   mul!(∂x, ∂A, ps.W)
+   mul!(∂W, transpose(PtrArray(∂A)), x)
+   return ∂x, ∂W
+end
+
 # --------------------- connect with ChainRules 
 # can this be generalized again? 
 # TODO: check whether we can do this without multiple dispatch on vec/mat without loss of performance
@@ -80,20 +103,8 @@ import ChainRulesCore: rrule, NoTangent
 
 function rrule(::typeof(evaluate), l::LinearLayer, x::AbstractVecOrMat, ps, st)
    val = l(x, ps, st)
-
-   function pb(A)
-      return NoTangent(), NoTangent(), ps.W' * A[1], (W = A[1] * x',), NoTangent()
+   function pb(∂Ast)
+      return NoTangent(), NoTangent(), pullback(∂Ast[1], l, x, ps)..., NoTangent()
    end
-
-   return val, pb
-end
-
-function rrule(::typeof(evaluate), l::LinearLayer{false}, x::AbstractMatrix, ps, st)
-   val = l(x, ps, st)
-
-   function pb(A)
-      return NoTangent(), NoTangent(), A[1] * ps.W, (W = transpose(PtrArray(A[1])) * x,), NoTangent()
-   end
-
    return val, pb
 end

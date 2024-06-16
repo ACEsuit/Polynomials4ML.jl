@@ -28,6 +28,17 @@ SparseProduct(spec) = SparseProduct(spec, _make_reqfields()...)
 _valtype(basis::SparseProduct, BB::Tuple) = 
       mapreduce(eltype, promote_type, BB)
 
+function _generate_input_1(basis::SparseProduct{NB}) where {NB} 
+   NN = [ maximum(b[i] for b in basis.spec) for i = 1:NB ]
+   BB = ntuple(i -> randn(NN[i]), NB)
+   return BB 
+end 
+
+function _generate_input(basis::SparseProduct{NB}; nX = rand(5:15)) where {NB} 
+   NN = [ maximum(b[i] for b in basis.spec) for i = 1:NB ]
+   BB = ntuple(i -> randn(nX, NN[i]), NB)
+   return BB 
+end 
 
 # ----------------------- overiding alloc functions
 # specifically for SparseProduct/PooledSparseProduct
@@ -91,10 +102,8 @@ function pullback(∂A, basis::SparseProduct{NB}, BB::Tuple) where {NB}
    return ∂BB
 end
 
-
 function pullback!(∂BB, ∂A, basis::SparseProduct{NB}, BB::Tuple) where {NB}
    nX = size(BB[1], 1)
-
    @assert all(nX <= size(BB[i], 1) for i = 1:NB)
    @assert all(nX <= size(∂BB[i], 1) for i = 1:NB)
    @assert all(size(∂BB[i], 2) >= size(BB[i], 2) for i = 1:NB)
