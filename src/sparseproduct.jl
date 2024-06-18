@@ -85,27 +85,31 @@ end
 
 # -------------------- reverse mode gradient
 
-function ChainRulesCore.rrule(::typeof(evaluate), basis::SparseProduct{NB}, 
-                              BB::Tuple) where {NB}
-   A = evaluate(basis, BB)
-   function pb(∂A)
-      return NoTangent(), NoTangent(), pullback(∂A, basis, BB)
-   end
-   return A, pb
+function whatalloc(::typeof(pullback!), 
+                   ∂A, basis::SparseProduct{NB}, BB::TupMat) where  {NB}
+   TA = promote_type(eltype.(BB)..., eltype(∂A))
+   return ntuple(i -> (TA, size(BB[i])...), NB)                   
 end
 
+# adapt to WithAlloc, should be sufficiently for now up to NB = 4
+# but should be later replaced by generated code
+pullback!(∂B1, ∂A, basis::SparseProduct{1}, BB::TupMat) = 
+         pullback!((∂B1,), ∂A, basis, BB)
 
-function pullback(∂A, basis::SparseProduct{NB}, BB::Tuple) where {NB}
-   TA = promote_type(eltype.(BB)...)
-   ∂BB = ntuple(i -> zeros(TA, size(BB[i])...), NB)
-   pullback!(∂BB, ∂A, basis, BB)
-   return ∂BB
-end
+pullback!(∂B1, ∂B2, ∂A, basis::SparseProduct{2}, BB::TupMat) = 
+         pullback!((∂B1, ∂B2,), ∂A, basis, BB)
+
+pullback!(∂B1, ∂B2, ∂B3, ∂A, basis::SparseProduct{3}, BB::TupMat) = 
+         pullback!((∂B1, ∂B2, ∂B3,), ∂A, basis, BB)
+
+pullback!(∂B1, ∂B2, ∂B3, ∂B4, ∂A, basis::SparseProduct{4}, BB::TupMat) = 
+         pullback!((∂B1, ∂B2, ∂B3, ∂B4,), ∂A, basis, BB)
+
 
 function pullback!(∂BB, ∂A, basis::SparseProduct{NB}, BB::Tuple) where {NB}
    nX = size(BB[1], 1)
-   @assert all(nX <= size(BB[i], 1) for i = 1:NB)
-   @assert all(nX <= size(∂BB[i], 1) for i = 1:NB)
+   #@assert all(nX <= size(BB[i], 1) for i = 1:NB)
+   #@assert all(nX <= size(∂BB[i], 1) for i = 1:NB)
    @assert all(size(∂BB[i], 2) >= size(BB[i], 2) for i = 1:NB)
    @assert size(∂A) == (nX, length(basis))
    @assert length(BB) == NB 
@@ -123,7 +127,7 @@ function pullback!(∂BB, ∂A, basis::SparseProduct{NB}, BB::Tuple) where {NB}
         end
       end 
    end
-   return nothing 
+   return ∂BB 
 end
 
 
@@ -293,3 +297,19 @@ function _frule_frule_evaluate!(A, dA, ddA, basis::SparseProduct{NB}, BB::Tuple{
 end
 
 =#
+
+# --------------------- connect with ChainRules 
+# can this be generalized again? 
+
+import ChainRulesCore: rrule, NoTangent
+
+function rrule(::typeof(evaluate), basis::SparseProduct{NB}, BB::TupMat) where {NB}
+   A = evaluate(basis, BB)
+
+   function pb(Δ)
+      ∂BB = pullback(Δ, basis, BB)
+      return NoTangent(), NoTangent(), ∂BB
+   end 
+
+   return A, pb 
+end

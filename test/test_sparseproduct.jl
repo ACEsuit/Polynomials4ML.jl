@@ -65,6 +65,15 @@ println()
 
 ##
 
+@info("    testing withalloc")
+basis = _generate_basis(; order=2)
+BB = _generate_input_1(basis)
+bBB = _generate_input(basis)
+test_withalloc(basis; batch=false)
+
+
+##
+
 @info("Testing rrule")
 using LinearAlgebra: dot 
 
