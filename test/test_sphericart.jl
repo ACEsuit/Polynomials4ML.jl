@@ -38,6 +38,7 @@ function explicit_shs(θ, φ)
          Y3m3, Y3m2, Y3m1, Y30, Y31, Y32, Y33]
 end
 
+# real solid harmonics 
 function explicit_rsh(X)
    x,y,z = X
    Y00 = 1
