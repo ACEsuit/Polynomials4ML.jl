@@ -1,4 +1,4 @@
-# Spherical Harmonics
+## Spherical Harmonics
 
 This section provides documentation for the evaluation of complex and real spherical harmonics and solid harmonics, including gradient and Laplacian calculations. 
 
@@ -8,7 +8,7 @@ This section provides documentation for the evaluation of complex and real spher
 - [Real Spherical Harmonics](#Real-Spherical-Harmonics)
 - [Real Solid Harmonics](#Real-Solid-Harmonics)
 
-## Associated Legendre Polynomials
+### Associated Legendre Polynomials
 Associated Legendre polynomials ``P_{\ell}^m`` are closely related to the spherical harmonics, ``P_{\ell}^m`` of degree ``\ell`` and order ``m\geq 0`` are defined as (in the phase convention of Condon and Shortley)
 ```math 
 	P_{\ell}^m(x) = \frac{(-1)^m}{2^{\ell}\ell!}(1-x^2)^{m/2}\frac{\mathrm{d}^{\ell+m}}{\mathrm{d}x^{\ell+m}}(x^2-1)^{\ell}.
@@ -43,7 +43,7 @@ index_p(l,m)
 ```
 The algorithm for computing associated Legendre polynomials is based on Dusson(2022) eq.(A.7), where `A_l^m`, `B_l^m`, `C_l^m` can be found in Limpanuparb(2014) eq.(7)-(14). 
 
-## Condon-Shortley Sign Convention
+### Condon-Shortley Sign Convention
 There are two sign conventions for associated Legendre polynomials. 
 - Include the Condon-Shortley phase factor:
 ```math
@@ -78,7 +78,7 @@ Including the factor of ``(-1)^m`` and written in terms ``x=\cos\theta``,  the f
 | 0                  | ``1``     | ``\cos\theta``| ``\frac{1}{2}(3\cos^2\theta - 1)``| ``\frac{1}{2}\cos\theta(5\cos^2\theta-3)``    |
 
 
-## Complex Spherical Harmonics
+### Complex Spherical Harmonics
 In `cylm.jl`, Polynomials4ML utilizes orthonormalized complex spherical harmonics that includes the Condon-Shortley phase, defined as
 ```math
 	Y_{\ell}^m(\theta, \varphi) = \sqrt{\frac{2\ell+1}{4\pi}\frac{(\ell-m)!}{(\ell+m)!}}P_{\ell}^m(\cos \theta)\mathrm{e}^{\mathrm{i}m \varphi}. 
@@ -140,7 +140,7 @@ To retrieve the specific values of `Y_l^m` and `dY_l^m` for given indices `(l, m
 ```julia
 index_y(l,m)
 ```
-## Alternative normalizations conventions
+### Alternative normalizations conventions
 Here, we provide a list of alternative normalizations conventions for complex spherical harmonics,
 
 -  Schmidt semi-normalized (Racah's normalization)
@@ -161,7 +161,7 @@ with
 ```math
 \int_0^{2\pi}\int_0^{\pi}\mathscr{Y}_{k}^m(\theta, \varphi)\bar{\mathscr{Y}}_{\ell}^n(\theta, \varphi)\sin \theta \mathrm{d}\theta\mathrm{d}\varphi = 4\pi\delta_{k\ell}\delta_{mn}. 
 ```
-## Complex Solid Harmonics
+### Complex Solid Harmonics
 In `crlm.jl`, Polynomials4ML utilizes orthonormalized complex solid harmonics defined as
 ```math
 	\gamma_{\ell}^m(r, \theta, \varphi) = r^{\ell}Y_{\ell}^m(\theta, \varphi). 
@@ -190,7 +190,7 @@ We can further compute ``\nabla^2 \gamma_{\ell}^m`` as,
 \nabla^2 r^{\ell}Y_{\ell m} = \left(\frac{1}{r^2}\frac{\partial}{\partial r} r^2\frac{\partial}{\partial r} - \frac{L^2}{r^2}    \right)r^{\ell}Y_{\ell}^m = \frac{Y_{\ell m}}{r^2}\frac{\partial}{\partial r}r^2\frac{\partial r^{\ell}}{\partial r} - \frac{r^{\ell}L^2 Y_{\ell}^{m}}{r^2} = 0,
 ```
 that is, the solid harmonics are solutions to Laplace's equation. 
-## Real Spherical Harmonics
+### Real Spherical Harmonics
 In `rylm.jl`, Polynomials4ML utilizes orthonormalized real spherical harmonics that exclude the Condon-Shortley phase. 
 		 
 - Include the Condon-Shortley phase factor:
@@ -230,7 +230,7 @@ Orthonormalized real spherical harmonics that employ the Condon-Shortley phase u
 | -2                 |                                   |           | ``\frac{1}{2}\sqrt{\frac{15}{\pi}}\cdot \frac{xy}{r^2}`` |``\frac{1}{2}\sqrt{\frac{105}{\pi}}\cdot \frac{xyz}{r^2}`` |
 | -3                 |                                   |           |           | ``\frac{1}{4}\sqrt{\frac{35}{2\pi}}\cdot \frac{(3x^2-y^2)y}{r^3}``|
 
-## Real Solid Harmonics
+### Real Solid Harmonics
 In `rrlm.jl`, Polynomials4ML utilizes Schmidt semi-normalized real solid harmonics that exclude the Condon-Shortley phase.
 
 - Include the Condon-Shortley phase factor:
@@ -278,7 +278,7 @@ Schmidt semi-normalized real spherical harmonics that employ the Condon-Shortley
 | -3                 |           |           |                                  | ``\frac{1}{2}\sqrt{\frac{5}{2}}(3x^2-y^2)y`` |
 
 
-## References
+### References
 
 1. Dusson, G., Bachmayr, M., Csányi, G., Drautz, R., Etter, S., van der Oord, C., & Ortner, C. (2022). [Atomic cluster expansion: Completeness, efficiency and stability](https://arxiv.org/pdf/1911.03550.pdf). Journal of Computational Physics, 454, 110946.
 2. Helgaker, T., Jorgensen, P., & Olsen, J. (2013). [Molecular electronic-structure theory](https://www.wiley.com/en-us/Molecular+Electronic-Structure+Theory-p-9780471967552). John Wiley & Sons.

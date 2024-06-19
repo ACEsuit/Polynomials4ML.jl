@@ -1,9 +1,4 @@
 
-using LoopVectorization
-
-using ChainRulesCore
-using ChainRulesCore: NoTangent
-
 export SparseSymmProd
 
 @doc raw"""
@@ -29,7 +24,7 @@ defines a basis of 9 functions,
 [ A_1, A_2, A_1^2, A_1 A_2, A_2^2, A_1^3, A_1^2 A_2, A_1 A_2^2, A_2^3 ]
 ```
 """
-struct SparseSymmProd{ORD, TS} <: AbstractPoly4MLBasis
+struct SparseSymmProd{ORD, TS} <: AbstractP4MLTensor
    specs::TS
    ranges::NTuple{ORD, UnitRange{Int}}
    hasconst::Bool 
@@ -67,6 +62,9 @@ end
 
 Base.length(basis::SparseSymmProd) = sum(length, basis.specs) + basis.hasconst
 
+Base.show(io::IO, basis::SparseSymmProd{ORD}) where {ORD} = 
+      print(io, "SparseSymmProd(order=$(ORD), length = $(length(basis)))")
+
 function reconstruct_spec(basis::SparseSymmProd) 
    spec = [ [ bb... ] for bb in vcat(basis.specs...) ]
    if basis.hasconst
@@ -78,28 +76,22 @@ end
 
 _valtype(basis::SparseSymmProd, ::Type{T}) where {T} = T
 
-(basis::SparseSymmProd)(args...) = evaluate(basis, args...)
-
-function evaluate(basis::SparseSymmProd, A::AbstractVector{T}) where {T}
-   AA = acquire!(basis.pool, :AA, (length(basis),), T)
-   evaluate!(AA, basis, A)
-   return AA
+function whatalloc(::typeof(evaluate!), 
+                   basis::SparseSymmProd, A::AbstractVector{T}) where {T}
+   VT = _valtype(basis, T)
+   return (VT, length(basis))
 end
 
-function evaluate(basis::SparseSymmProd, A::AbstractMatrix{T}) where {T}
-   nX = size(A, 1)
-   AA = acquire!(basis.pool, :AAbatch, (nX, length(basis)), T)
-   evaluate!(AA, basis, A)
-   return AA
+function whatalloc(::typeof(evaluate!), 
+                   basis::SparseSymmProd, A::AbstractMatrix{T}) where {T}
+   VT = _valtype(basis, T)
+   return (VT, size(A, 1), length(basis))
 end
-
 
 # -------------- kernels for simple evaluation 
 
 using Base.Cartesian: @nexprs 
-using ObjectPools: FlexCachedArray
 
-__view_AA(AA::FlexCachedArray, basis, N) = __view_AA(unwrap(AA), basis, N)
 __view_AA(AA::AbstractVector, basis, N) = (@view AA[basis.ranges[N]])
 __view_AA(AA::AbstractMatrix, basis, N) = (@view AA[:, basis.ranges[N]])
 
@@ -147,35 +139,32 @@ function _evaluate_AA!(AA, spec::Vector{NTuple{N, Int}}, A::AbstractMatrix) wher
 end
 
 
-# ------- 
+# ----------------------------------- 
+#  pullback 
 
 import ChainRulesCore: rrule, NoTangent 
 
-function rrule(::typeof(evaluate), basis::SparseSymmProd, A)
-   AA = evaluate(basis, A)
-   return AA, Δ -> (NoTangent(), NoTangent(), _pb_evaluate(basis, Δ, A))
+function whatalloc(::typeof(pullback!), 
+                   ∂AA, basis::SparseSymmProd, A)
+   T∂A = promote_type(eltype(∂AA), eltype(A))
+   return (T∂A, size(A)... )
 end
 
 
-@generated function _pb_evaluate(
-                        basis::SparseSymmProd{ORD}, 
-                        Δ,  # differential
-                        A   # input 
-                        ) where {ORD}
-   quote                         
-      TG = promote_type(eltype(Δ), eltype(A))
-      gA = zeros(TG, size(A))
+@generated function pullback!(∂A,  
+                                 ∂AA, basis::SparseSymmProd{ORD}, A
+                                 ) where {ORD}
+   quote
+      fill!(∂A, zero(eltype(∂A)))
       @nexprs $ORD N -> _pb_evaluate_pbAA!(
-                              gA, 
-                              __view_AA(Δ, basis, N), 
+                              ∂A, 
+                              __view_AA(∂AA, basis, N), 
                               basis.specs[N], 
                               A)
-      return gA
+      return ∂A
    end 
 end
 
-# _pb_evaluate_pbAA_const!(gA::AbstractVector) = (gA[1] .= 0; nothing)
-# _pb_evaluate_pbAA_const!(gA::AbstractMatrix) = (gA[:, 1] .= 0; nothing)
 
 function _pb_evaluate_pbAA!(gA::AbstractVector, ΔN::AbstractVector, 
                             spec::Vector{NTuple{N, Int}}, 
@@ -208,126 +197,123 @@ function _pb_evaluate_pbAA!(gA, ΔN::AbstractMatrix,
 end
 
 
-function rrule(::typeof(_pb_evaluate), basis::SparseSymmProd, ΔAA, A)
-   uA = _pb_evaluate(basis, ΔAA, A)
-   return uA, Δ² -> (NoTangent(), NoTangent(), 
-                     _pb_pb_evaluate(basis, Δ², ΔAA, A)...)
+# ----------------------------------- 
+#   reverse-over-reverse 
+#
+#  AA = evaluate(basis, A) 
+#  ∇_A = pullback(∂AA, basis, A)
+#  ∇_∂AA, ∇_A = pullback2(∂∇A, ∂AA, basis, A)
+#
+
+function whatalloc(::typeof(pullback2!), 
+                   ∂∇A,   # cotangent to be pulled back 
+                   ∂AA,   # cotangent from pullback(∂AA, basis, A)
+                   basis::SparseSymmProd, A)
+   T = promote_type(eltype(∂∇A), eltype(∂AA), eltype(A))
+   return (T, size(∂AA)...), (T, size(A)...)
 end
 
 
-@generated function _pb_pb_evaluate(basis::SparseSymmProd{ORD}, Δ², ΔAA, A)  where {ORD}
-   quote 
-      TG = promote_type(eltype(Δ²), eltype(ΔAA), eltype(A))
-      gΔAA = zeros(TG, size(ΔAA))
-      gA = zeros(TG, size(A))
-      @nexprs $ORD N -> _pb_pb_evaluate_AA!(basis.specs[N], 
-                              __view_AA(gΔAA, basis, N), gA,   # outputs (gradients)
-                              Δ²,                              # differential 
-                              __view_AA(ΔAA,  basis, N), A,    # inputs 
-                              )
-      return gΔAA, gA
-   end 
-end 
 
-function _pb_pb_evaluate_AA!(spec::Vector{NTuple{N, Int}}, 
-                             gΔAA, gA, 
-                             Δ², 
-                             ΔN::AbstractVector, A::AbstractVector) where {N}
-   # We wish to compute ∇_Δ and ∇_A w.r.t.  the expression 
-   #         ∑ₖ Δ²ₖ * ∇_{Aₖ} (Δ ⋅ AA)    (Δ = ΔN)
-   #      =  ∑ᵢ Δᵢ * ∇̃ AA[i] 
-   # where   ∇̃ = ∑_k Δ²ₖ * ∇_Aₖ
-   #   here k = 1,...,#A and i = 1,...,#AA 
-
-   @assert size(gA) == size(A) 
-   @assert length(gΔAA) >= length(spec)
-   @assert length(ΔN) >= length(spec)
-   @assert length(Δ²) >= length(A)
-
-   @inbounds for (i, ϕ) in enumerate(spec)
-      A_ϕ = ntuple(t -> A[ϕ[t]], N)
-      Δ²_ϕ = ntuple(t -> Δ²[ϕ[t]], N)
-      p_i, g_i, u_i = _pb_grad_static_prod(Δ²_ϕ, A_ϕ)
-      gΔAA[i] = sum(g_i .* Δ²_ϕ) 
-      for t = 1:N 
-         gA[ϕ[t]] += u_i[t] * ΔN[i]
+function pullback2!(∇_∂AA, ∇_A, 
+                    ∂∇A, ∂AA, basis, A)
+   @assert size(∂∇A) == size(A)                     
+   T = promote_type(eltype(∂∇A), eltype(∂AA), eltype(A))
+   d = Dual{T}(zero(T), one(T))
+   DT = typeof(d)
+   @no_escape begin 
+      A_d = @alloc(DT, size(A)...)
+      @inbounds for i = 1:length(A) 
+         A_d[i] = A[i] + d * ∂∇A[i]
+      end
+      AA_d = @withalloc evaluate!(basis, A_d)
+      # ∇A_d = pullback(∂AA, basis, A_d)
+      ∇A_d = @withalloc pullback!(∂AA, basis, A_d)
+      @inbounds for i = 1:length(AA_d)
+         ∇_∂AA[i] = extract_derivative(eltype(∇_∂AA), AA_d[i])
+      end
+      @inbounds for i = 1:length(∇A_d)
+         ∇_A[i] = extract_derivative(eltype(∇_A), ∇A_d[i])
       end
    end
-   return nothing 
+   return ∇_∂AA, ∇_A
 end
 
-
-function _pb_pb_evaluate_AA!(spec::Vector{NTuple{N, Int}}, 
-                             gΔAA, gA, 
-                             Δ², 
-                             ΔN::AbstractMatrix, A::AbstractMatrix) where {N}
-   nX = size(A, 1)
-   for (i, ϕ) in enumerate(spec)
-      for j = 1:nX
-         A_ϕ = ntuple(t -> A[j, ϕ[t]], N)
-         Δ²_ϕ = ntuple(t -> Δ²[j, ϕ[t]], N)
-         p_i, g_i, u_i = _pb_grad_static_prod(Δ²_ϕ, A_ϕ)
-         gΔAA[j, i] = sum(g_i .* Δ²_ϕ)
-         for t = 1:N 
-            gA[j, ϕ[t]] += u_i[t] * ΔN[j, i]
-         end
-      end
-   end
-   return nothing 
-end
 
 
 # -------------- Pushforwards / frules  
 
-function pfwd_evaluate(basis::SparseSymmProd, 
-                       A::AbstractVector{<: Number}, 
-                       ΔA::AbstractMatrix)
-   nAA = length(basis)                       
+using ForwardDiff
+
+function whatalloc(::typeof(pushforward!), 
+                   basis::SparseSymmProd, 
+                   A::AbstractVector, ΔA::AbstractVector)
+   nAA = length(basis)
    TAA = eltype(A)
-   AA = acquire!(basis.pool, :AA, (nAA,), TAA)
-   T∂AA = _my_promote_type(TAA, eltype(ΔA))
-   ∂AA = acquire!(basis.pool, :∂AA, (nAA, size(ΔA, 2)), T∂AA)
-   fill!(∂AA, zero(T∂AA))
-   pfwd_evaluate!(unwrap(AA), unwrap(∂AA), basis, A, ΔA)
+   T∂AA = promote_type(TAA, eltype(ΔA))
+   return (TAA, nAA), (T∂AA, nAA)
+end
+
+function whatalloc(::typeof(pushforward!), 
+                   basis::SparseSymmProd, 
+                   A::AbstractMatrix, ΔA::AbstractMatrix)
+   nAA = length(basis)
+   TAA = eltype(A)
+   T∂AA = promote_type(TAA, eltype(ΔA))
+   nX = size(A, 1)
+   return (TAA, nX, nAA), (T∂AA, nX, nAA)
+end
+
+
+function pushforward!(AA, ∂AA, basis::SparseSymmProd, A, ∂A)
+   @assert size(∂A) == size(A)
+   @assert size(∂AA) == size(AA)
+   T = promote_type(eltype(A), eltype(∂A))
+   d = Dual{T}(zero(T), one(T))
+   DT = typeof(d)
+   @no_escape begin 
+      A_d = @alloc(DT, size(A)...)
+      @inbounds for i = 1:length(A) 
+         A_d[i] = A[i] + d * ∂A[i]
+      end
+      AA_d = @withalloc evaluate!(basis, A_d)
+      @assert length(AA_d) <= length(AA) && length(AA_d) == length(∂AA)
+      @inbounds for i = 1:length(AA_d)
+         AA[i] = ForwardDiff.value(AA_d[i])
+         ∂AA[i] = ForwardDiff.extract_derivative(eltype(∂AA), AA_d[i])
+      end 
+   end
    return AA, ∂AA
 end
 
 
-@generated function pfwd_evaluate!(AA, ∂AA, basis::SparseSymmProd{NB}, A, ΔA) where {NB}
-   quote 
-      if basis.hasconst; error("no implementation with hasconst"); end 
-      Base.Cartesian.@nexprs $NB N -> _pfwd_AA_N!(AA, ∂AA, A, ΔA, basis.ranges[N], basis.specs[N])
-      return AA, ∂AA
+# ------------------------------------------
+#  ChainRules integration 
+
+function rrule(::typeof(pullback), ∂AA, basis::SparseSymmProd, A) 
+   ∂A = pullback(∂AA, basis, A)
+   function pb(∂∂A)
+      ∂²∂AA, ∂²A = pullback2(∂∂A, ∂AA, basis, A)
+      return NoTangent(), ∂²∂AA, NoTangent(), ∂²A
    end
+   return ∂A, pb
 end
 
-function _pfwd_AA_N!(AA, ∂AA, A, ΔA, 
-                     rg_N, spec_N::Vector{NTuple{N, Int}}) where {N}
-   nX = size(ΔA, 2)                     
-   for (i, bb) in zip(rg_N, spec_N)
-      aa = ntuple(t -> A[bb[t]], N)
-      ∏aa, ∇∏aa = Polynomials4ML._static_prod_ed(aa)
-      AA[i] = ∏aa
-      for t = 1:N, j = 1:nX
-         ∂AA[i, j] += ∇∏aa[t] * ΔA[bb[t], j]
-      end
-   end
-end 
 
 
 # -------------- Lux integration 
 # it needs an extra lux interface reason as in the case of the `basis` 
 # should it not be enough to just overload valtype? 
 
-function evaluate(l::PolyLuxLayer{<: SparseSymmProd}, A::AbstractVector{T}, ps, st) where {T}
-   AA = acquire!(st.pool, :AA, (length(l),), T)
-   evaluate!(AA, l.basis, A)
-   return AA, st
-end
+# function evaluate(l::PolyLuxLayer{<: SparseSymmProd}, A::AbstractVector{T}, ps, st) where {T}
+#    AA = acquire!(st.pool, :AA, (length(l),), T)
+#    evaluate!(AA, l.basis, A)
+#    return AA, st
+# end
 
-function evaluate(l::PolyLuxLayer{<: SparseSymmProd}, A::AbstractMatrix{T}, ps, st) where {T}
-   nX = size(A, 1)
-   AA = acquire!(st.pool, :AAbatch, (nX, length(l)), T)
-   evaluate!(AA, l.basis, A)
-   return AA, st
-end
+# function evaluate(l::PolyLuxLayer{<: SparseSymmProd}, A::AbstractMatrix{T}, ps, st) where {T}
+#    nX = size(A, 1)
+#    AA = acquire!(st.pool, :AAbatch, (nX, length(l)), T)
+#    evaluate!(AA, l.basis, A)
+#    return AA, st
+# end

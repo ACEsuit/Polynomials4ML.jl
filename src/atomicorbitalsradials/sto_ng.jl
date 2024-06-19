@@ -1,4 +1,4 @@
-mutable struct STO_NG{T} <: ScalarPoly4MLBasis
+mutable struct STO_NG{T} <: AbstractP4MLBasis
     ζ::Tuple{Vector{Vector{T}},Vector{Vector{T}}}
     # ----------------- metadata 
     @reqfields
@@ -7,6 +7,8 @@ end
 STO_NG(ζ) = STO_NG(ζ, _make_reqfields()...)
 
 Base.length(basis::STO_NG) = size(basis.ζ[1], 1)
+
+Base.show(io::IO, basis::STO_NG) = print(io, "STO_NG(...)")
 
 _valtype(::STO_NG, T::Type{<: Real}) = T
 _valtype(::STO_NG, T::Type{<: Hyper{<:Real}}) = T

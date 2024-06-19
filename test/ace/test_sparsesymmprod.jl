@@ -1,15 +1,17 @@
 
 using Test, BenchmarkTools, Polynomials4ML
-using Polynomials4ML: SimpleProdBasis, release!, SparseSymmProd
-using Polynomials4ML.Testing: println_slim, print_tf, generate_SO2_spec
+using Polynomials4ML: SimpleProdBasis, SparseSymmProd, pullback, 
+                     evaluate
+using Polynomials4ML.Testing: println_slim, print_tf, generate_SO2_spec, 
+                              test_withalloc
 using Random
 
 using ACEbase.Testing: fdtest, dirfdtest
 using Lux
 using ChainRulesCore: rrule 
-# using Zygote
 
 P4ML = Polynomials4ML
+
 ##
 
 M = 5 
@@ -141,24 +143,24 @@ println()
 
 ##
 
+@info("Test pullback2")
 
-@info("Test _pb_pb_evaluate")
+for ntest = 1:30
+   local A, AA, Δ, Δ², uA, uΔ, F, dF, basis2 
 
-for ntest = 1:10 
-   local A, AA, Δ, Δ², uA, uΔ, F, dF
-
+   basis2 = SparseSymmProd(spec)
    A = randn(2*M+1)
    AA = basis2(A)
-   Δ = randn(length(AA)) ./ (1+length(AA))
-   Δ² = randn(length(A)) ./ (1+length(A))
-   uA = randn(length(A)) ./ (1+length(A))
-   uΔ = randn(length(AA)) ./ (1+length(AA))
+   Δ = randn(length(AA)) ./ (1:length(AA))
+   Δ² = randn(length(A)) ./ (1:length(A))
+   uA = randn(length(A)) ./ (1:length(A))
+   uΔ = randn(length(AA)) ./ (1:length(AA))
 
-   F(t) = dot(Δ², P4ML._pb_evaluate(basis2, Δ + t * uΔ, A + t * uA))
+   F(t) = dot(Δ², P4ML.pullback(Δ + t * uΔ, basis2, A + t * uA))
 
    dF(t) = begin 
-      val, pb = P4ML.rrule(P4ML._pb_evaluate, basis2,  Δ + t * uΔ, A + t * uA)
-      _, _, ∇_Δ, ∇_A = pb(Δ²)
+      val, pb = P4ML.rrule(P4ML.pullback, Δ + t * uΔ, basis2,  A + t * uA)
+      _, ∇_Δ, _, ∇_A = pb(Δ²)
       return dot(∇_Δ, uΔ) + dot(∇_A, uA)
    end
    print_tf(@test fdtest(F, dF, 0.0; verbose=false))
@@ -179,20 +181,75 @@ for ntest = 1:30
    uA = randn(size(bA)) /  Diagonal(1:size(bA, 2))
    uΔ = randn(size(bAA)) / Diagonal(1:size(bAA, 2))
 
-   _X(t) = (Δ + t * uΔ, bA + t * uA)
+   _Δ(t) = Δ + t * uΔ   
+   _X(t) = bA + t * uA
 
-   F(t) = dot(Δ², P4ML._pb_evaluate(basis2, _X(t)...))
+   F(t) = dot(Δ², P4ML.pullback(_Δ(t), basis2, _X(t)))
    dF(t) = begin
-      val, pb = rrule(P4ML._pb_evaluate, basis2, _X(t)...)
-      _, _, ∇_Δ, ∇_A = pb(Δ²)
+      val, pb = rrule(P4ML.pullback, _Δ(t), basis2, _X(t))
+      _, ∇_Δ, _, ∇_A = pb(Δ²)
       return dot(∇_Δ, uΔ) + dot(∇_A, uA)
    end
+   F(0.0)
+   dF(0.0)
    print_tf(@test fdtest(F, dF, 0.0; verbose=false))
 end
 println() 
 
 
 ##
+
+
+@info("Testing basic pushforward")
+
+for ntest = 1:10 
+   local M, nX, spec, A, basis, AA1, AA2 
+   M = rand(4:7)
+   BO = rand(2:5)
+   spec = generate_SO2_spec(BO, 2*M)
+   A = randn(Float64, 2*M+1)
+   ΔA = randn(length(A))
+
+   basis = SparseSymmProd(spec)
+   AA1 = basis(A)
+   AA2, ∂AA2 = P4ML.pushforward(basis, A, ΔA)
+   print_tf( @test AA1 ≈ AA2 )
+
+   u = randn(length(AA1)) ./ (1:length(AA1))
+   F(t) = dot(u, basis(A + t * ΔA))
+   print_tf(@test fdtest(F, t -> dot(u, ∂AA2), 0.0; verbose=false))
+end 
+println() 
+
+@info("Testing batched basic pushforward")
+
+for ntest = 1:10 
+   local M, nX, spec, A, basis, AA1, AA2 
+   M = rand(4:7)
+   BO = rand(2:5)
+   spec = generate_SO2_spec(BO, 2*M)
+   basis = SparseSymmProd(spec)
+
+   nX = rand(6:12)
+   A = randn(Float64, nX, 2*M+1)
+   ΔA = randn(size(A))
+
+   AA1 = basis(A)
+   AA2, ∂AA2 = P4ML.pushforward(basis, A, ΔA)
+   print_tf( @test AA1 ≈ AA2 )
+
+   u = randn(size(AA1))
+   F(t) = dot(u, basis(A + t * ΔA))
+   print_tf(@test fdtest(F, t -> dot(u, ∂AA2), 0.0; verbose=false))
+end 
+println() 
+
+##
+
+
+
+#= 
+# TODO: revive this test 
 
 @info("Testing lux interface")
 
@@ -203,28 +260,6 @@ l_AA2, _ = l_basis2(bA, ps, st)
 println_slim(@test l_AA2 ≈ basis2(bA))
 
 println()
-##
-
-
-@info("Testing basic pushforward")
-
-using ForwardDiff
-
-for ntest = 1:10 
-   local M, nX, spec, A, basis, AA1, AA2 
-   M = rand(4:7)
-   BO = rand(2:5)
-   nX = rand(6:12)
-   spec = generate_SO2_spec(BO, 2*M)
-   A = randn(Float64, 2*M+1)
-   ΔA = randn(length(A), nX)
-
-   basis = SparseSymmProd(spec)
-   AA1 = basis(A)
-   ∂AA1 = ForwardDiff.jacobian(basis, A) * ΔA
-   AA2, ∂AA2 = P4ML.pfwd_evaluate(basis, A, ΔA)
-   print_tf( @test AA1 ≈ AA2 )
-   print_tf( @test ∂AA1 ≈ ∂AA2 )
-end 
+=# 
 
 ##

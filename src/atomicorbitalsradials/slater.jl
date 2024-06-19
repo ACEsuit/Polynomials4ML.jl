@@ -1,4 +1,4 @@
-mutable struct SlaterBasis{T} <: ScalarPoly4MLBasis
+mutable struct SlaterBasis{T} <: AbstractP4MLBasis
     ζ::Vector{T}
     # ----------------- metadata 
     @reqfields
@@ -8,20 +8,10 @@ SlaterBasis(ζ::Vector{T}) where {T} = SlaterBasis(ζ, _make_reqfields()...)
 
 Base.length(basis::SlaterBasis) = length(basis.ζ)
 
+Base.show(io::IO, basis::SlaterBasis) = print(io, "SlaterBasis(...)")
+
 _valtype(::SlaterBasis, T::Type{<: Real}) = T
 _valtype(::SlaterBasis, T::Type{<: Hyper{<:Real}}) = T
-
-_alloc_dp(basis::SlaterBasis, X) = 
-      acquire!(basis.pool, _outsym(X), _out_size(basis, X), _gradtype(basis, X) )
-
-_alloc_ed_dp(basis::SlaterBasis, x) = 
-      _alloc(basis, x), _alloc_d(basis, x), _alloc_dp(basis, x)
-
-function evaluate_ed_dp(basis::SlaterBasis, x) 
-   B, dB, dpB = _alloc_ed_dp(basis, x)
-   evaluate_ed_dp!(unwrap(B), unwrap(dB), unwrap(dpB), basis, x)
-   return B, dB, dpB
-end 
 
 
 function evaluate!(P, basis::SlaterBasis, x::AbstractVector) 
@@ -91,17 +81,17 @@ end
 function ChainRulesCore.rrule(::typeof(evaluate), basis::SlaterBasis{T}, R::AbstractVector{<: Real}) where {T}
     A, dR, dζ = evaluate_ed_dp(basis, R)
 
-    ∂R = similar(R)
-    ∂ζ = similar(basis.Dn.ζ)
     function pb(∂A)
-         @assert size(∂A) == (length(R), length(basis))
-         for i = 1:length(R)
+        ∂R = similar(R)
+        ∂ζ = similar(basis.Dn.ζ)
+        @assert size(∂A) == (length(R), length(basis))
+        for i = 1:length(R)
             ∂R[i] = dot(@view(∂A[i, :]), @view(dR[i, :]))
-         end
-         for i = 1:length(basis.Dn.ζ)
+        end
+        for i = 1:length(basis.Dn.ζ)
             ∂ζ[i] = dot(@view(∂A[:, i]), @view(dζ[:, i]))
-         end
-         return NoTangent(), ∂ζ, ∂R
+        end
+        return NoTangent(), ∂ζ, ∂R
     end
     return A, pb
 end

@@ -1,67 +1,72 @@
 module Polynomials4ML
 
-# -------------- Import ObjectPools stuff ---------------
-using ObjectPools: acquire!, release!, 
-                   FlexArray, FlexArrayCache, TSafe, ArrayPool, unwrap
-
-
-# -------------- import ACEbase stuff 
+# -------------- import ACEbase, Bumper, WithAlloc, Lux and related
 
 import ACEbase
 import ACEbase: evaluate, evaluate_d, evaluate_ed, evaluate_dd, evaluate_ed2, 
                 evaluate!, evaluate_d!, evaluate_ed!, evaluate_ed2!
 import ACEbase.FIO: read_dict, write_dict
 
+using Bumper, WithAlloc, StrideArrays
+import WithAlloc: whatalloc 
+
+using LuxCore, Random, StaticArrays
+import ChainRulesCore: rrule, frule, NoTangent, ZeroTangent
+using HyperDualNumbers: Hyper
+using ForwardDiff: Dual, extract_derivative
+
+import LuxCore: AbstractExplicitLayer, AbstractExplicitContainerLayer, 
+                 initialparameters, initialstates                 
+
+using Random: AbstractRNG   
+
+
+function _generate_input end 
+function _generate_batch end 
+
 function natural_indices end   # could rename this get_spec or similar ... 
 function index end
 function orthpolybasis end
 function degree end 
 
+function pullback! end
+function pullback end
+function pullback2! end
+function pullback2 end
+function pushforward end
+function pushforward! end
 
 # some stuff to allow bases to overload some lux functionality ... 
 # how much of this should go into ACEbase? 
-function _valtype end 
 function lux end 
-function _init_luxparams end 
-function _init_luxstate end 
 
-export natural_indices, 
-       index, 
-       evaluate, 
-       evaluate_d, 
-       evaluate_dd, 
-       evaluate_ed, 
-       evaluate_ed2, 
-       evaluate!, 
-       evaluate_ed!, 
-       evaluate_ed2!, 
-       orthpolybasis, 
-       degree 
-
-
+export orthpolybasis
 
 # generic fallbacks for a lot of wrapper kind of functionality 
 include("interface.jl")
+include("generic_ad.jl")
+
+# static product - used throughout several layers
+include("staticprod.jl")
 
 # polynomials 
 include("orthopolybasis.jl")
 include("discreteweights.jl")
 include("jacobiweights.jl")
 include("monomials.jl")
+include("chebbasis.jl")
 
 # 2d harmonics / trigonometric polynomials 
 include("trig.jl")
 include("rtrig.jl")
-include("chebbasis.jl")
 
 # 3d harmonics 
-include("sphericalharmonics/sphericalharmonics.jl")
+include("sphericart.jl")
 
 # quantum chemistry 
 include("atomicorbitalsradials/atomicorbitalsradials.jl")
 
 # generating product bases (generalisation of tensor products)
-include("staticprod.jl")
 include("sparseproduct.jl")
 
 # LinearLayer implementation
@@ -73,7 +78,11 @@ include("linear.jl")
 include("lux.jl")
 
 # basis components to implement cluster expansion methods
-include("ace/ace.jl")
+include("ace/sparseprodpool.jl")
+include("ace/symmprod_dag.jl")
+include("ace/symmprod_dag_kernels.jl")
+include("ace/simpleprodbasis.jl")
+include("ace/sparsesymmprod.jl")
 
 # some nice utility functions to generate basis sets and other things  
 include("utils/utils.jl")

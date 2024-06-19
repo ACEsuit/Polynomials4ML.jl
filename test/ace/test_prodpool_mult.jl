@@ -2,6 +2,9 @@
 # this is an experimental testset for working with batched 
 # pooled products. This isn't really supported yet, and not 
 # property working, hence not part of runtests. 
+#
+# Note also this hasn't yet been updated to the updated interface. 
+#
 
 @info("PooledSparseProduct - Multiple evaluations")
 

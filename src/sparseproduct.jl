@@ -1,12 +1,10 @@
-using ChainRulesCore
-using ChainRulesCore: NoTangent
 
 export SparseProduct
 
 """
 `SparseProduct` : a model layer to build tensor products
 """
-struct SparseProduct{NB} <: AbstractPoly4MLBasis
+struct SparseProduct{NB} <: AbstractP4MLTensor
    spec::Vector{NTuple{NB, Int}}
    # ---- temporaries & caches
    @reqfields()
@@ -27,30 +25,180 @@ Base.length(basis::SparseProduct) = length(basis.spec)
 
 SparseProduct(spec) = SparseProduct(spec, _make_reqfields()...)
 
-_valtype(basis::SparseProduct{T1}, TX::NTuple{NB, AbstractVecOrMat{T2}}) where {T1, T2, NB} = T2
+_valtype(basis::SparseProduct, BB::Tuple) = 
+      mapreduce(eltype, promote_type, BB)
+
+function _generate_input_1(basis::SparseProduct{NB}) where {NB} 
+   NN = [ maximum(b[i] for b in basis.spec) for i = 1:NB ]
+   BB = ntuple(i -> randn(NN[i]), NB)
+   return BB 
+end 
+
+function _generate_input(basis::SparseProduct{NB}; nX = rand(5:15)) where {NB} 
+   NN = [ maximum(b[i] for b in basis.spec) for i = 1:NB ]
+   BB = ntuple(i -> randn(nX, NN[i]), NB)
+   return BB 
+end 
+
+# ----------------------- overiding alloc functions
+# specifically for SparseProduct/PooledSparseProduct
+
+_out_size(basis::SparseProduct, BB::TupVec) = (length(basis), )
+_out_size(basis::SparseProduct, BB::TupMat) = (size(BB[1],1), length(basis))
+
+_out_size(basis::SparseProduct, BB::Tuple{AbstractVector, AbstractVector}) = (length(basis), )
+_out_size(basis::SparseProduct, BB::Tuple{AbstractMatrix, AbstractMatrix}) = (size(BB[1],1), length(basis))
+
+# ----------------------- evaluation kernels 
+
+function whatalloc(::typeof(evaluate!), basis::SparseProduct{NB}, BB::TupVecMat) where {NB}
+   VT = _valtype(basis, BB)
+   return (VT, _out_size(basis, BB)...)
+end
+
+function evaluate!(A, basis::SparseProduct{NB}, 
+                   BB::TupVec) where {NB}
+   @assert length(BB) == NB
+   spec = basis.spec
+   for (iA, ϕ) in enumerate(spec)
+      b = ntuple(t->BB[t][ϕ[t]], NB)
+      @inbounds A[iA] = @fastmath prod(b)
+   end
+   return A 
+end
+
+function evaluate!(A, basis::SparseProduct{NB}, 
+                   BB::TupMat) where {NB}
+   nX = size(BB[1], 1)
+   @assert all(B->size(B, 1) == nX, BB)
+   spec = basis.spec
+
+   @inbounds for (iA, ϕ) in enumerate(spec)
+      @simd ivdep for j = 1:nX
+         b = ntuple(t->BB[t][j, ϕ[t]], NB)
+         A[j, iA] = @fastmath prod(b)
+      end
+   end
+   return A
+end
+
+# special-casing NB = 1 for correctness 
+function evaluate!(A, basis::SparseProduct{1}, 
+                   BB::Tuple{<: AbstractMatrix},
+                   nX = size(BB[1], 1))
+   @assert size(BB[1], 1) >= nX
+   BB1 = BB[1] 
+   spec = basis.spec
+   fill!(A, zero(eltype(A)))
+   @inbounds for (iA, ϕ) in enumerate(spec)
+      ϕ1 = ϕ[1]
+      @simd ivdep for j = 1:nX
+         A[j, iA] = BB1[j, ϕ1]
+      end
+   end
+   return A
+end
+
+# -------------------- reverse mode gradient
+
+function whatalloc(::typeof(pullback!), 
+                   ∂A, basis::SparseProduct{NB}, BB::TupMat) where  {NB}
+   TA = promote_type(eltype.(BB)..., eltype(∂A))
+   return ntuple(i -> (TA, size(BB[i])...), NB)                   
+end
+
+# adapt to WithAlloc, should be sufficiently for now up to NB = 4
+# but should be later replaced by generated code
+pullback!(∂B1::AbstractMatrix, ∂A, basis::SparseProduct{1}, BB::TupMat) = 
+         pullback!((∂B1,), ∂A, basis, BB)
+
+pullback!(∂B1, ∂B2, ∂A, basis::SparseProduct{2}, BB::TupMat) = 
+         pullback!((∂B1, ∂B2,), ∂A, basis, BB)
+
+pullback!(∂B1, ∂B2, ∂B3, ∂A, basis::SparseProduct{3}, BB::TupMat) = 
+         pullback!((∂B1, ∂B2, ∂B3,), ∂A, basis, BB)
+
+pullback!(∂B1, ∂B2, ∂B3, ∂B4, ∂A, basis::SparseProduct{4}, BB::TupMat) = 
+         pullback!((∂B1, ∂B2, ∂B3, ∂B4,), ∂A, basis, BB)
+
+# NB = 1 for correctness 
+function pullback!(∂BB::Tuple, ∂A, basis::SparseProduct{1}, BB::TupMat)
+   nX = size(BB[1], 1)
+   NB = 1
+   @assert size(∂A) == (nX, length(basis))
+   @assert length(BB) == length(∂BB) == NB 
+   @assert all(nX <= size(BB[i], 1) for i = 1:NB)
+   @assert all(nX <= size(∂BB[i], 1) for i = 1:NB)
+   @assert all(size(∂BB[i], 2) >= size(BB[i], 2) for i = 1:NB)
+   BB1 = BB[1]
+   ∂BB1 = ∂BB[1]
+
+   fill!(∂BB1, zero(eltype(∂BB1)))
+   
+   @inbounds for (iA, ϕ) in enumerate(basis.spec)
+      ϕ1 = ϕ[1]
+      @simd ivdep for j = 1:nX 
+         ∂BB1[j, ϕ1] += ∂A[j, iA]
+      end 
+   end
+   return ∂BB 
+end
+
+function pullback!(∂BB, ∂A, basis::SparseProduct{NB}, BB::Tuple) where {NB}
+   nX = size(BB[1], 1)
+   @assert all(nX <= size(BB[i], 1) for i = 1:NB)
+   @assert all(nX <= size(∂BB[i], 1) for i = 1:NB)
+   @assert all(size(∂BB[i], 2) >= size(BB[i], 2) for i = 1:NB)
+   @assert size(∂A) == (nX, length(basis))
+   @assert length(BB) == NB 
+   @assert length(∂BB) == NB
+   
+   @inbounds for (iA, ϕ) in enumerate(basis.spec) # for each spec
+      # ∂A_iA = ∂A[iA]
+      @simd ivdep for j = 1:nX 
+        b = ntuple(Val(NB)) do i 
+           @inbounds BB[i][j, ϕ[i]] 
+        end 
+        a, g = _static_prod_ed(b)
+        for i = 1:NB 
+           ∂BB[i][j, ϕ[i]] = muladd(∂A[j, iA], g[i], ∂BB[i][j, ϕ[i]])
+        end
+      end 
+   end
+   return ∂BB 
+end
+
+
+
 
 # ----------------------- evaluation interfaces 
-function _frule_evaluate(basis::SparseProduct, BB::Tuple{Vararg{AbstractVector}}, ∂BB::Tuple{Vararg{AbstractVector}}) 
+
+function pushforward(basis::SparseProduct, 
+                              BB::Tuple{Vararg{AbstractVector}}, 
+                              ∂BB::Tuple{Vararg{AbstractVector}}) 
    VT = mapreduce(eltype, promote_type, BB)
    A = zeros(VT, length(basis))
    # ∂BB: Vector of SVector{3, Float64}
    # dA: Matrix 3 * length(basis)
    dA = zeros(VT, length(∂BB[1][1]), length(basis)) 
-   _frule_evaluate!(A, dA, basis, BB::Tuple, ∂BB::Tuple)
+   pushforward!(A, dA, basis, BB::Tuple, ∂BB::Tuple)
    return A, dA
 end
 
-function _frule_evaluate(basis::SparseProduct, BB::Tuple{Vararg{AbstractMatrix}}, ∂BB::Tuple{Vararg{AbstractMatrix}}) 
+function pushforward(basis::SparseProduct, 
+                              BB::Tuple{Vararg{AbstractMatrix}}, 
+                              ∂BB::Tuple{Vararg{AbstractMatrix}}) 
    VT = mapreduce(eltype, promote_type, BB)
    nX = size(∂BB[1], 1)
    # BB: Matrix Nel * length(basis)
    # ∂BB: Matrix of SVector{3, Float64}: Nel * length(basis)
    A = zeros(VT, nX, length(basis))
    dA = [zeros(VT, length(∂BB[1][1])) for i = 1:nX, j = 1:length(basis)]
-   _frule_evaluate!(A, dA, basis, BB::Tuple, ∂BB::Tuple)
+   pushforward!(A, dA, basis, BB::Tuple, ∂BB::Tuple)
    return A, dA
 end
 
+#=
 function _frule_frule_evaluate(basis::SparseProduct, BB::Tuple{Vararg{AbstractVector}}, ∂BB::Tuple{Vararg{AbstractVector}}, ∂∂BB::Tuple{Vararg{AbstractVector}}) 
    VT = mapreduce(eltype, promote_type, BB)
    A = zeros(VT, length(basis))
@@ -73,146 +221,11 @@ function _frule_frule_evaluate(basis::SparseProduct, BB::Tuple{Vararg{AbstractMa
    _frule_frule_evaluate!(A, dA, ddA, basis, BB::Tuple, ∂BB::Tuple, ∂∂BB::Tuple)
    return A, dA, ddA
 end
+=#
 
-# ----------------------- overiding alloc functions
-# specifically for SparseProduct/PooledSparseProduct
-_outsym(x::TupVec) = :out
-_outsym(X::TupMat) = :outb
-
-# TODO: generalize it
-#_outsym(x::Tuple{AbstractVector, AbstractVector}) = :out
-#_outsym(X::Tuple{AbstractMatrix, AbstractMatrix}) = :outb
-
-_out_size(basis::SparseProduct, BB::TupVec) = (length(basis), )
-_out_size(basis::SparseProduct, BB::TupMat) = (size(BB[1],1), length(basis))
-
-_out_size(basis::SparseProduct, BB::Tuple{AbstractVector, AbstractVector}) = (length(basis), )
-_out_size(basis::SparseProduct, BB::Tuple{AbstractMatrix, AbstractMatrix}) = (size(BB[1],1), length(basis))
-
-function _alloc_d(basis::SparseProduct, BBs::NTuple{NB, AbstractVecOrMat{T}}) where {NB, T}
-      BBs_size = [size(bb) for bb in BBs]
-      return [Tuple([acquire!(basis.pool, _outsym(BBs), (BBsize), _valtype(basis, BBs)) for BBsize in BBs_size]) for _ = 1:length(basis)]
-end
-
-function _alloc_dd(basis::SparseProduct, BBs::NTuple{NB, AbstractVecOrMat{T}}) where {NB, T}
-      BBs_size = [size(bb) for bb in BBs]
-      return [Tuple([acquire!(basis.pool, _outsym(BBs), (BBsize), _valtype(basis, BBs)) for BBsize in BBs_size]) for _ = 1:length(basis)]
-end
-
-_alloc_ed(basis::SparseProduct, x::NTuple{NB, AbstractVecOrMat{T}}) where {NB, T} = _alloc(basis, x), _alloc_d(basis, x)
-_alloc_ed2(basis::SparseProduct, x::NTuple{NB, AbstractVecOrMat{T}}) where {NB, T} = _alloc(basis, x), _alloc_d(basis, x), _alloc_dd(basis, x)
-
-
-
-# ----------------------- evaluation kernels 
-
-function evaluate!(A, basis::SparseProduct{NB}, BB::Tuple{Vararg{AbstractVector}}) where {NB}
-   @assert length(BB) == NB
-   spec = basis.spec
-   for (iA, ϕ) in enumerate(spec)
-      b = ntuple(t->BB[t][ϕ[t]], NB)
-      @inbounds A[iA] = @fastmath prod(b)
-   end
-   return A 
-end
-
-function evaluate!(A, basis::SparseProduct{NB}, BB::Tuple{Vararg{AbstractMatrix}}) where {NB}
-   nX = size(BB[1], 1)
-   @assert all(B->size(B, 1) == nX, BB)
-   spec = basis.spec
-
-   @inbounds for (iA, ϕ) in enumerate(spec)
-      @simd ivdep for j = 1:nX
-         b = ntuple(t->BB[t][j, ϕ[t]], NB)
-         A[j, iA] = @fastmath prod(b)
-      end
-   end
-   return A
-end
-
-
-function evaluate_ed!(A, dA, basis::SparseProduct{NB}, BB::Tuple{Vararg{AbstractVector}}) where {NB}
-   @assert length(BB) == NB
-   spec = basis.spec
-   # evaluate!(A, basis, BB)
-   for (iA, ϕ) in enumerate(spec)
-      b = ntuple(Val(NB)) do i 
-         @inbounds BB[i][ϕ[i]] 
-      end 
-      a, g = _static_prod_ed(b)
-      A[iA] = a
-      fill!.(dA[iA], 0.0)
-      for i = 1:NB
-         dA[iA][i][ϕ[i]] += g[i]
-      end
-   end 
-   return A, dA 
-end
-
-function evaluate_ed!(A, dA, basis::SparseProduct{NB}, BB::Tuple{Vararg{AbstractMatrix}}) where {NB}
-   nX = size(BB[1], 1)
-   @assert all(B->size(B, 1) == nX, BB)
-   spec = basis.spec
-   # evaluate!(A, basis, BB)
-   @inbounds for (iA, ϕ) in enumerate(spec)
-      fill!.(dA[iA], 0.0)
-      @simd ivdep for j = 1:nX 
-        b = ntuple(Val(NB)) do i 
-           @inbounds BB[i][j, ϕ[i]] 
-        end 
-        a, g = _static_prod_ed(b)
-        A[j, iA] = a 
-        for i = 1:NB
-           dA[iA][i][j, ϕ[i]] += g[i]
-        end
-      end 
-   end
-   return A, dA
-end
-
-function evaluate_ed2!(A, dA, ddA, basis::SparseProduct{NB}, BB::Tuple{Vararg{AbstractVector}}) where {NB}
-   @assert length(BB) == NB
-   spec = basis.spec
-
-   for (iA, ϕ) in enumerate(spec)
-      b = ntuple(Val(NB)) do i 
-         @inbounds BB[i][ϕ[i]] 
-      end 
-      a, g = _static_prod_ed(b)
-      A[iA] = a
-      fill!.(dA[iA], 0.0)
-      fill!.(ddA[iA], 0.0)
-      for i = 1:NB 
-         dA[iA][i][ϕ[i]] += g[i]
-      end
-   end 
-   return A, dA, ddA 
-end
-
-
-function evaluate_ed2!(A, dA, ddA, basis::SparseProduct{NB}, BB::Tuple{Vararg{AbstractMatrix}}) where {NB}
-   nX = size(BB[1], 1)
-   @assert all(B->size(B, 1) == nX, BB)
-   spec = basis.spec
-   # evaluate!(A, basis, BB)
-   @inbounds for (iA, ϕ) in enumerate(spec)
-      fill!.(dA[iA], 0.0)
-      fill!.(ddA[iA], 0.0)
-      @simd ivdep for j = 1:nX 
-        b = ntuple(Val(NB)) do i 
-           @inbounds BB[i][j, ϕ[i]] 
-        end 
-        a, g = _static_prod_ed(b)
-        A[j, iA] = a
-        for i = 1:NB
-           dA[iA][i][j, ϕ[i]] += g[i]
-        end
-      end 
-   end
-   return A, dA
-end
-
-function _frule_evaluate!(A, dA, basis::SparseProduct{NB}, BB::Tuple{Vararg{AbstractVector}}, ∂BB::Tuple{Vararg{AbstractVector}}) where {NB}
+function pushforward!(A, dA, basis::SparseProduct{NB}, 
+                               BB::Tuple{Vararg{AbstractVector}}, 
+                               ∂BB::Tuple{Vararg{AbstractVector}}) where {NB}
    @assert length(BB) == NB
    @assert length(∂BB) == NB
    spec = basis.spec
@@ -232,7 +245,9 @@ function _frule_evaluate!(A, dA, basis::SparseProduct{NB}, BB::Tuple{Vararg{Abst
    return A, dA 
 end
 
-function _frule_evaluate!(A, dA, basis::SparseProduct{NB}, BB::Tuple{Vararg{AbstractMatrix}}, ∂BB::Tuple{Vararg{AbstractMatrix}}) where {NB}
+function pushforward!(A, dA, basis::SparseProduct{NB}, 
+                               BB::Tuple{Vararg{AbstractMatrix}}, 
+                               ∂BB::Tuple{Vararg{AbstractMatrix}}) where {NB}
    nX = size(BB[1], 1)
    @assert all(B->size(B, 1) == nX, BB)
    @assert all(∂B->size(∂B, 1) == nX, ∂BB)
@@ -255,6 +270,7 @@ function _frule_evaluate!(A, dA, basis::SparseProduct{NB}, BB::Tuple{Vararg{Abst
    return A, dA
 end
 
+#=
 function _frule_frule_evaluate!(A, dA, ddA, basis::SparseProduct{NB}, BB::Tuple{Vararg{AbstractVector}}, ∂BB::Tuple{Vararg{AbstractVector}}, ∂∂BB::Tuple{Vararg{AbstractVector}}) where {NB}
    @assert length(BB) == NB
    @assert length(∂BB) == NB
@@ -317,54 +333,21 @@ function _frule_frule_evaluate!(A, dA, ddA, basis::SparseProduct{NB}, BB::Tuple{
    end
    return A, dA, ddA
 end
-# -------------------- reverse mode gradient
 
-function ChainRulesCore.rrule(::typeof(evaluate), basis::SparseProduct{NB}, BB::Tuple) where {NB}
+=#
+
+# --------------------- connect with ChainRules 
+# can this be generalized again? 
+
+import ChainRulesCore: rrule, NoTangent
+
+function rrule(::typeof(evaluate), basis::SparseProduct{NB}, BB::TupMat) where {NB}
    A = evaluate(basis, BB)
-   function pb(∂A)
-      return NoTangent(), NoTangent(), _pullback_evaluate(∂A, basis, BB)
-   end
-   return A, pb
+
+   function pb(Δ)
+      ∂BB = pullback(Δ, basis, BB)
+      return NoTangent(), NoTangent(), ∂BB
+   end 
+
+   return A, pb 
 end
-
-
-# function _rrule_evaluate(basis::SparseProduct{NB}, BB::Tuple) where {NB}
-#    A = evaluate(basis, BB)
-#    return A, ∂A -> _pullback_evaluate(∂A, basis, BB)
-# end
-
-
-function _pullback_evaluate(∂A, basis::SparseProduct{NB}, BB::Tuple) where {NB}
-   TA = promote_type(eltype.(BB)...)
-   ∂BB = ntuple(i -> zeros(TA, size(BB[i])...), NB)
-   _pullback_evaluate!(∂BB, ∂A, basis, BB)
-   return ∂BB
-end
-
-
-function _pullback_evaluate!(∂BB, ∂A, basis::SparseProduct{NB}, BB::Tuple) where {NB}
-   nX = size(BB[1], 1)
-
-   @assert all(nX <= size(BB[i], 1) for i = 1:NB)
-   @assert all(nX <= size(∂BB[i], 1) for i = 1:NB)
-   @assert all(size(∂BB[i], 2) >= size(BB[i], 2) for i = 1:NB)
-   @assert size(∂A) == (nX, length(basis))
-   @assert length(BB) == NB 
-   @assert length(∂BB) == NB
-   
-   @inbounds for (iA, ϕ) in enumerate(basis.spec) # for each spec
-      # ∂A_iA = ∂A[iA]
-      @simd ivdep for j = 1:nX 
-        b = ntuple(Val(NB)) do i 
-           @inbounds BB[i][j, ϕ[i]] 
-        end 
-        a, g = _static_prod_ed(b)
-        for i = 1:NB 
-           ∂BB[i][j, ϕ[i]] = muladd(∂A[j, iA], g[i], ∂BB[i][j, ϕ[i]])
-        end
-      end 
-   end
-   return nothing 
-end
-
-

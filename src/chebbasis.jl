@@ -9,11 +9,14 @@ Chebyshev polynomials up to degree `N-1` (inclusive). i.e  basis with length `N`
 ```
 where `x` is input variable. 
 
-The differences between `ChebBasis` and `chebyshev_basis` is that `ChebBasis` computes the basis on the go when it is compiled and it does not store the recursion coefficients as in `chebyshev_basis`.
+The differences between `ChebBasis` and `chebyshev_basis` is that `ChebBasis` 
+computes the basis on the fly when it is compiled and it does not store the 
+recursion coefficients as in `chebyshev_basis`. There might be a small 
+performance benefit from this. 
 
 Warning: `ChebBasis` and `chebyshev_basis` have different normalization.
 """
-struct ChebBasis <: ScalarPoly4MLBasis
+struct ChebBasis <: AbstractP4MLBasis
    N::Int
    @reqfields
 end
@@ -25,6 +28,8 @@ Base.length(basis::ChebBasis) = basis.N
 natural_indices(basis::ChebBasis) = 0:length(basis)-1
 
 _valtype(basis::ChebBasis, T::Type{<:Real}) = T
+
+_generate_input(basis::ChebBasis) = 2 * rand() - 1 
 
 
 function evaluate!(P::AbstractVector, basis::ChebBasis, x::Real)
@@ -43,7 +48,7 @@ end
 
 
 function evaluate!(P::AbstractMatrix, basis::ChebBasis,
-   x::AbstractVector{<:Real})
+                   x::AbstractVector{<:Real})
    N = basis.N
    nX = length(x)
    @assert N >= 2
@@ -65,8 +70,9 @@ function evaluate!(P::AbstractMatrix, basis::ChebBasis,
    return P
 end
 
+
 function evaluate_ed!(P::AbstractVector, dP::AbstractVector,
-   basis::ChebBasis, x::Real)
+                      basis::ChebBasis, x::Real)
    N = basis.N
    nX = length(x)
    @assert N >= 2
@@ -88,7 +94,7 @@ end
 
 
 function evaluate_ed!(P::AbstractMatrix, dP::AbstractMatrix, basis::ChebBasis,
-   x::AbstractVector{<:Real})
+                      x::AbstractVector{<:Real})
    N = basis.N
    nX = length(x)
    @assert N >= 2
@@ -117,7 +123,7 @@ end
 
 
 function evaluate_ed2!(P::AbstractVector, dP::AbstractVector, ddP::AbstractVector,
-   basis::ChebBasis, x::Real)
+                       basis::ChebBasis, x::Real)
    N = basis.N
    @assert N >= 2
    @assert length(P) >= length(basis) # N
@@ -142,9 +148,8 @@ function evaluate_ed2!(P::AbstractVector, dP::AbstractVector, ddP::AbstractVecto
 end
 
 
-
-function evaluate_ed2!(P::AbstractMatrix, dP::AbstractMatrix, ddP::AbstractMatrix, basis::ChebBasis,
-   x::AbstractVector{<:Real})
+function evaluate_ed2!(P::AbstractMatrix, dP::AbstractMatrix, ddP::AbstractMatrix, 
+                       basis::ChebBasis, x::AbstractVector{<:Real})
    N = basis.N
    nX = length(x)
    @assert N >= 2

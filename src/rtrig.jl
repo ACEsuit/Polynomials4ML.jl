@@ -1,4 +1,3 @@
-using HyperDualNumbers: Hyper
 
 export RTrigBasis
 
@@ -11,7 +10,7 @@ Real trigonometric polynomials up to degree `N` (inclusive). The basis is ordere
 ```
 where `θ` is input variable. 
 """
-struct RTrigBasis <: ScalarPoly4MLBasis
+struct RTrigBasis <: AbstractP4MLBasis
    N::Int
    @reqfields
 end
@@ -31,7 +30,11 @@ function natural_indices(basis::RTrigBasis)
 end
 
 _valtype(basis::RTrigBasis, T::Type{<: Real}) = T
+
 _valtype(::RTrigBasis, T::Type{<: Hyper{<: Real}}) = T
+
+_generate_input(basis::RTrigBasis) = 2 * π * rand() - π
+
 
 ##
 

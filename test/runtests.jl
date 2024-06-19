@@ -12,25 +12,19 @@ using Test
     @testset "TrigonometricPolynomials" begin include("test_trig.jl"); end
     @testset "Real Trig Polys" begin include("test_rtrig.jl"); end
 
-    # 3D Harmonics 
-    @testset "Complex SphericalHarmonics" begin include("sphericalharmonics/test_cylm.jl"); end
-    @testset "Real Spherical Harmonics" begin include("sphericalharmonics/test_rylm.jl"); end
-    @testset "Complex Solid Harmonics" begin include("sphericalharmonics/test_crlm.jl"); end
-    @testset "Real Solid Harmonics" begin include("sphericalharmonics/test_rrlm.jl"); end
-    @testset "Real Spherical Harmonics via SpheriCart" begin include("sphericalharmonics/test_scylm.jl"); end
+    @testset "SpheriCart Interface" begin include("test_sphericart.jl"); end
 
     # Quantum Chemistry 
     @testset "Atomic Orbitals Radials" begin include("test_atorbrad.jl"); end
 
-    # ACE 
+    # Tensors  
     @testset "SparsePooledProduct" begin include("ace/test_sparseprodpool.jl"); end 
-    @testset "Sparse Symmetric Product - DAG" begin include("ace/test_prodbasis1.jl"); end 
-    @testset "Sparse Symmetric Product" begin include("ace/test_prodbasis2.jl"); end 
-
+    @testset "Sparse Symmetric Product" begin include("ace/test_sparsesymmprod.jl"); end 
+    @testset "Sparse Symmetric Product - DAG" begin include("ace/test_sparsesymmproddag.jl"); end 
+    @testset "Sparse Product" begin include("test_sparseproduct.jl"); end 
+    @testset "Linear layer" begin include("test_linear.jl"); end 
+    
     # Misc
     @testset "Static Prod" begin include("test_staticprod.jl"); end
-    #@testset "Flex Array Interface" begin include("test_flex.jl"); end 
-    @testset "Sparse Product" begin include("test_sparseproduct.jl"); end 
     @testset "Lux" begin include("test_lux.jl"); end 
-    @testset "Linear lux layer" begin include("test_linear.jl"); end 
 end

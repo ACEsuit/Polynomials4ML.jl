@@ -1,4 +1,4 @@
-using Polynomials4ML, Test, ObjectPools, StaticArrays
+using Polynomials4ML, Test, StaticArrays
 using Polynomials4ML.Testing: println_slim, print_tf
 
 @info(" ----- Testing the FlexArray Interface -------")

@@ -10,7 +10,7 @@ constructed in the order
 ```
 where `θ` is input variable. 
 """
-struct CTrigBasis <: AbstractPoly4MLBasis
+struct CTrigBasis <: AbstractP4MLBasis
    N::Int
    @reqfields
 end
@@ -26,8 +26,11 @@ index(basis::CTrigBasis, m::Integer) =
 Base.length(basis::CTrigBasis) = 2 * basis.N + 1 
 
 _valtype(basis::CTrigBasis, T::Type{<: Real}) = complex(T)
+
 _valtype(::CTrigBasis, T::Type{<: Hyper{<: Real}}) = complex(T)
   
+_generate_input(basis::CTrigBasis) = 2 * π * rand() - π
+
 # ----------------- main evaluation code 
 
 function evaluate!(P::AbstractArray, basis::CTrigBasis, x) 

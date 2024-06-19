@@ -27,7 +27,7 @@ However, the field `projection` is used only for information, and not
 to actually reduce the output. One could of course use it to compose 
 the output with a projection matrix.
 """
-struct SparseSymmProdDAG <: AbstractPoly4MLBasis
+struct SparseSymmProdDAG <: AbstractP4MLTensor
    nodes::Vector{BinDagNode}
    has0::Bool
    num1::Int
@@ -41,6 +41,9 @@ end
 # the extended length and not the length of the actual basis. 
 
 length(dag::SparseSymmProdDAG) = length(dag.nodes)
+
+Base.show(io::IO, dag::SparseSymmProdDAG) = 
+         print(io, "SparseSymmProdDAG(len = $(length(dag)))")
 
 # ==(dag1::SparseSymmProdDAG, dag2::SparseSymmProdDAG) = ACE1._allfieldsequal(dag1, dag2)
 

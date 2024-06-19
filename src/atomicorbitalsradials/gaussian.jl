@@ -1,4 +1,4 @@
-mutable struct GaussianBasis{T} <: ScalarPoly4MLBasis
+mutable struct GaussianBasis{T} <: AbstractP4MLBasis
     ζ::Vector{T}
     # ----------------- metadata 
     @reqfields
@@ -8,20 +8,12 @@ GaussianBasis(ζ::Vector{T}) where {T} = GaussianBasis(ζ, _make_reqfields()...)
 
 Base.length(basis::GaussianBasis) = length(basis.ζ)
 
+Base.show(io::IO, basis::GaussianBasis) = 
+    print(io, "GaussianBasis(", length(basis), ")")
+
 _valtype(::GaussianBasis, T::Type{<: Real}) = T
 _valtype(::GaussianBasis, T::Type{<: Hyper{<:Real}}) = T
 
-_alloc_dp(basis::GaussianBasis, X) = 
-      acquire!(basis.pool, _outsym(X), _out_size(basis, X), _gradtype(basis, X) )
-
-_alloc_ed_dp(basis::GaussianBasis, x) = 
-      _alloc(basis, x), _alloc_d(basis, x), _alloc_dp(basis, x)
-
-function evaluate_ed_dp(basis::GaussianBasis, x) 
-   B, dB, dpB = _alloc_ed_dp(basis, x)
-   evaluate_ed_dp!(unwrap(B), unwrap(dB), unwrap(dpB), basis, x)
-   return B, dB, dpB
-end 
 
 function evaluate!(P, basis::GaussianBasis, x::AbstractVector)
     N = size(P, 2)
@@ -89,17 +81,18 @@ function ChainRulesCore.rrule(::typeof(evaluate), basis::GaussianBasis{T}, R::Ab
     A, dR, dζ = evaluate_ed_dp(basis, R)
     #dζ = pb_params(basis.Dn.ζ, basis, R)
 
-    ∂R = similar(R)
-    ∂ζ = similar(basis.Dn.ζ)
     function pb(∂A)
-         @assert size(∂A) == (length(R), length(basis))
-         for i = 1:length(R)
+        ∂R = similar(R)
+        ∂ζ = similar(basis.Dn.ζ)
+        @assert size(∂A) == (length(R), length(basis))
+        for i = 1:length(R)
             ∂R[i] = dot(@view(∂A[i, :]), @view(dR[i, :]))
-         end
-         for i = 1:length(basis.Dn.ζ)
+        end
+        for i = 1:length(basis.Dn.ζ)
             ∂ζ[i] = dot(@view(∂A[:, i]), @view(dζ[:, i]))
-         end
-         return NoTangent(), ∂ζ, ∂R
+        end
+        return NoTangent(), ∂ζ, ∂R
     end
+    
     return A, pb
 end

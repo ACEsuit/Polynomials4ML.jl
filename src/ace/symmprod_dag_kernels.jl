@@ -1,22 +1,13 @@
 
-
-# --------------- interface functions 
-
-(dag::SparseSymmProdDAG)(args...) = evaluate(dag, args...)
-
-function evaluate(dag::SparseSymmProdDAG, A::AbstractVector{T}) where {T}
-   AA = acquire!(dag.pool, :AA, (length(dag),), T)
-   evaluate!(AA, dag, A)
-   return AA
+function whatalloc(::typeof(evaluate!), dag::SparseSymmProdDAG, 
+                   A::AbstractVector{T}) where {T <: Number}
+   return (T, length(dag),)                   
 end
 
-function evaluate(dag::SparseSymmProdDAG, A::AbstractMatrix{T}) where {T}
-   nX = size(A, 1)
-   AA = acquire!(dag.pool, :AAbatch, (nX, length(dag)), T)
-   evaluate!(AA, dag, A)
-   return AA
+function whatalloc(::typeof(evaluate!), dag::SparseSymmProdDAG, 
+                   A::AbstractMatrix{T}) where {T <: Number}
+   return (T, size(A, 1), length(dag),)
 end
-
 
 # --------------- old evaluation 
 
@@ -43,8 +34,9 @@ function evaluate!(AA, dag::SparseSymmProdDAG, A::AbstractVector)
       AA[i] = AA[n1] * AA[n2]
    end
 
-   return nothing
+   return AA
 end
+
 
 
 # this is the simplest case for the pull-back, when the cotangent is just a 
@@ -54,9 +46,9 @@ end
 #
 # Warning (to be documented!!!) : the input must be AA and not A!!!
 #                    A is no longer needed to evaluate the pullback
-#
-function pullback_arg!(∂A, ∂AA::AbstractVector, 
-                       dag::SparseSymmProdDAG, AA::AbstractVector)
+
+function unsafe_pullback!(∂A, ∂AA::AbstractVector, 
+                                   dag::SparseSymmProdDAG, AA::AbstractVector)
    nodes = dag.nodes
    has0 = dag.has0
    num1 = dag.num1 
@@ -86,57 +78,24 @@ function pullback_arg!(∂A, ∂AA::AbstractVector,
       ∂A[i] = Δ̃[i+has0]
    end
 
-   return nothing                                                    
+   return ∂A                                                    
 end
 
-# ------------------------- rrule integration 
 
-import ChainRulesCore: rrule, NoTangent 
-
-function rrule(::typeof(evaluate), dag::SparseSymmProdDAG, A::AbstractVector)
-   AA = evaluate(dag, A)
-   return AA, Δ -> (NoTangent(), NoTangent(), _pb_evaluate(dag, Δ, A, AA))
-end
-
-function _pb_evaluate(dag::SparseSymmProdDAG, ∂AA,
-                        A::AbstractVector, 
-                        AA::AbstractVector)
-   # NB this computes only ∇A. The last input AA is only provided here to 
+function unsafe_pullback(∂AA, dag::SparseSymmProdDAG, AA::AbstractVector)
+   # NB actually computes  ∂A. The input AA is provided instead of A to 
    #    accelerate evaluation of the pullback but we don't need to differentiate 
-   #    wrt to it. Think of AA as just a buffer. same in the _pb_pb below!!!
+   #    wrt to it. Think of AA as just a buffer. same elsewhere...
 
    T∂A = promote_type(eltype(∂AA), eltype(AA))
    ∂A = zeros(T∂A, length(A))
-   pullback_arg!(∂A, ∂AA, dag, AA)
+   unsafe_pullback!(∂A, ∂AA, dag, AA)
    return ∂A
 end
 
-function rrule(::typeof(_pb_evaluate), dag::SparseSymmProdDAG, 
-               ∂AA, A::AbstractVector, 
-               AA::AbstractVector)
-   # we need to differentiate w.r.t. ∂AA and A. AA is just a buffer.
-   ∂A = _pb_evaluate(dag, ∂AA, A, AA)
-
-   # _pb_pb_evaluate will return ∂2_∂AA and ∂2_A
-   # the buffer has no tangent
-   return ∂A, ∂2 -> (NoTangent(), NoTangent(), _pb_pb_evaluate(dag, ∂2, ∂AA, A, AA, ∂A)..., NoTangent())
-end
-
-function _pb_pb_evaluate(dag::SparseSymmProdDAG, 
-                         ∂2,                       # differential to be pbed 
-                         ∂AA, A::AbstractVector,   # input arguments
-                         AA::AbstractVector, ∂A)   # buffers / temps 
-   T∂2_∂AA = Float64 
-   T∂2_A = Float64
-   ∂2_∂AA = zeros(T∂2_∂AA, length(∂AA))
-   ∂2_A = zeros(T∂2_A, length(A))
-
-   
-end
 
 # ------------------------- batched kernels 
 
-using LoopVectorization
 
 function evaluate!(AA, dag::SparseSymmProdDAG, A::AbstractMatrix{T}) where {T} 
    nX = size(A, 1)
@@ -171,11 +130,91 @@ function evaluate!(AA, dag::SparseSymmProdDAG, A::AbstractMatrix{T}) where {T}
       end
    end # inbounds 
 
-   return nothing 
+   return AA 
 end
 
 
 
+function unsafe_pullback!(∂A::AbstractMatrix, 
+                                   ∂AA::AbstractMatrix, 
+                                   dag::SparseSymmProdDAG,
+                                   AA::AbstractMatrix)
+   nX = size(AA, 1)                            
+   nodes = dag.nodes
+   num1 = dag.num1 
+   @assert size(AA, 2) >= length(dag)
+   @assert size(∂AA, 2) >= length(dag)
+   @assert size(∂A, 2) >= num1
+   @assert size(∂A, 1) >= nX 
+   @assert size(∂AA, 1) >= nX 
+   @assert size(AA, 1) >= nX 
+   @assert length(nodes) >= length(dag)
+
+   @inbounds begin 
+
+      for i = length(dag):-1:num1+1
+         n1, n2 = nodes[i]
+         @simd ivdep for j = 1:nX 
+            wi = ∂AA[j, i]
+            ∂AA[j, n1] = muladd(wi, AA[j, n2], ∂AA[j, n1])
+            ∂AA[j, n2] = muladd(wi, AA[j, n1], ∂AA[j, n2])
+         end
+      end
+
+      # at this point the Δ̃[i] for i = 1:num1 will contain the 
+      # gradients w.r.t. A 
+      for i = 1:num1 
+         @simd ivdep for j = 1:nX 
+            ∂A[j, i] = ∂AA[j, i]
+         end
+      end
+
+   end # inbounds 
+
+   return ∂A 
+end
+
+
+# -------------------------------------------- 
+# ChainRules integration 
+
+function rrule(::typeof(evaluate), dag::SparseSymmProdDAG, A::AbstractArray)
+   AA = evaluate(dag, A)
+
+   function pb(∂AA)
+      ∂A = zeros(eltype(A), size(A))
+      unsafe_pullback!(∂A, ∂AA, dag, AA)
+      return ∂A
+   end
+
+   return AA, ∂AA -> (NoTangent(), NoTangent(), pb(∂AA))
+end
+
+
+# -------------------------------------------- 
+# Lux integration 
+
+
+# # it needs an extra lux interface reason as in the case of the `basis` 
+# function evaluate(l::PolyLuxLayer{<: SparseSymmProdDAG}, A::AbstractVector{T}, ps, st) where {T}
+#    AA = acquire!(st.pool, :AA, (length(l),), T)
+#    evaluate!(AA, l.basis, A)
+#    return AA, st
+# end
+
+# function evaluate(l::PolyLuxLayer{<: SparseSymmProdDAG}, A::AbstractMatrix{T}, ps, st) where {T}
+#    nX = size(A, 1)
+#    AA = acquire!(st.pool, :AAbatch, (nX, length(l)), T)
+#    evaluate!(AA, l.basis, A)
+#    return AA, st
+# end
+
+
+
+# -------------------------------------------------------- 
+#   Fused evaluate and dot operations (Experimental!!)
+#   TODO: test and revive this
+#= 
 function evaluate_dot(dag::SparseSymmProdDAG, A::AbstractMatrix{T}, c, freal
                        ) where {T}
    nX = size(A, 1)
@@ -221,79 +260,4 @@ function evaluate_dot!(vals, AA, dag::SparseSymmProdDAG, A::AbstractMatrix{T},
 
    return nothing 
 end
-
-
-
-function pullback_arg!(∂A::AbstractMatrix, 
-                       ∂AA::AbstractMatrix, 
-                       dag::SparseSymmProdDAG,
-                       AA::AbstractMatrix, 
-                       nX = size(AA, 1))
-   nodes = dag.nodes
-   num1 = dag.num1 
-   @assert size(AA, 2) >= length(dag)
-   @assert size(∂AA, 2) >= length(dag)
-   @assert size(∂A, 2) >= num1
-   @assert size(∂A, 1) >= nX 
-   @assert size(∂AA, 1) >= nX 
-   @assert size(AA, 1) >= nX 
-   @assert length(nodes) >= length(dag)
-
-   @inbounds begin 
-
-      for i = length(dag):-1:num1+1
-         n1, n2 = nodes[i]
-         @simd ivdep for j = 1:nX 
-            wi = ∂AA[j, i]
-            ∂AA[j, n1] = muladd(wi, AA[j, n2], ∂AA[j, n1])
-            ∂AA[j, n2] = muladd(wi, AA[j, n1], ∂AA[j, n2])
-         end
-      end
-
-      # at this point the Δ̃[i] for i = 1:num1 will contain the 
-      # gradients w.r.t. A 
-      for i = 1:num1 
-         @simd ivdep for j = 1:nX 
-            ∂A[j, i] = ∂AA[j, i]
-         end
-      end
-
-   end # inbounds 
-
-   return nothing 
-end
-
-
-# -------------------------------------------- 
-# ChainRules integration 
-
-function rrule(::typeof(evaluate), dag::SparseSymmProdDAG, A::AbstractArray)
-   AA = evaluate(dag, A)
-
-   function pb(Δ)
-      ∇_A = zeros(eltype(A), size(A))
-      pullback_arg!(∇_A, Δ, dag, AA)
-      return ∇_A
-   end
-
-   return AA, Δ -> (NoTangent(), NoTangent(), pb(Δ))
-end
-
-
-# -------------------------------------------- 
-# Lux integration 
-
-
-# it needs an extra lux interface reason as in the case of the `basis` 
-function evaluate(l::PolyLuxLayer{<: SparseSymmProdDAG}, A::AbstractVector{T}, ps, st) where {T}
-   AA = acquire!(st.pool, :AA, (length(l),), T)
-   evaluate!(AA, l.basis, A)
-   return AA, st
-end
-
-function evaluate(l::PolyLuxLayer{<: SparseSymmProdDAG}, A::AbstractMatrix{T}, ps, st) where {T}
-   nX = size(A, 1)
-   AA = acquire!(st.pool, :AAbatch, (nX, length(l)), T)
-   evaluate!(AA, l.basis, A)
-   return AA, st
-end
+=#

@@ -1,16 +1,11 @@
+using LinearAlgebra: dot 
+
 export AtomicOrbitalsRadials, GaussianBasis, SlaterBasis, STO_NG
-using ChainRulesCore
-using ChainRulesCore: NoTangent
-
-import LuxCore 
-import LuxCore: initialparameters, initialstates, AbstractExplicitLayer
-using Random: AbstractRNG
-
 
 const NLM{T} = NamedTuple{(:n1, :n2, :l, :m), Tuple{T, T, T, T}}
 const NL{T} = NamedTuple{(:n1, :n2, :l), Tuple{T, T, T}}
 
-mutable struct AtomicOrbitalsRadials{TP, TD, TI}  <: ScalarPoly4MLBasis
+mutable struct AtomicOrbitalsRadials{TP, TD, TI}  <: AbstractP4MLBasis
    Pn::TP
    Dn::TD
    spec::Vector{NL{TI}}
@@ -23,140 +18,156 @@ AtomicOrbitalsRadials(Pn, Dn, spec) =
 
 Base.length(basis::AtomicOrbitalsRadials) = length(basis.spec)
 
+natural_indices(basis::AtomicOrbitalsRadials) = copy(basis.spec)
+degree(basis::AtomicOrbitalsRadials, b::NamedTuple) = b.n1
+
 _valtype(basis::AtomicOrbitalsRadials, T::Type{<: Real}) = T
 _valtype(basis::AtomicOrbitalsRadials, T::Type{<: Hyper{<:Real}}) = T
+
+_generate_input(basis::AtomicOrbitalsRadials) = rand()
+
+Base.show(io::IO, basis::AtomicOrbitalsRadials) = 
+        print(io, "AtomicOrbitalsRadials($(basis.Pn), $(basis.Dn))")
+
 # -------- Evaluation Code 
 
-# TODO: (Jerry?) this kind of construction could be used for all bases? 
-#       file an issue on this.
-
-
-_alloc_dp(basis::AtomicOrbitalsRadials, X) = 
-      acquire!(basis.pool, _outsym(X), _out_size(basis, X), _gradtype(basis, X) )
-
-_alloc_ed_dp(basis::AtomicOrbitalsRadials, x) = 
-      _alloc(basis, x), _alloc_d(basis, x), _alloc_dp(basis, x)
-
-function evaluate_ed_dp(basis::AtomicOrbitalsRadials, x) 
-   B, dB, dpB = _alloc_ed_dp(basis, x)
-   evaluate_ed_dp!(unwrap(B), unwrap(dB), unwrap(dpB), basis, x)
-   return B, dB, dpB
-end 
 
 function evaluate!(Rnl, basis::AtomicOrbitalsRadials, R::AbstractVector)
     nR = length(R)
-    Pn = evaluate(basis.Pn, R)           # Pn(r)
-    Dn = evaluate(basis.Dn, R)           # Dn(r)  (ζ are the parameters -> reorganize the Lux way)
-
     fill!(Rnl, zero(eltype(Rnl)))
-    
-    for (i, b) in enumerate(basis.spec)
-        for j = 1:nR
-            Rnl[j, i] = Pn[j, b.n1] * Dn[j, i]
+
+    @no_escape begin 
+        Pn = @withalloc evaluate!(basis.Pn, R)     # Pn(r)
+        Dn = @withalloc evaluate!(basis.Dn, R)      # Dn(r)  (ζ are the parameters -> reorganize the Lux way)
+        for (i, b) in enumerate(basis.spec)
+            for j = 1:nR
+                Rnl[j, i] = Pn[j, b.n1] * Dn[j, i]
+            end
         end
     end
-
-    release!(Pn); release!(Dn)
 
     return Rnl 
 end
 
 function evaluate_ed!(Rnl, dRnl, basis::AtomicOrbitalsRadials{TP, TD, TI}, R::AbstractVector) where {TP, TD, TI}
     nR = length(R)
-    Pn, dPn = evaluate_ed(basis.Pn, R)
-    Dn, dDn = evaluate_ed(basis.Dn, R)
+    fill!(Rnl, zero(eltype(Rnl)))
+    fill!(dRnl, zero(eltype(Rnl))); 
 
-    fill!(Rnl, zero(eltype(Rnl))); fill!(dRnl, zero(eltype(Rnl))); 
-
-    for (i, b) in enumerate(basis.spec)
-        for j = 1:nR
-            Rnl[j, i] += Pn[j, b.n1] * Dn[j, i]
-            dRnl[j, i] += dPn[j, b.n1] * Dn[j, i]
-            dRnl[j, i] += Pn[j, b.n1] * dDn[j, i]
+    @no_escape begin 
+        Pn, dPn = @withalloc evaluate_ed!(basis.Pn, R)
+        Dn, dDn = @withalloc evaluate_ed!(basis.Dn, R)
+        for (i, b) in enumerate(basis.spec)
+            for j = 1:nR
+                Rnl[j, i] += Pn[j, b.n1] * Dn[j, i]
+                dRnl[j, i] += dPn[j, b.n1] * Dn[j, i]
+                dRnl[j, i] += Pn[j, b.n1] * dDn[j, i]
+            end
         end
-    end
-
-    release!(Pn); release!(dPn); release!(Dn); release!(dDn)
-
+    end 
     return Rnl, dRnl 
-end
-
-function evaluate_ed_dp!(Rnl, dRnl, dpRnl, basis::AtomicOrbitalsRadials, R::AbstractVector)
-    nR = length(R)
-    Pn, dPn = evaluate_ed(basis.Pn, R)
-    Dn, dDn, dpDn = evaluate_ed_dp(basis.Dn, R)
-
-    fill!(Rnl, zero(eltype(Rnl))); fill!(dRnl, zero(eltype(Rnl))); fill!(dpRnl, zero(eltype(Rnl))); 
-
-    for (i, b) in enumerate(basis.spec)
-        for j = 1:nR
-            Rnl[j, i] += Pn[j, b.n1] * Dn[j, i]
-            dRnl[j, i] += dPn[j, b.n1] * Dn[j, i]
-            dRnl[j, i] += Pn[j, b.n1] * dDn[j, i]
-            dpRnl[j, i] += Pn[j, b.n1] * dpDn[j, i]
-        end
-    end
-
-    release!(Pn); release!(dPn); release!(Dn); release!(dDn); release!(dpDn)
-
-    return Rnl, dRnl, dpRnl
 end
 
 function evaluate_ed2!(Rnl, dRnl, ddRnl, basis::AtomicOrbitalsRadials, R::AbstractVector)
     nR = length(R)
-    Pn, dPn, ddPn = evaluate_ed2(basis.Pn, R)
-    Dn, dDn, ddDn = evaluate_ed2(basis.Dn, R)
+    fill!(Rnl, zero(eltype(Rnl)))
+    fill!(dRnl, zero(eltype(dRnl)))
+    fill!(ddRnl, zero(eltype(ddRnl)))
 
-    fill!(Rnl, zero(eltype(Rnl))); fill!(dRnl, zero(eltype(dRnl))); fill!(ddRnl, zero(eltype(ddRnl)))
-
-    for (i, b) in enumerate(basis.spec)
-        for j = 1:nR
-            Rnl[j, i] += Pn[j, b.n1] * Dn[j, i]
-            dRnl[j, i] += dPn[j, b.n1] * Dn[j, i] + Pn[j, b.n1] * dDn[j, i]
-            ddRnl[j, i] += ddPn[j, b.n1] * Dn[j, i] + 2 * dPn[j, b.n1] * dDn[j, i] + Pn[j, b.n1] * ddDn[j, i]
+    @no_escape begin
+        Pn, dPn, ddPn = @withalloc evaluate_ed2!(basis.Pn, R)
+        Dn, dDn, ddDn = @withalloc evaluate_ed2!(basis.Dn, R)
+        for (i, b) in enumerate(basis.spec)
+            for j = 1:nR
+                Rnl[j, i] += Pn[j, b.n1] * Dn[j, i]
+                dRnl[j, i] += dPn[j, b.n1] * Dn[j, i] + Pn[j, b.n1] * dDn[j, i]
+                ddRnl[j, i] += ddPn[j, b.n1] * Dn[j, i] + 2 * dPn[j, b.n1] * dDn[j, i] + Pn[j, b.n1] * ddDn[j, i]
+            end
         end
-    end
-
-    release!(Pn); release!(dPn); release!(ddPn); 
-    release!(Dn); release!(dDn); release!(ddDn)
-
+    end 
     return Rnl, dRnl, ddRnl
 end
 
-natural_indices(basis::AtomicOrbitalsRadials) = copy(basis.spec)
-degree(basis::AtomicOrbitalsRadials, b::NamedTuple) = b.n1
 
+# ---------------------------------------- 
+#  gradient w.r.t. parameters 
+
+function evaluate_ed_dp! end 
+
+evaluate_ed_dp(basis, x) = _with_safe_alloc(evaluate_ed_dp!, basis, x) 
+
+
+function evaluate_ed_dp!(Rnl, dRnl, dpRnl, basis::AtomicOrbitalsRadials, R::AbstractVector)
+    nR = length(R)
+    fill!(Rnl, zero(eltype(Rnl)))
+    fill!(dRnl, zero(eltype(Rnl)))
+    fill!(dpRnl, zero(eltype(Rnl))) 
+
+    @no_escape begin 
+        Pn, dPn = @withalloc evaluate_ed!(basis.Pn, R)
+        Dn, dDn, dpDn = @withalloc evaluate_ed_dp!(basis.Dn, R)
+        for (i, b) in enumerate(basis.spec)
+            for j = 1:nR
+                Rnl[j, i] += Pn[j, b.n1] * Dn[j, i]
+                dRnl[j, i] += dPn[j, b.n1] * Dn[j, i]
+                dRnl[j, i] += Pn[j, b.n1] * dDn[j, i]
+                dpRnl[j, i] += Pn[j, b.n1] * dpDn[j, i]
+            end
+        end
+    end 
+    return Rnl, dRnl, dpRnl
+end
+
+
+# ------------------------------------------------------- 
 include("gaussian.jl")
 include("slater.jl")
 include("sto_ng.jl")
 
-function evaluate!(Rnl, basis::Union{AtomicOrbitalsRadials, GaussianBasis, SlaterBasis, STO_NG}, r::Number)
+AORBAS = Union{AtomicOrbitalsRadials, GaussianBasis, SlaterBasis, STO_NG}
+
+function whatalloc(::typeof(evaluate_ed_dp!), basis::AORBAS, r::Number)
+    Nb = length(basis)
+    TV = _valtype(basis, r)
+    TG = _gradtype(basis, r)
+    return (TV, Nb), (TG, Nb), (TG, Nb)
+end
+
+function whatalloc(::typeof(evaluate_ed_dp!), basis::AORBAS, R::AbstractVector)
+    Nb = length(basis); Nr = length(R)
+    TV = _valtype(basis, R)
+    TG = _gradtype(basis, R)
+    return (TV, Nr, Nb), (TG, Nr, Nb), (TG, Nr, Nb)
+end
+
+
+function evaluate!(Rnl, basis::AORBAS, r::Number)
     Rnl_ = reshape(Rnl, (1, length(basis)))
     evaluate!(Rnl_, basis, [r,])
     return Rnl 
 end
 
-function evaluate_ed!(Rnl, dRnl, basis::Union{AtomicOrbitalsRadials, GaussianBasis, SlaterBasis, STO_NG}, r::Number)
+function evaluate_ed!(Rnl, dRnl, basis::AORBAS, r::Number)
     Rnl_ = reshape(Rnl, (1, length(basis)))
     dRnl_ = reshape(dRnl, (1, length(basis)))
     evaluate_ed!(Rnl_, dRnl_, basis, [r,])
-    return Rnl 
+    return Rnl, dRnl 
 end
 
-function evaluate_ed_dp!(Rnl, dRnl, dpRnl, basis::Union{AtomicOrbitalsRadials, GaussianBasis, SlaterBasis}, r::Number)
+function evaluate_ed_dp!(Rnl, dRnl, dpRnl, basis::AORBAS, r::Number)
     Rnl_ = reshape(Rnl, (1, length(basis)))
     dpRnl_ = reshape(dpRnl, (1, length(basis)))
     dRnl_ = reshape(dRnl, (1, length(basis)))
     evaluate_ed_dp!(Rnl_, dRnl_, dpRnl_, basis, [r,])
-    return Rnl 
+    return Rnl, dRnl, dpRnl 
 end
 
-function evaluate_ed2!(Rnl, dRnl, ddRnl, basis::Union{AtomicOrbitalsRadials, GaussianBasis, SlaterBasis, STO_NG}, r::Number)
+function evaluate_ed2!(Rnl, dRnl, ddRnl, basis::AORBAS, r::Number)
     Rnl_ = reshape(Rnl, (1, length(basis)))
     dRnl_ = reshape(dRnl, (1, length(basis)))
     ddRnl_ = reshape(ddRnl, (1, length(basis)))
     evaluate_ed2!(Rnl_, dRnl_, ddRnl_, basis, [r,])
-    return Rnl 
+    return Rnl, dRnl, ddRnl 
 end
 
 

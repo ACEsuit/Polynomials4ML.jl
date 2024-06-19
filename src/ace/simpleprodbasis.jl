@@ -3,7 +3,7 @@
 """
 Naive implementation of the product basis, intended only for testing
 """
-struct SimpleProdBasis 
+struct SimpleProdBasis  <: AbstractP4MLTensor
    orders::Vector{Int}
    spec::Matrix{Int} 
 end 
@@ -28,13 +28,16 @@ end
 #   we only provide the evaluate functionality itself to test the DAG 
 #   gradients can just be checked by finite differences
 
-(basis::SimpleProdBasis)(A::AbstractVector) = evaluate(basis, A)
+_valtype(basis::SimpleProdBasis, ::Type{T}) where {T} = T
 
-function evaluate(basis::SimpleProdBasis, A::AbstractVector) 
-   AA = zeros(eltype(A), length(basis))
-   evaluate!(AA, basis, A)
-   return AA 
+function whatalloc(::typeof(evaluate!), 
+                   basis::SimpleProdBasis, A::AbstractVector{T}) where {T}
+   VT = _valtype(basis, T)
+   return (VT, length(basis))
 end
+
+
+
 
 function evaluate!(AA, basis::SimpleProdBasis, A::AbstractVector)
    for i = 1:length(basis) 

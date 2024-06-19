@@ -23,6 +23,7 @@ makedocs(;
     authors="Christoph Ortner <christophortner0@gmail.com> and contributors",
     # repo="https://github.com/ACEsuit/Polynomials4ML.jl/blob/{commit}{path}#{line}",    
     sitename="Polynomials4ML.jl",
+    checkdocs = :none, 
     format=Documenter.HTML(;
         prettyurls=get(ENV, "CI", "false") == "true",
         canonical="https://ACEsuit.github.io/Polynomials4ML.jl",
@@ -32,17 +33,22 @@ makedocs(;
     ),
     pages=[
         "Home" => "index.md",
-        "API" => "api.md", 
+        "Public API" => Any[ 
+            "API Index" => "api.md",
+            "Bases / Embeddings" => "polynomials.md", 
+            "Tensors" => "tensors.md", 
+            "Integration" => "integration.md", 
+        ],
         "Tutorials" => Any[
             "Tutorial Index" => "tutorials.md",
             "Linear Regression" => "literate_tutorials/polyregression.md",
         ],
         "Background" => [ 
-                "SH.md",
-                "ace.md", ], 
+                "Background Index" => "background.md",
+                "Spherical and Solid Harmonics" => "SH.md",
+                "Cluster Expansion" => "ace.md", ], 
         "Docstrings" => "docstrings.md",
-        "Experimental" => "experimental.md",
-        "Developter Documentation" => [
+        "Developer Documentation" => [
             "benchmarking.md",
         ],
     ],

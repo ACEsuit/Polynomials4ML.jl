@@ -1,8 +1,10 @@
 
 
 using Polynomials4ML, Test
-using Polynomials4ML: evaluate, evaluate_d, evaluate_dd
-using Polynomials4ML.Testing: println_slim, print_tf, test_derivatives
+using Polynomials4ML: evaluate, evaluate_d, evaluate_dd, 
+                      natural_indices, index
+using Polynomials4ML.Testing: println_slim, print_tf, 
+            test_evaluate_xx, test_withalloc, test_chainrules
 
 
 ##
@@ -25,6 +27,11 @@ println()
 
 ##
 
-@info("      test derivatives")
-generate_x = () -> rand()*2*π - π
-test_derivatives(basis, generate_x)
+test_evaluate_xx(basis)
+test_chainrules(basis)
+
+##
+
+# very strange that this fails with the weirdest error 
+@error("       test withalloc => CTrigBasis fails the allocation test!")
+# test_withalloc(basis; allowed_allocs = 0)  
