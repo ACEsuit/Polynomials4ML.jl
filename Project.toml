@@ -1,7 +1,7 @@
 name = "Polynomials4ML"
 uuid = "03c4bcba-a943-47e9-bfa1-b1661fc2974f"
 authors = ["Christoph Ortner <christophortner@gmail.com> and contributors"]
-version = "0.3.0-dev"
+version = "0.3.0"
 
 [deps]
 ACEbase = "14bae519-eb20-449c-a949-9c58ed33163e"
@@ -42,9 +42,9 @@ SpecialFunctions = "2.2"
 SpheriCart = "0.1.1"
 StaticArrays = "1.5"
 StrideArrays = "0.1.25"
-Test = "1.9"
+Test = "1.9, 1.10"
 WithAlloc = "0.0.4"
-julia = "1.9.0, 1.10.0"
+julia = "1.9, 1.10"
 
 [extras]
 Lux = "b2108857-7c20-44ae-9111-449ecde12c47"
