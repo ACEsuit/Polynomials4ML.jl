@@ -13,7 +13,7 @@ test_evaluate(basis::SparseProduct, BB::Tuple{Vararg{AbstractMatrix}}) =
       [ prod(BB[j][k, basis.spec[i][j]] for j = 1:length(BB)) 
       for k = 1:size(BB[1], 1), i = 1:length(basis)]
 
-function _generate_basis(; order=3, len = 50)
+function _generate_basis_2(; order=3, len = 50)
    NN = [ rand(10:30) for _ = 1:order ]
    spec = sort([ ntuple(t -> rand(1:NN[t]), order) for _ = 1:len])
    return SparseProduct(spec)
@@ -26,7 +26,7 @@ end
 for ntest = 1:30
    local BB, A1, A2, basis
    order = mod1(ntest, 4)
-   basis = _generate_basis(; order=order)
+   basis = _generate_basis_2(; order=order)
    BB = _generate_input_1(basis)
    A1 = test_evaluate(basis, BB)
    A2 = evaluate(basis, BB)
@@ -52,7 +52,7 @@ for ntest = 1:30
    local bBB, bA1, bA2, bA3, basis 
 
    order = mod1(ntest, 4)
-   basis = _generate_basis(; order=order)
+   basis = _generate_basis_2(; order=order)
    bBB = _generate_input(basis)
    bA1 = test_evaluate(basis, bBB)
    bA2 = evaluate(basis, bBB)
@@ -66,7 +66,7 @@ println()
 ##
 
 @info("    testing withalloc")
-basis = _generate_basis(; order=2)
+basis = _generate_basis_2(; order=2)
 BB = _generate_input_1(basis)
 bBB = _generate_input(basis)
 test_withalloc(basis; batch=false)
@@ -78,11 +78,9 @@ test_withalloc(basis; batch=false)
 using LinearAlgebra: dot 
 
 for ntest = 1:30
-   local bBB, bUU, bA2, nX, basis
-   local bA2
-   local u
+   local bBB, bA2, u, basis, nX 
    order = mod1(ntest, 4)
-   basis = _generate_basis(; order=order)
+   basis = _generate_basis_2(; order=order)
    bBB = _generate_input(basis)
    bUU = _generate_input(basis, nX = size(bBB[1], 1))
    _BB(t) = ntuple(i -> bBB[i] + t * bUU[i], order)

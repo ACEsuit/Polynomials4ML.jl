@@ -51,13 +51,13 @@ _out_size(basis::SparseProduct, BB::Tuple{AbstractMatrix, AbstractMatrix}) = (si
 
 # ----------------------- evaluation kernels 
 
-function whatalloc(::typeof(evaluate!), basis::SparseProduct, BB)
+function whatalloc(::typeof(evaluate!), basis::SparseProduct{NB}, BB::TupVecMat) where {NB}
    VT = _valtype(basis, BB)
    return (VT, _out_size(basis, BB)...)
 end
 
 function evaluate!(A, basis::SparseProduct{NB}, 
-                   BB::Tuple{Vararg{AbstractVector}}) where {NB}
+                   BB::TupVec) where {NB}
    @assert length(BB) == NB
    spec = basis.spec
    for (iA, ϕ) in enumerate(spec)
@@ -68,7 +68,7 @@ function evaluate!(A, basis::SparseProduct{NB},
 end
 
 function evaluate!(A, basis::SparseProduct{NB}, 
-                   BB::Tuple{Vararg{AbstractMatrix}}) where {NB}
+                   BB::TupMat) where {NB}
    nX = size(BB[1], 1)
    @assert all(B->size(B, 1) == nX, BB)
    spec = basis.spec
@@ -82,6 +82,22 @@ function evaluate!(A, basis::SparseProduct{NB},
    return A
 end
 
+# special-casing NB = 1 for correctness 
+function evaluate!(A, basis::SparseProduct{1}, 
+                   BB::Tuple{<: AbstractMatrix},
+                   nX = size(BB[1], 1))
+   @assert size(BB[1], 1) >= nX
+   BB1 = BB[1] 
+   spec = basis.spec
+   fill!(A, zero(eltype(A)))
+   @inbounds for (iA, ϕ) in enumerate(spec)
+      ϕ1 = ϕ[1]
+      @simd ivdep for j = 1:nX
+         A[j, iA] = BB1[j, ϕ1]
+      end
+   end
+   return A
+end
 
 # -------------------- reverse mode gradient
 
@@ -93,7 +109,7 @@ end
 
 # adapt to WithAlloc, should be sufficiently for now up to NB = 4
 # but should be later replaced by generated code
-pullback!(∂B1, ∂A, basis::SparseProduct{1}, BB::TupMat) = 
+pullback!(∂B1::AbstractMatrix, ∂A, basis::SparseProduct{1}, BB::TupMat) = 
          pullback!((∂B1,), ∂A, basis, BB)
 
 pullback!(∂B1, ∂B2, ∂A, basis::SparseProduct{2}, BB::TupMat) = 
@@ -105,11 +121,33 @@ pullback!(∂B1, ∂B2, ∂B3, ∂A, basis::SparseProduct{3}, BB::TupMat) =
 pullback!(∂B1, ∂B2, ∂B3, ∂B4, ∂A, basis::SparseProduct{4}, BB::TupMat) = 
          pullback!((∂B1, ∂B2, ∂B3, ∂B4,), ∂A, basis, BB)
 
+# NB = 1 for correctness 
+function pullback!(∂BB::Tuple, ∂A, basis::SparseProduct{1}, BB::TupMat)
+   nX = size(BB[1], 1)
+   NB = 1
+   @assert size(∂A) == (nX, length(basis))
+   @assert length(BB) == length(∂BB) == NB 
+   @assert all(nX <= size(BB[i], 1) for i = 1:NB)
+   @assert all(nX <= size(∂BB[i], 1) for i = 1:NB)
+   @assert all(size(∂BB[i], 2) >= size(BB[i], 2) for i = 1:NB)
+   BB1 = BB[1]
+   ∂BB1 = ∂BB[1]
+
+   fill!(∂BB1, zero(eltype(∂BB1)))
+   
+   @inbounds for (iA, ϕ) in enumerate(basis.spec)
+      ϕ1 = ϕ[1]
+      @simd ivdep for j = 1:nX 
+         ∂BB1[j, ϕ1] += ∂A[j, iA]
+      end 
+   end
+   return ∂BB 
+end
 
 function pullback!(∂BB, ∂A, basis::SparseProduct{NB}, BB::Tuple) where {NB}
    nX = size(BB[1], 1)
-   #@assert all(nX <= size(BB[i], 1) for i = 1:NB)
-   #@assert all(nX <= size(∂BB[i], 1) for i = 1:NB)
+   @assert all(nX <= size(BB[i], 1) for i = 1:NB)
+   @assert all(nX <= size(∂BB[i], 1) for i = 1:NB)
    @assert all(size(∂BB[i], 2) >= size(BB[i], 2) for i = 1:NB)
    @assert size(∂A) == (nX, length(basis))
    @assert length(BB) == NB 
