@@ -56,7 +56,7 @@ Y = f2.(X);
 # both real and complex spherical harmonics. Since the target function is 
 # real, we choose the real basis. 
 
-basis = RYlmBasis(9) 
+basis = real_sphericalharmonics(9)
 @show length(basis);
 
 # We see that we now have far more basis functions per degree and therefore 
