@@ -33,17 +33,22 @@ makedocs(;
     ),
     pages=[
         "Home" => "index.md",
-        "API" => "api.md", 
+        "Public API" => Any[ 
+            "API Index" => "api.md",
+            "Bases / Embeddings" => "polynomials.md", 
+            "Tensors" => "tensors.md", 
+            "Integration" => "integration.md", 
+        ],
         "Tutorials" => Any[
             "Tutorial Index" => "tutorials.md",
             "Linear Regression" => "literate_tutorials/polyregression.md",
         ],
         "Background" => [ 
-                "SH.md",
-                "ace.md", ], 
+                "Background Index" => "background.md",
+                "Spherical and Solid Harmonics" => "SH.md",
+                "Cluster Expansion" => "ace.md", ], 
         "Docstrings" => "docstrings.md",
-        "Experimental" => "experimental.md",
-        "Developter Documentation" => [
+        "Developer Documentation" => [
             "benchmarking.md",
         ],
     ],
