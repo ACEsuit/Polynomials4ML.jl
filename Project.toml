@@ -43,7 +43,7 @@ SpheriCart = "0.1.1"
 StaticArrays = "1.5"
 StrideArrays = "0.1.25"
 Test = "1.9, 1.10"
-WithAlloc = "0.0.4"
+WithAlloc = "0.1.0"
 julia = "1.9, 1.10"
 
 [extras]
