@@ -514,15 +514,13 @@ import LuxCore: AbstractExplicitLayer, initialparameters, initialstates
 struct PooledSparseProductLayer{NB} <: AbstractExplicitLayer 
    basis::PooledSparseProduct{NB}
    meta::Dict{String, Any}
-   release_input::Bool
 end
 
 function lux(basis::PooledSparseProduct; 
                name = String(nameof(typeof(basis))), 
-               meta = Dict{String, Any}("name" => name),
-               release_input = true)
+               meta = Dict{String, Any}("name" => name))
    @assert haskey(meta, "name")
-   return PooledSparseProductLayer(basis, meta, release_input)
+   return PooledSparseProductLayer(basis, meta)
 end
 
 initialparameters(rng::AbstractRNG, layer::PooledSparseProductLayer) = 
@@ -533,8 +531,5 @@ initialstates(rng::AbstractRNG, layer::PooledSparseProductLayer) =
 
 (l::PooledSparseProductLayer)(BB, ps, st) = begin
    out = evaluate(l.basis, BB)
-   if l.release_input
-      release!.(BB)
-   end
    return out, st
 end
