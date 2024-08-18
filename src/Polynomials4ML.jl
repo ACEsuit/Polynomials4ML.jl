@@ -56,6 +56,10 @@ include("jacobiweights.jl")
 include("monomials.jl")
 include("chebbasis.jl")
 
+# less standard polynomial basis such as Sobolev-space orthogonal bases 
+# laplacian eigenbases etc; experimental, currently not documented or exported 
+include("sobolev.jl")
+
 # 2d harmonics / trigonometric polynomials 
 include("trig.jl")
 include("rtrig.jl")
