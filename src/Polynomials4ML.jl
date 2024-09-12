@@ -84,6 +84,9 @@ include("ace/symmprod_dag_kernels.jl")
 include("ace/simpleprodbasis.jl")
 include("ace/sparsesymmprod.jl")
 
+# experimental 
+include("ace/pure2b.jl")
+
 # some nice utility functions to generate basis sets and other things  
 include("utils/utils.jl")
 
