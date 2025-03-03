@@ -26,9 +26,11 @@ function pullback!(∂X,
    #                 = ∑_ij ∂P_ij * dP_ij δ_ia
    for n = 1:size(dP, 2)
       @simd ivdep for a = 1:length(X)
-            ∂X[a] += dP[a, n] * ∂P[a, n]
+            # ∂X[a] += dP[a, n] * ∂P[a, n]
+            ∂X[a] += Utils._cdot(dP[a, n], ∂P[a, n])
       end
    end
+   @show ∂X
    return ∂X
 end
 

@@ -287,10 +287,15 @@ function pullback!(∂BB::Tuple, ∂A, basis::PooledSparseProduct{2}, BB::TupMat
       @simd ivdep for j = 1:nX 
          b1 = BB1[j, ϕ1]
          b2 = BB2[j, ϕ2]
-         ∂BB1[j, ϕ1] = muladd(∂A_iA, b2, ∂BB1[j, ϕ1])
-         ∂BB2[j, ϕ2] = muladd(∂A_iA, b1, ∂BB2[j, ϕ2])
+         # >>>>>>>>>>> DEBUG
+         # ∂BB1[j, ϕ1] = muladd(∂A_iA, b2, ∂BB1[j, ϕ1])
+         # ∂BB2[j, ϕ2] = muladd(∂A_iA, b1, ∂BB2[j, ϕ2])
+         ∂BB1[j, ϕ1] += real(∂A_iA) * real(b2) + imag(∂A_iA) * imag(b2)
+         ∂BB2[j, ϕ2] += real(∂A_iA) * real(b1) + imag(∂A_iA) * imag(b1)
+         # <<<<<<<<<<
       end 
    end
+
    return ∂BB 
 end
 
