@@ -12,8 +12,22 @@ _promote_grad_type(::Type{SVector{D, T}}, ::Type{S}
 function whatalloc(::typeof(pullback!), 
                     ∂P, basis::AbstractP4MLBasis, X::AbstractVector)
    T∂X = _promote_grad_type(_gradtype(basis, X), eltype(∂P))
+   @info("generic")
+   @show typeof(∂P)
    return (T∂X, length(X))
 end
+
+# have a second allocation function that checks whether the cotangent it 
+# real and if so, enforces a real output tangent. This can be done because 
+# 0 imaginary part in ∂P means that the outputs will also have zero imag part.
+function whatalloc(::typeof(pullback!), 
+                   ∂P::AbstractArray{<: Real}, 
+                   basis::AbstractP4MLBasis, X::AbstractVector)
+   T∂X = real( _promote_grad_type(_gradtype(basis, X), eltype(∂P)) )
+   @show T∂X
+   return (T∂X, length(X))
+end
+
 
 function pullback!(∂X, 
                   ∂P, basis::AbstractP4MLBasis, X::AbstractVector; 
@@ -26,11 +40,12 @@ function pullback!(∂X,
    #                 = ∑_ij ∂P_ij * dP_ij δ_ia
    for n = 1:size(dP, 2)
       @simd ivdep for a = 1:length(X)
-            # ∂X[a] += dP[a, n] * ∂P[a, n]
+            # if everything is real, then this is just
+            #       ∂X[a] += dP[a, n] * ∂P[a, n]
+            # but complex numbers need to be treated carefully
             ∂X[a] += Utils._cdot(dP[a, n], ∂P[a, n])
       end
    end
-   @show ∂X
    return ∂X
 end
 

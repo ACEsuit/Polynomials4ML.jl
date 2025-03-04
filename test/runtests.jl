@@ -26,5 +26,8 @@ using Test
     
     # Misc
     @testset "Static Prod" begin include("test_staticprod.jl"); end
-    @testset "Lux" begin include("test_lux.jl"); end 
+
+    # Lux tests 
+    @testset "Lux" begin include("lux/test_lux.jl"); end 
+    @testset "Lux" begin include("lux/test_lux_c.jl"); end 
 end
