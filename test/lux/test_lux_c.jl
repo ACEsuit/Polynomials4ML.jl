@@ -94,7 +94,7 @@ println_slim(@test norm(vcat(gz...) - gf, Inf) < 1e-10)
 
 ## --------------------------------------------------------------------- 
 #
-# Test 3: 
+# Test 3: backprop through an A basis, real cotangent
 #
 
 function _generate_basis(; order=3, len = 30)
@@ -134,4 +134,99 @@ println_slim(@test norm(_2vec(gz) - gf, Inf) < 1e-10)
 @show eltype(gz)
 println_slim(@test eltype(gz) == SVector{3, Float64})
 
+## --------------------------------------------------------------------- 
+#
+# Test 4: backprop through an A basis, complex cotangent 
+#
+
+function _generate_basis(; order=3, len = 30)
+   NN = [ rand(10:20) for _ = 1:order ]
+   spec = sort([ ntuple(t -> rand(1:NN[t]), order) for _ = 1:len])
+   return PooledSparseProduct(spec)
+end
+
+bA = _generate_basis(; order = 2)
+bY = complex_sphericalharmonics(4)
+bR = legendre_basis(21)
+θ = randn(length(bA))
+
+_embed = Parallel(nothing; 
+                  Y = lux(bY), 
+                  R = Chain(nrm = WrappedFunction(X -> norm.(X)), 
+                             Rn = lux(bR)) )
+m = Chain( embed = _embed, 
+           A = lux(bA),
+           dot = WrappedFunction(a -> dot(θ, real.(a))) )
+
+ps, st = Lux.setup(rng, m)
+
+xx = [ rand(SVector{3, Float64}) .- 0.5 for _ = 1:5 ]
+m(xx, ps, st)
+
+gf = ForwardDiff.gradient(
+      xvec -> m( _2svec3(xvec), ps, st)[1], 
+      _2vec(xx) )
+
+gz = Zygote.gradient(x -> m(x, ps, st)[1], xx)[1]
+
+@show norm(_2vec(gz) - gf, Inf)
+println_slim(@test norm(_2vec(gz) - gf, Inf) < 1e-10)
+
+# check the output is real 
+@show eltype(gz)
+println_slim(@test eltype(gz) == SVector{3, Float64})
+
+
 ## ---------------------------------------------------------------------
+#
+# Test 5: 
+#    this is now an almost complete ACE chain. 
+#
+
+function _generate_A_basis(; order=3, len = 20)
+   NN = [ rand(10:20) for _ = 1:order ]
+   spec = sort([ ntuple(t -> rand(1:NN[t]), order) for _ = 1:len])
+   return PooledSparseProduct(spec)
+end
+
+function _generate_AA_basis(bA; len = [5, 12, 30])
+   len_A = length(bA)
+   spec = Vector{Int}[]
+   for N = 1:length(len)
+      spec_N = [ sort(rand(1:len_A, N)) for n = 1:len[N] ]
+      append!(spec, spec_N)
+   end
+   return SparseSymmProd(spec)
+end
+
+
+bA = _generate_A_basis(; order = 2)
+bAA = _generate_AA_basis(bA)
+bY = complex_sphericalharmonics(4)
+bR = legendre_basis(21)
+
+θ = randn(length(bAA))
+
+_embed = Parallel(nothing; 
+                  Y = lux(bY), 
+                  R = Chain(nrm = WrappedFunction(X -> norm.(X)), 
+                             Rn = lux(bR)) )
+m = Chain( embed = _embed, 
+           A = lux(bA),
+           AA = lux(bAA),
+           dot = WrappedFunction(aa -> dot(θ, real.(aa))) )
+
+ps, st = Lux.setup(rng, m)
+
+xx = [ rand(SVector{3, Float64}) .- 0.5 for _ = 1:5 ]
+m(xx, ps, st)
+
+gf = ForwardDiff.gradient(
+      xvec -> m( _2svec3(xvec), ps, st)[1], 
+      _2vec(xx) )
+
+gz = Zygote.gradient(x -> m(x, ps, st)[1], xx)[1]
+
+@show norm(_2vec(gz) - gf, Inf)
+
+# println_slim(@test norm(_2vec(gz) - gf, Inf) < 1e-10)
