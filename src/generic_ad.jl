@@ -12,8 +12,6 @@ _promote_grad_type(::Type{SVector{D, T}}, ::Type{S}
 function whatalloc(::typeof(pullback!), 
                     ∂P, basis::AbstractP4MLBasis, X::AbstractVector)
    T∂X = _promote_grad_type(_gradtype(basis, X), eltype(∂P))
-   @info("generic")
-   @show typeof(∂P)
    return (T∂X, length(X))
 end
 
@@ -24,7 +22,6 @@ function whatalloc(::typeof(pullback!),
                    ∂P::AbstractArray{<: Real}, 
                    basis::AbstractP4MLBasis, X::AbstractVector)
    T∂X = real( _promote_grad_type(_gradtype(basis, X), eltype(∂P)) )
-   @show T∂X
    return (T∂X, length(X))
 end
 
