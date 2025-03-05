@@ -197,7 +197,7 @@ for basis in bases[4:5]
    @info("Tests for $(basis)")
    test_chainrules(basis)
    test_evaluate_xx(basis; ed2 = false)
-   @error("withalloc test fails for complex spherical harmonics")
+   @warn("withalloc test fails for complex spherical harmonics")
    # test_withalloc(basis; ed2 = false)
 end
 

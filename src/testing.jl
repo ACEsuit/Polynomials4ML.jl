@@ -161,12 +161,12 @@ function test_chainrules(basis::AbstractP4MLBasis;
       B = basis(X)
       # generate a perturbation dX and a tangent ∂B 
       dX = randn(eltype(X), size(X))
-      ∂B = real.(randn(eltype(B), size(B)))
+      ∂B = randn(eltype(B), size(B))
       # we want to differentiate 
-      F(t) = sum(∂B .* basis(X + t * dX))
+      F(t) = real(sum(∂B .* basis(X + t * dX)))
       dF(t) = begin
          val, pb = rrule(evaluate, basis, X + t * dX)
-         ∇_X = pb(∂B)[3]
+         ∇_X = pb(conj.(∂B))[3]
          return sum( sum(a .* b) for (a, b) in zip(∇_X, dX) )
       end
       print_tf(@test fdtest(F, dF, 0.0; verbose = false))
