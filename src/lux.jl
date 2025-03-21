@@ -1,6 +1,6 @@
 
 import LuxCore 
-import LuxCore: initialparameters, initialstates, AbstractExplicitLayer
+import LuxCore: initialparameters, initialstates, AbstractLuxLayer
 using Random: AbstractRNG
 using ChainRulesCore
 
@@ -36,7 +36,7 @@ _init_luxstate(l) = NamedTuple()
 # WARNING: All PolyLuxLayer are assumed to be not containing trainable parameters, so that they fallback to rrule 
 # interface without ps and st, all trainable PolyLayers should overload Polynomials4ML.lux with wanted function 
 # and return another non-PolyLuxLayer type
-struct PolyLuxLayer{TB} <: AbstractExplicitLayer
+struct PolyLuxLayer{TB} <: AbstractLuxLayer
    basis::TB
    meta::Dict{String, Any}
 end

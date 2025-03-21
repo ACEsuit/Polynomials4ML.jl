@@ -15,8 +15,7 @@ import ChainRulesCore: rrule, frule, NoTangent, ZeroTangent
 using HyperDualNumbers: Hyper
 using ForwardDiff: Dual, extract_derivative
 
-import LuxCore: AbstractExplicitLayer, AbstractExplicitContainerLayer, 
-                 initialparameters, initialstates                 
+import LuxCore: AbstractLuxLayer, initialparameters, initialstates                 
 
 using Random: AbstractRNG   
 

@@ -16,8 +16,8 @@ rng = Random.default_rng()
 # simple Dot product layer with weight for testing
 module M1
    using LuxCore, LinearAlgebra, Random 
-   import LuxCore:  AbstractExplicitLayer, initialparameters, initialstates
-   struct DotL <: AbstractExplicitLayer
+   import LuxCore:  AbstractLuxLayer, initialparameters, initialstates
+   struct DotL <: AbstractLuxLayer
       nin::Int
    end
    function (l::DotL)(x::AbstractVector{<: Number}, ps, st)

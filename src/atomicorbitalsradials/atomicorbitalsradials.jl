@@ -172,11 +172,11 @@ end
 
 
 # --------------------- connect with Lux 
-struct AORLayer{TP, TD, TI} <: AbstractExplicitLayer 
+struct AORLayer{TP, TD, TI} <: AbstractLuxLayer 
     basis::AtomicOrbitalsRadials{TP, TD, TI}
 end
 
-struct STOLayer{TP, TD, TI} <: AbstractExplicitLayer 
+struct STOLayer{TP, TD, TI} <: AbstractLuxLayer 
     basis::AtomicOrbitalsRadials{TP, TD, TI}
 end
 
