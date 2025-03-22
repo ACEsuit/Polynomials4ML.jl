@@ -27,7 +27,7 @@ WithAlloc = "fb1aa66a-603c-4c1d-9bc4-66947c7b08dd"
 [compat]
 ACEbase = "0.4.2"
 BenchmarkTools = "1"
-Bumper = "0.6.0" 
+Bumper = "0.7.0" 
 ChainRulesCore = "1"
 Combinatorics = "1"
 ForwardDiff = "0.10"
