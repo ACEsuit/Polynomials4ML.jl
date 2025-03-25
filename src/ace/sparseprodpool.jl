@@ -189,6 +189,12 @@ function whatalloc(::typeof(pullback!),
    return ntuple(i -> (TA, size(BB[i])...), NB)                   
 end
 
+function whatalloc(::typeof(pullback!), 
+                   ∂A::AbstractArray{<: Real}, 
+                   basis::PooledSparseProduct{NB}, BB::TupMat) where  {NB}
+   TA = real(promote_type(eltype.(BB)..., eltype(∂A)))
+   return ntuple(i -> (TA, size(BB[i])...), NB)                   
+end
 
 # the next few method definitions ensure that we can use the 
 # WithAlloc stuff with the pullback! function.
@@ -287,10 +293,15 @@ function pullback!(∂BB::Tuple, ∂A, basis::PooledSparseProduct{2}, BB::TupMat
       @simd ivdep for j = 1:nX 
          b1 = BB1[j, ϕ1]
          b2 = BB2[j, ϕ2]
-         ∂BB1[j, ϕ1] = muladd(∂A_iA, b2, ∂BB1[j, ϕ1])
-         ∂BB2[j, ϕ2] = muladd(∂A_iA, b1, ∂BB2[j, ϕ2])
+         # >>>>>>>>>>> DEBUG
+         # ∂BB1[j, ϕ1] = muladd(∂A_iA, b2, ∂BB1[j, ϕ1])
+         # ∂BB2[j, ϕ2] = muladd(∂A_iA, b1, ∂BB2[j, ϕ2])
+         ∂BB1[j, ϕ1] += Utils._cdot(∂A_iA, b2)
+         ∂BB2[j, ϕ2] += Utils._cdot(∂A_iA, b1)
+         # <<<<<<<<<<
       end 
    end
+
    return ∂BB 
 end
 

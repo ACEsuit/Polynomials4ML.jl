@@ -150,6 +150,11 @@ function whatalloc(::typeof(pullback!),
    return (T∂A, size(A)... )
 end
 
+function whatalloc(::typeof(pullback!), 
+                   ∂AA::AbstractVector{<: Real}, basis::SparseSymmProd, A)
+   T∂A = (promote_type(eltype(∂AA), eltype(A)))
+   return (T∂A, size(A)... )
+end
 
 @generated function pullback!(∂A,  
                                  ∂AA, basis::SparseSymmProd{ORD}, A
@@ -166,15 +171,43 @@ end
 end
 
 
+
 function _pb_evaluate_pbAA!(gA::AbstractVector, ΔN::AbstractVector, 
                             spec::Vector{NTuple{N, Int}}, 
-                            A) where {N}
+                            A::AbstractVector{<: Real}) where {N}
    # we compute ∇_A w.r.t. the expression ∑_i Δ[i] * AA[i]                             
    for (i, ϕ) in enumerate(spec)
       aa = ntuple(i -> A[ϕ[i]], N)
-      pi, gi = _static_prod_ed(aa) 
+      pi, gi = _static_prod_ed(aa)
       for j = 1:N 
          gA[ϕ[j]] += ΔN[i] * gi[j]
+      end
+   end
+   return nothing 
+end 
+
+#
+# The next method feels a little like a temporary hack to make complex 
+# numbers work. But this needs more serious thought to implement broadly 
+# and in a transparent manner. 
+#
+function _pb_evaluate_pbAA!(gA::AbstractVector, ΔN::AbstractVector{<: Real}, 
+                            spec::Vector{NTuple{N, Int}}, 
+                            A::AbstractVector{<: Complex}) where {N}
+   # we compute ∇_A w.r.t. the expression ∑_i Δ[i] * Re( AA[i] )
+   function _grad_re_prod(aa::NTuple{N, Complex{T}}) where {N, T}
+      aa_r = SVector{N}(real.(aa))
+      aa_i = SVector{N}(imag.(aa))
+      g_r = ForwardDiff.gradient(_aa -> real(prod(_aa + im * aa_i)), aa_r)
+      g_i = ForwardDiff.gradient(_aa -> real(prod(aa_r + im * _aa)), aa_i)
+      return g_r, g_i 
+   end
+   
+   for (i, ϕ) in enumerate(spec)
+      aa = ntuple(i -> A[ϕ[i]], N)
+      g_r, g_i = _grad_re_prod(aa)
+      for j = 1:N 
+         gA[ϕ[j]] += ΔN[i] * g_r[j] + im * ΔN[i] * g_i[j]
       end
    end
    return nothing 

@@ -33,5 +33,5 @@ test_chainrules(basis)
 ##
 
 # very strange that this fails with the weirdest error 
-@error("       test withalloc => CTrigBasis fails the allocation test!")
+@warn("       test withalloc => CTrigBasis fails the allocation test!")
 # test_withalloc(basis; allowed_allocs = 0)  
