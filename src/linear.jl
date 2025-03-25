@@ -33,7 +33,7 @@ out, st = l(x, ps, st)
 println(out == x * transpose(W))) # true
 ```
 """
-struct LinearLayer{FEATFIRST} <: AbstractExplicitLayer
+struct LinearLayer{FEATFIRST} <: AbstractLuxLayer
    in_dim::Integer
    out_dim::Integer
    @reqfields()

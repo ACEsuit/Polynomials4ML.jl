@@ -142,8 +142,8 @@ end
 
 # a helper that converts all whatalloc outputs to tuple form 
 function _tup_whatalloc(args...) 
-   _to_tuple(wa::Tuple{Vararg{<: Tuple}}) = wa 
-   _to_tuple(wa::Tuple{<: Type, Vararg{<: Integer}}) = (wa,)
+   _to_tuple(wa::Tuple{Vararg{Tuple}}) = wa 
+   _to_tuple(wa::Tuple{<: Type, Vararg{Integer}}) = (wa,)
    return _to_tuple(whatalloc(args...))
 end
 

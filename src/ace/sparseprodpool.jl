@@ -509,9 +509,9 @@ end
 # but technically the pooling operation changes the behaviour in
 # a few ways and we need to be very careful about this
 
-import LuxCore: AbstractExplicitLayer, initialparameters, initialstates
+import LuxCore: AbstractLuxLayer, initialparameters, initialstates
 
-struct PooledSparseProductLayer{NB} <: AbstractExplicitLayer 
+struct PooledSparseProductLayer{NB} <: AbstractLuxLayer 
    basis::PooledSparseProduct{NB}
    meta::Dict{String, Any}
 end
