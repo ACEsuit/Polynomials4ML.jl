@@ -186,24 +186,6 @@ end
 # KernelAbstractions kernel
 # 
 
-function ka_evaluate!(P, dP, basis::ChebBasis, x::AbstractVector{<: Number})
-   nX = length(x) 
-   len_basis = length(basis)
-   
-   @assert size(P, 1) >= nX 
-   @assert size(P, 2) >= len_basis 
-   if !isnothing(dP)
-      @assert size(dP, 1) >= nX
-      @assert size(dP, 2) >= len_basis
-   end
-
-   backend = KernelAbstractions.get_backend(P)
-
-   kernel! = _ka_evaluate!(backend)
-   kernel!(P, dP, basis, x; ndrange = (nX,))
-   
-   return nothing 
-end
 
 
 @kernel function _ka_evaluate!(P, dP, basis::ChebBasis, x::AbstractVector{T}

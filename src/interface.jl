@@ -46,7 +46,7 @@ _make_reqfields() = (_makemeta(), )
 #       we could allow for more generality here if there is demand for it. 
 #       This is something to be explored in the future. 
 
-const SINGLE = Union{Number, StaticArray, SphericalCoords}
+const SINGLE = Union{Number, StaticArray}
 const BATCH = AbstractVector{<: SINGLE}
 
 const TupVec = Tuple{Vararg{AbstractVector}}
@@ -171,3 +171,39 @@ pullback2(∂P, ∂X, l::AbstractP4MLLayer, args...) =
       _with_safe_alloc(pullback2!, ∂P, ∂X, l, args...)
 
 
+# ------------------------------------------------------------ 
+# KernelAbstractions Interface 
+
+# evaluate!(::GPUArray) and evaluate_ed!(::GPUArray) are function barriers that 
+# redirect evaluation with GPU arrays to KA kernels. 
+# the seprate ka_evaluate! is useful since it allows the KA kernels to be 
+# used also with CPU arrays. 
+
+evaluate!(P::GPUArray, 
+          basis::AbstractP4MLBasis,  X::GPUArray{<: SINGLE}) = 
+      ka_evaluate!(P, nothing, basis, X)
+
+evaluate_ed!(P::GPUArray, dP::GPUArray, 
+             basis::AbstractP4MLBasis,  X::GPUArray{<: SINGLE}) = 
+      ka_evaluate!(P, dP, basis, X)
+
+function ka_evaluate!(P, dP,
+                     basis::AbstractP4MLBasis, x::AbstractVector{<: SINGLE})
+      nX = length(x) 
+      len_basis = length(basis)
+      
+      @assert size(P, 1) >= nX 
+      @assert size(P, 2) >= len_basis 
+      if !isnothing(dP)
+         @assert size(dP, 1) >= nX
+         @assert size(dP, 2) >= len_basis
+      end
+   
+      backend = KernelAbstractions.get_backend(P)
+   
+      kernel! = _ka_evaluate!(backend)
+      kernel!(P, dP, basis, x; ndrange = (nX,))
+      
+      return nothing 
+   end
+   
