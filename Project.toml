@@ -30,7 +30,7 @@ BenchmarkTools = "1"
 Bumper = "0.7.0" 
 ChainRulesCore = "1"
 Combinatorics = "1"
-ForwardDiff = "0.10"
+ForwardDiff = "1.0"
 HyperDualNumbers = "4.0.10"
 LinearAlgebra = "1.10"
 LuxCore = "1.2.0"
@@ -39,19 +39,19 @@ QuadGK = "2"
 Random = "1.10"
 SparseArrays = "1.10"
 SpecialFunctions = "2.2"
-SpheriCart = "0.1.1"
+SpheriCart = "0.2.0"
 StaticArrays = "1.5"
 StrideArrays = "0.1.25"
 Test = "1.10"
 WithAlloc = "0.1.0"
-julia = "1.10"
+julia = "1.10 - 1.11"
 
 [extras]
-Lux = "b2108857-7c20-44ae-9111-449ecde12c47"
+# Lux = "b2108857-7c20-44ae-9111-449ecde12c47"
 Optimisers = "3bd65402-5787-11e9-1adc-39752487f4e2"
 Printf = "de0858da-6303-5e67-8744-51eddeeeb8d7"
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
-Zygote = "e88e6eb3-aa80-5325-afca-941959d7151f"
+# Zygote = "e88e6eb3-aa80-5325-afca-941959d7151f"
 
 [targets]
-test = ["Test", "Lux", "Printf", "Zygote", "Optimisers"]
+test = ["Test", "Printf", "Optimisers"]

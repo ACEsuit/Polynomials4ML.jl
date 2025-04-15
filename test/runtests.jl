@@ -15,9 +15,11 @@ using Test
     @testset "SpheriCart Interface" begin include("test_sphericart.jl"); end
 
     # Quantum Chemistry 
-    @testset "Atomic Orbitals Radials" begin include("test_atorbrad.jl"); end
+    # TODO: RESTRUCTURE OR MOVE?
+    # @testset "Atomic Orbitals Radials" begin include("test_atorbrad.jl"); end
 
     # # Tensors  
+    # TODO: RETIRE / MOVE ??? 
     # @testset "SparsePooledProduct" begin include("ace/test_sparseprodpool.jl"); end 
     # @testset "Sparse Symmetric Product" begin include("ace/test_sparsesymmprod.jl"); end 
     # @testset "Sparse Symmetric Product - DAG" begin include("ace/test_sparsesymmproddag.jl"); end 
@@ -26,5 +28,5 @@ using Test
     
     # Misc
     @testset "Static Prod" begin include("test_staticprod.jl"); end
-    @testset "Lux" begin include("test_lux.jl"); end 
+    # @testset "Lux" begin include("test_lux.jl"); end 
 end

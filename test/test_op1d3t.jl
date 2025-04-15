@@ -6,9 +6,7 @@ using Polynomials4ML.Testing: println_slim, test_evaluate_xx, print_tf,
 using LinearAlgebra: I, norm, dot 
 using QuadGK
 using ACEbase.Testing: fdtest
-using Printf
-using ChainRulesCore: rrule 
-using Zygote
+
 
 @info("Testing OrthPolyBasis1D3T")
 

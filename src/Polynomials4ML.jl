@@ -63,25 +63,29 @@ include("rtrig.jl")
 include("sphericart.jl")
 
 # quantum chemistry 
-include("atomicorbitalsradials/atomicorbitalsradials.jl")
+# TODO: RESTRUCTURE OR MOVE?
+# include("atomicorbitalsradials/atomicorbitalsradials.jl")
 
 # generating product bases (generalisation of tensor products)
-include("sparseproduct.jl")
+# RETIRE - to be discussed
+# include("sparseproduct.jl")
 
 # LinearLayer implementation
 # this is needed to better play with cached arrays + to give the correct 
 # behaviour when the feature dimension is different from expected. 
-include("linear.jl")
+# RETIRE 
+# include("linear.jl")
 
 # generic machinery for wrapping poly4ml bases into lux layers 
 include("lux.jl")
 
 # basis components to implement cluster expansion methods
-include("ace/sparseprodpool.jl")
-include("ace/symmprod_dag.jl")
-include("ace/symmprod_dag_kernels.jl")
-include("ace/simpleprodbasis.jl")
-include("ace/sparsesymmprod.jl")
+# RETIRE all of the following 
+# include("ace/sparseprodpool.jl")
+# include("ace/symmprod_dag.jl")
+# include("ace/symmprod_dag_kernels.jl")
+# include("ace/simpleprodbasis.jl")
+# include("ace/sparsesymmprod.jl")
 
 # some nice utility functions to generate basis sets and other things  
 include("utils/utils.jl")
