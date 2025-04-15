@@ -40,22 +40,6 @@ _make_reqfields() = (_makemeta(), )
 
 # -------------------------------------------------------------------
 
-# SphericalCoords is defined here so it can be part of SINGLE 
-# TODO: retire this as soon as we fully switched to SpheriCart 
-
-"""
-`struct SphericalCoords` : a simple datatype storing spherical coordinates
-of a point (x,y,z) in the format `(r, cosφ, sinφ, cosθ, sinθ)`.
-Use `spher2cart` and `cart2spher` to convert between cartesian and spherical
-coordinates.
-"""
-struct SphericalCoords{T}
-	r::T
-	cosφ::T
-	sinφ::T
-	cosθ::T
-	sinθ::T
-end
 
 # NOTE: Because we don't have a use-case for general arrays, we assume that a 
 #       BATCH is always given as an AbstractVector of SINGLEs. But in principle 

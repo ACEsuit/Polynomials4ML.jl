@@ -5,10 +5,11 @@ module Polynomials4ML
 import ACEbase
 import ACEbase: evaluate, evaluate_d, evaluate_ed, evaluate_dd, evaluate_ed2, 
                 evaluate!, evaluate_d!, evaluate_ed!, evaluate_ed2!
-import ACEbase.FIO: read_dict, write_dict
 
-using Bumper, WithAlloc, StrideArrays
+using Bumper, WithAlloc
 import WithAlloc: whatalloc 
+
+using KernelAbstractions, GPUArraysCore
 
 using LuxCore, Random, StaticArrays
 import ChainRulesCore: rrule, frule, NoTangent, ZeroTangent

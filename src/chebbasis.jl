@@ -180,3 +180,54 @@ function evaluate_ed2!(P::AbstractMatrix, dP::AbstractMatrix, ddP::AbstractMatri
    end
    return P, dP, ddP
 end
+
+
+# --------------------------------------------------------- 
+# KernelAbstractions kernel
+# 
+
+function ka_evaluate!(P, dP, basis::ChebBasis, x::AbstractVector{<: Number})
+   nX = length(x) 
+   len_basis = length(basis)
+   
+   @assert size(P, 1) >= nX 
+   @assert size(P, 2) >= len_basis 
+   if !isnothing(dP)
+      @assert size(dP, 1) >= nX
+      @assert size(dP, 2) >= len_basis
+   end
+
+   backend = KernelAbstractions.get_backend(P)
+
+   kernel! = _ka_evaluate!(backend)
+   kernel!(P, dP, basis, x; ndrange = (nX,))
+   
+   return nothing 
+end
+
+
+@kernel function _ka_evaluate!(P, dP, basis::ChebBasis, x::AbstractVector{T}
+         ) where {T}
+   
+   i = @Index(Global)
+   @uniform WITHGRAD = !isnothing(dP)
+   @uniform N = length(basis)
+
+   @inbounds begin
+      # n = 0 
+      P[i, 1] = 1
+      if WITHGRAD; dP[i, 1] = 0; end 
+      # n = 1 
+      if N > 1
+         P[i, 2] = x[i]
+         if WITHGRAD; dP[i, 2] = 1; end
+      end 
+      # n = 2, 3, ... 
+      for n = 3:N 
+         P[i, n] = 2 * x[i] * P[i, n-1] - P[i, n-2]
+         if WITHGRAD
+            dP[i, n] = 2 * P[i, n-1] + 2 * x[i] * dP[i, n-1] - dP[i, n-2]
+         end 
+      end
+   end
+end
