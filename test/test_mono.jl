@@ -1,8 +1,8 @@
 using Polynomials4ML, Test
-using Polynomials4ML: evaluate, evaluate_d, evaluate_dd
-using Polynomials4ML.Testing: println_slim, print_tf, test_derivatives, 
-                              test_withalloc, test_chainrules
-
+using Polynomials4ML: evaluate
+using Polynomials4ML.Testing: print_tf, 
+                              test_withalloc, test_chainrules, 
+                              test_evaluate_xx, test_ka_evaluate
 
 ##
 
@@ -27,3 +27,4 @@ println()
 test_evaluate_xx(basis)
 test_withalloc(basis)
 test_chainrules(basis)
+test_ka_evaluate(basis)

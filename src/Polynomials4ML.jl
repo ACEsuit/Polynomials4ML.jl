@@ -53,7 +53,7 @@ include("staticprod.jl")
 # include("orthopolybasis.jl")
 # include("discreteweights.jl")
 # include("jacobiweights.jl")
-# include("monomials.jl")
+include("monomials.jl")
 include("chebbasis.jl")
 
 # 2d harmonics / trigonometric polynomials 
