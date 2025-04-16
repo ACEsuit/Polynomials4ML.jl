@@ -91,10 +91,10 @@ end
 # general rrules and frules for AbstractP4MLTensor 
 
 
-function rrule(::typeof(evaluate), 
-                  basis::AbstractP4MLTensor, 
-                  X)
-   P = evaluate(basis, X)
-   return P, ∂P -> (NoTangent(), NoTangent(), pullback(∂P, basis, X))
-end
+# function rrule(::typeof(evaluate), 
+#                   basis::AbstractP4MLTensor, 
+#                   X)
+#    P = evaluate(basis, X)
+#    return P, ∂P -> (NoTangent(), NoTangent(), pullback(∂P, basis, X))
+# end
 

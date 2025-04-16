@@ -22,7 +22,7 @@ end
 
 ChebBasis(N::Integer) = ChebBasis{N}(_make_reqfields()...)
 
-Base.length(basis::ChebBasis{N}) = N
+Base.length(basis::ChebBasis{N}) where {N} = N
 
 natural_indices(basis::ChebBasis) = 0:length(basis)-1
 
@@ -70,7 +70,7 @@ end
 @kernel function _ka_evaluate!(P, dP, basis::ChebBasis{N}, x::AbstractVector{T}
          ) where {T, N}
             
-   i = @Index(Global)
+   i = @index(Global)
    @uniform WITHGRAD = !isnothing(dP)
 
    @inbounds begin

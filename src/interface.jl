@@ -62,12 +62,16 @@ const BATCH = Union{AbstractVector{<: SINGLE}, StaticBatch{<: SINGLE}}
 # ------------------------------------------------------------
 # In-place CPU interface 
 
-evaluate!(P, basis::AbstractP4MLBasis, x::SINGLE) = 
-		evaluate!(reshape(P, 1, :), basis, StaticBatch(x))
+function evaluate!(P, basis::AbstractP4MLBasis, x::SINGLE) 
+	evaluate!(reshape(P, 1, :), basis, StaticBatch(x))
+	return P
+end
 
-evaluate_ed!(P, dP, basis::AbstractP4MLBasis, x::SINGLE) = 
-		evaluate_ed!(reshape(P, 1, :), reshape(dP, 1, :), 
-					    basis, StaticBatch(x))
+function evaluate_ed!(P, dP, basis::AbstractP4MLBasis, x::SINGLE) 
+	evaluate_ed!(reshape(P, 1, :), reshape(dP, 1, :), 
+					 basis, StaticBatch(x))
+	return P, dP
+end					 
 
 function evaluate!(P, basis::AbstractP4MLBasis, x::BATCH)
    @assert size(P, 1) >= length(x) 
@@ -128,7 +132,7 @@ function _ka_evaluate_launcher!(P, dP, basis::AbstractP4MLBasis, x)
    
 
 
-# ---------------------------------------
+# -----------------------------------------------------------
 # managing defaults for input-output types
 # We deliberately provide no defaults for `valtype` but we try to guess 
 # gradtype, hesstype and laplacetype based on the valtype. 
@@ -149,21 +153,6 @@ _gradtype(basis::AbstractP4MLBasis, TX::Type{<:Number}) =
 _gradtype(basis::AbstractP4MLBasis, Tx::Type{<: StaticArray}) = 
       StaticArrays.similar_type(Tx, 
                      promote_type(eltype(Tx), _valtype(basis, Tx)))
-
-# default hessian types 
-_hesstype(basis::AbstractP4MLBasis, TX::Type{<:Number}) = 
-      _valtype(basis, TX)
-
-_hesstype(basis::AbstractP4MLBasis, ::Type{SVector{N, T}}) where {N, T} = 
-      SMatrix{N, N, promote_type(_valtype(basis, SVector{N, T}), T)}
-
-# laplacian types       
-_laplacetype(basis::AbstractP4MLBasis, TX::Type{<: Number}) = 
-      eltype(_hesstype(basis, TX))
-
-_laplacetype(basis::AbstractP4MLBasis, TX::Type{SVector{N, T}}) where {N, T} = 
-      eltype(_hesstype(basis, TX))
-
 
 # ------------------------------------------------------------
 # allocation interface & WithAlloc Interface 
@@ -193,7 +182,6 @@ function _tup_whatalloc(args...)
 end
 
 
-
 # _with_safe_alloc is a simple analogy of WithAlloc.@withalloc 
 # that allocates standard arrays on the heap instead of using Bumper 
 function _with_safe_alloc(fcall, args...) 
@@ -203,34 +191,18 @@ function _with_safe_alloc(fcall, args...)
 end
 
 
-# # --------------------------------------- 
-# # allocating evaluation interface 
+# --------------------------------------- 
+# allocating evaluation interface 
 
-# (l::AbstractP4MLLayer)(args...) = 
-#       evaluate(l, args...)
+(l::AbstractP4MLBasis)(args...) = 
+      evaluate(l, args...)
             
-# evaluate(l::AbstractP4MLLayer, args...) = 
-#       _with_safe_alloc(evaluate!, l, args...) 
+evaluate(l::AbstractP4MLBasis, args...) = 
+      _with_safe_alloc(evaluate!, l, args...) 
 
-# evaluate_ed(l::AbstractP4MLLayer, args...) = 
-#       _with_safe_alloc(evaluate_ed!, l, args...)
+evaluate_ed(l::AbstractP4MLBasis, args...) = 
+      _with_safe_alloc(evaluate_ed!, l, args...)
 
-# evaluate_ed2(l::AbstractP4MLLayer, args...) = 
-#       _with_safe_alloc(evaluate_ed2!, l, args...)
-
-# evaluate_d(l::AbstractP4MLLayer, args...) = 
-#       evaluate_ed(l, args...)[2] 
-
-# evaluate_dd(l::AbstractP4MLLayer, args...) = 
-#       evaluate_ed2(l, args...)[3] 
-
-# pullback(∂X, l::AbstractP4MLLayer, args...) = 
-#       _with_safe_alloc(pullback!, ∂X, l, args...)
-
-# pushforward(l::AbstractP4MLLayer, args...) = 
-#       _with_safe_alloc(pushforward!, l, args...)
-
-# pullback2(∂P, ∂X, l::AbstractP4MLLayer, args...) = 
-#       _with_safe_alloc(pullback2!, ∂P, ∂X, l, args...)
-
+evaluate_d(l::AbstractP4MLBasis, args...) = 
+      evaluate_ed(l, args...)[2] 
 

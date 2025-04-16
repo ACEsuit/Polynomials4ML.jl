@@ -3,7 +3,8 @@ module Testing
 using Polynomials4ML: evaluate!, evaluate_ed!, evaluate_ed2!, 
                evaluate, evaluate_d, evaluate_ed, evaluate_dd, evaluate_ed2, 
                pullback!,
-               AbstractP4MLBasis, AbstractP4MLTensor, AbstractP4MLLayer
+               AbstractP4MLBasis
+               # , AbstractP4MLTensor, AbstractP4MLLayer
 
 import Polynomials4ML: _generate_input, _generate_batch
 
@@ -48,21 +49,21 @@ time_ed2_batched!(P, dP, ddP, basis, X) = evaluate_ed2!(P, dP, ddP, basis, X)
 
 # ------------------------ Test correctness of derivatives 
 
-function test_derivatives(basis::AbstractP4MLBasis, x::Number; ed2 = true)
+function test_derivatives(basis::AbstractP4MLBasis, x::Number) # ; ed2 = true)
    P, dP = evaluate_ed(basis, x)
    adP = ForwardDiff.derivative(x -> evaluate(basis, x), x)
    print_tf(@test adP ≈ dP)
    
-   if ed2 
-      P, dP, ddP = evaluate_ed2(basis, x)
-      ddP2 = evaluate_dd(basis, x)
-      addP = ForwardDiff.derivative(x -> evaluate_d(basis, x), x)
-      print_tf(@test addP ≈ ddP ≈ ddP2)
-   end
+   # if ed2 
+   #    P, dP, ddP = evaluate_ed2(basis, x)
+   #    ddP2 = evaluate_dd(basis, x)
+   #    addP = ForwardDiff.derivative(x -> evaluate_d(basis, x), x)
+   #    print_tf(@test addP ≈ ddP ≈ ddP2)
+   # end
 end
 
 
-function test_derivatives(basis::AbstractP4MLBasis, x::AbstractVector; ed2 = true)
+function test_derivatives(basis::AbstractP4MLBasis, x::AbstractVector) # ; ed2 = true)
    P, dP = evaluate_ed(basis, x)
    adP_re = ForwardDiff.jacobian(x -> real.(evaluate(basis, x)), x)
    adP_im = ForwardDiff.jacobian(x -> imag.(evaluate(basis, x)), x)
@@ -70,13 +71,13 @@ function test_derivatives(basis::AbstractP4MLBasis, x::AbstractVector; ed2 = tru
    dP2 = [ adP[i, :] for i = 1:size(adP, 1) ]
    print_tf(@test dP2 ≈ dP)
    
-   if ed2 
-      @error("ed2 test for vector inputs not yet implemented")
-      # P, dP, ddP = evaluate_ed2(basis, x)
-      # ddP2 = evaluate_dd(basis, x)
-      # addP = ForwardDiff.gradient(x -> evaluate_d(basis, x), x)
-      # print_tf(@test addP ≈ ddP ≈ ddP2)
-   end
+   # if ed2 
+   #    @error("ed2 test for vector inputs not yet implemented")
+   #    # P, dP, ddP = evaluate_ed2(basis, x)
+   #    # ddP2 = evaluate_dd(basis, x)
+   #    # addP = ForwardDiff.gradient(x -> evaluate_d(basis, x), x)
+   #    # print_tf(@test addP ≈ ddP ≈ ddP2)
+   # end
 end
 
 """
@@ -89,8 +90,8 @@ This checks a number of things:
 function test_evaluate_xx(basis::AbstractP4MLBasis; 
                           generate_x = () -> _generate_input(basis), 
                           nX = 15, 
-                          ntest = 8, 
-                          ed2 = true)
+                          ntest = 8, )
+                        #   ed2 = true)
 
    @info("Test consistency of evaluate_**")
    for ntest = 1:ntest 
@@ -100,19 +101,19 @@ function test_evaluate_xx(basis::AbstractP4MLBasis;
       dP3 = evaluate_d(basis, x)
       print_tf(@test P1 ≈ P2 )
       print_tf(@test dP2 ≈ dP3)
-      if ed2 
-         P4, dP4, ddP4 = evaluate_ed2(basis, x)
-         ddP5 = evaluate_dd(basis, x)
-         print_tf(@test ddP4 ≈ ddP5)
-         print_tf(@test P4 ≈ P1)
-         print_tf(@test dP4 ≈ dP2)
-      end
+      # if ed2 
+      #    P4, dP4, ddP4 = evaluate_ed2(basis, x)
+      #    ddP5 = evaluate_dd(basis, x)
+      #    print_tf(@test ddP4 ≈ ddP5)
+      #    print_tf(@test P4 ≈ P1)
+      #    print_tf(@test dP4 ≈ dP2)
+      # end
    end
    println() 
 
    @info("Test correctness of derivatives")
    for ntest = 1:ntest 
-      test_derivatives(basis, generate_x(); ed2 = ed2)
+      test_derivatives(basis, generate_x() ) # ; ed2 = ed2)
    end 
    println() 
 
@@ -122,30 +123,30 @@ function test_evaluate_xx(basis::AbstractP4MLBasis;
    alc, alcd = whatalloc(evaluate_ed!, basis, X)
    bP1 = zeros(alc...) 
    bdP1 = zeros(alcd...)
-   if ed2 
-      bddP1 = deepcopy(bP1)
-   end
+   # if ed2 
+   #    bddP1 = deepcopy(bP1)
+   # end
    for (i, x) in enumerate(X)
       bP1[i, :] = evaluate(basis, x)
       bdP1[i, :] = evaluate_d(basis, x)
-      if ed2 
-         bddP1[i, :] = evaluate_dd(basis, x)
-      end
+      # if ed2 
+      #    bddP1[i, :] = evaluate_dd(basis, x)
+      # end
    end
       
    bP2 = evaluate(basis, X)
    bP3, bdP3 = evaluate_ed(basis, X)
-   if ed2 
-      bP4, bdP4, bddP4 = evaluate_ed2(basis, X)
-   end
+   # if ed2 
+   #    bP4, bdP4, bddP4 = evaluate_ed2(basis, X)
+   # end
       
    println_slim(@test bP2 ≈ bP1 ≈ bP3)
    println_slim(@test bdP3 ≈ bdP1)
-   if ed2 
-      println_slim(@test bP1 ≈ bP4)
-      println_slim(@test bdP1 ≈ bdP4)
-      println_slim(@test bddP4 ≈ bddP1)
-   end
+   # if ed2 
+   #    println_slim(@test bP1 ≈ bP4)
+   #    println_slim(@test bdP1 ≈ bdP4)
+   #    println_slim(@test bddP4 ≈ bddP1)
+   # end
    
 end
 
@@ -178,7 +179,7 @@ end
 # ------------------------ Test allocations using the WithAlloc interface
 
 function _allocations_inner(basis::AbstractP4MLBasis, x; 
-                            ed = true, ed2 = true)
+                            ed = true) # , ed2 = true)
    @no_escape begin 
       P = @withalloc evaluate!(basis, x)
       s = sum(P)
@@ -186,10 +187,10 @@ function _allocations_inner(basis::AbstractP4MLBasis, x;
          P1, dP1 = @withalloc evaluate_ed!(basis, x)
          # s += s + sum(P1) + sum(dP1)
       end 
-      if ed2 
-         P2, dP2, ddP2 = @withalloc evaluate_ed2!(basis, x)
-         # s2 = s1 + sum(P2) + sum(dP2) + sum(ddP2)
-      end
+      # if ed2 
+      #    P2, dP2, ddP2 = @withalloc evaluate_ed2!(basis, x)
+      #    # s2 = s1 + sum(P2) + sum(dP2) + sum(ddP2)
+      # end
       nothing 
    end
    return s 
@@ -202,37 +203,37 @@ function test_withalloc(basis::AbstractP4MLBasis;
             generate_x = () -> _generate_input(basis),
             generate_batch = () -> _generate_batch(basis),
             allowed_allocs = 0, 
-            ed = true, ed2 = true, 
+            ed = true,  #ed2 = true, 
             kwargs...) 
    X = generate_batch()
    x = generate_x()
    for Y in (x, X, )
-      nalloc1 = _allocations_inner(basis, Y; ed=ed, ed2=ed2)
-      nalloc = @allocated ( _allocations_inner(basis, Y; ed=ed, ed2=ed2) )
+      nalloc1 = _allocations_inner(basis, Y; ed=ed) # , ed2=ed2)
+      nalloc = @allocated ( _allocations_inner(basis, Y; ed=ed) ) # , ed2=ed2) )
       println("nalloc = $nalloc (allowed = $allowed_allocs)")
       print_tf(@test nalloc <= allowed_allocs)
       P1, dP1 = evaluate_ed(basis, Y)
-      if ed2 
-         P1, dP1, ddP1 = evaluate_ed2(basis, Y)
-      end
+      # if ed2 
+      #    P1, dP1, ddP1 = evaluate_ed2(basis, Y)
+      # end
       @no_escape begin 
          P2 = @withalloc evaluate!(basis, Y)
          P3, dP3 = @withalloc evaluate_ed!(basis, Y)
-         if ed2 
-            P4, dP4, ddP4 = @withalloc evaluate_ed2!(basis, Y)
-         end
+         # if ed2 
+         #    P4, dP4, ddP4 = @withalloc evaluate_ed2!(basis, Y)
+         # end
          match_P1P2 = P1 ≈ P2 ≈ P3
          match_dP1dP2 = dP1 ≈ dP3
          match_all = match_P1P2 & match_dP1dP2
          print_tf(@test match_P1P2)
          print_tf(@test match_dP1dP2)
-         if ed2
-            match_P1P2 = match_P1P2 & (P1 ≈ P4)
-            match_dP1dP2 = match_dP1dP2 & (dP3 ≈ dP4)
-            match_ddP1ddP2 = ddP1 ≈ ddP4
-            math_all = match_P1P2 & match_dP1dP2 & match_ddP1ddP2
-            print_tf(@test match_ddP1ddP2)
-         end
+         # if ed2
+         #    match_P1P2 = match_P1P2 & (P1 ≈ P4)
+         #    match_dP1dP2 = match_dP1dP2 & (dP3 ≈ dP4)
+         #    match_ddP1ddP2 = ddP1 ≈ ddP4
+         #    math_all = match_P1P2 & match_dP1dP2 & match_ddP1ddP2
+         #    print_tf(@test match_ddP1ddP2)
+         # end
       end
       println() 
       # if !math_all 
@@ -242,99 +243,99 @@ function test_withalloc(basis::AbstractP4MLBasis;
    return nothing 
 end
 
-function _allocations_inner(basis::AbstractP4MLTensor, x; 
-                              pb = true)
-   @no_escape begin 
-      P = @withalloc evaluate!(basis, x)
-      s = sum(P)
-      if pb 
-         T = eltype(P) 
-         sz = size(P)
-         ∂P = @alloc(T, sz...)
-         fill!(∂P, zero(T))
-         ∂x = @withalloc pullback!(∂P, basis, x)
-      end 
-      nothing 
-   end
-   return s 
-end
+# function _allocations_inner(basis::AbstractP4MLTensor, x; 
+#                               pb = true)
+#    @no_escape begin 
+#       P = @withalloc evaluate!(basis, x)
+#       s = sum(P)
+#       if pb 
+#          T = eltype(P) 
+#          sz = size(P)
+#          ∂P = @alloc(T, sz...)
+#          fill!(∂P, zero(T))
+#          ∂x = @withalloc pullback!(∂P, basis, x)
+#       end 
+#       nothing 
+#    end
+#    return s 
+# end
 
 
-function test_withalloc(basis::AbstractP4MLTensor; 
-            generate_single = () -> _generate_input(basis),
-            generate_batch = () -> _generate_batch(basis),
-            allowed_allocs = 0, 
-            pb = true, 
-            batch = true, 
-            single = true, 
-            kwargs...) 
+# function test_withalloc(basis::AbstractP4MLTensor; 
+#             generate_single = () -> _generate_input(basis),
+#             generate_batch = () -> _generate_batch(basis),
+#             allowed_allocs = 0, 
+#             pb = true, 
+#             batch = true, 
+#             single = true, 
+#             kwargs...) 
 
-   if single 
-      X = generate_single()
-      nalloc_pre = _allocations_inner(basis, X; pb=pb)
-      nalloc_pre = _allocations_inner(basis, X; pb=pb)
-      nalloc = @allocated ( _allocations_inner(basis, X; pb=pb) )
-      println("single: nalloc = $nalloc (allowed = $allowed_allocs)")
-      println_slim(@test nalloc <= allowed_allocs)
-      A1 = evaluate(basis, X)
-      @no_escape begin 
-         A2 = @withalloc evaluate!(basis, X)
-         match_A1A2 = A1 ≈ A2
-         println_slim(@test match_A1A2)
-      end
-      # if !match_A1A2
-      #    println("single: standard withalloc evaluations don't match")
-      # end      
-   end 
+#    if single 
+#       X = generate_single()
+#       nalloc_pre = _allocations_inner(basis, X; pb=pb)
+#       nalloc_pre = _allocations_inner(basis, X; pb=pb)
+#       nalloc = @allocated ( _allocations_inner(basis, X; pb=pb) )
+#       println("single: nalloc = $nalloc (allowed = $allowed_allocs)")
+#       println_slim(@test nalloc <= allowed_allocs)
+#       A1 = evaluate(basis, X)
+#       @no_escape begin 
+#          A2 = @withalloc evaluate!(basis, X)
+#          match_A1A2 = A1 ≈ A2
+#          println_slim(@test match_A1A2)
+#       end
+#       # if !match_A1A2
+#       #    println("single: standard withalloc evaluations don't match")
+#       # end      
+#    end 
 
-   if batch 
-      X = generate_batch()
-      nalloc_pre = _allocations_inner(basis, X; pb=pb)
-      nalloc = @allocated ( _allocations_inner(basis, X; pb=pb) )
-      println("batch: nalloc = $nalloc (allowed = $allowed_allocs)")
-      println_slim(@test nalloc <= allowed_allocs)
-      A1 = evaluate(basis, X)
-      @no_escape begin 
-         A2 = @withalloc evaluate!(basis, X)
-         match_A1A2 = A1 ≈ A2
-         println_slim(@test match_A1A2)
-      end
-      # if !match_A1A2
-      #    println("batch: standard withalloc evaluations don't match")
-      # end
-   end 
+#    if batch 
+#       X = generate_batch()
+#       nalloc_pre = _allocations_inner(basis, X; pb=pb)
+#       nalloc = @allocated ( _allocations_inner(basis, X; pb=pb) )
+#       println("batch: nalloc = $nalloc (allowed = $allowed_allocs)")
+#       println_slim(@test nalloc <= allowed_allocs)
+#       A1 = evaluate(basis, X)
+#       @no_escape begin 
+#          A2 = @withalloc evaluate!(basis, X)
+#          match_A1A2 = A1 ≈ A2
+#          println_slim(@test match_A1A2)
+#       end
+#       # if !match_A1A2
+#       #    println("batch: standard withalloc evaluations don't match")
+#       # end
+#    end 
 
-   return nothing 
-end
+#    return nothing 
+# end
 
 
 
 # ------------------------ 
 # additional testing utility functions for ACE 
 
-function generate_SO2_spec(order, M, p=1)
-   # m = 0, -1, 1, -2, 2, -3, 3, ... 
-   i2m(i) = (-1)^(isodd(i-1)) * (i ÷ 2)
-   m2i(m) = 2 * abs(m) - (m < 0)
+# function generate_SO2_spec(order, M, p=1)
+#    # m = 0, -1, 1, -2, 2, -3, 3, ... 
+#    i2m(i) = (-1)^(isodd(i-1)) * (i ÷ 2)
+#    m2i(m) = 2 * abs(m) - (m < 0)
 
-   spec = Vector{Int}[] 
+#    spec = Vector{Int}[] 
 
-   function append_N!(::Val{N}) where {N} 
-      for ci in CartesianIndices(ntuple(_ -> 1:2*M+1, N))
-         mm = i2m.(ci.I)
-         if (sum(mm) == 0) && (norm(mm, p) <= M) && issorted(ci.I)
-            push!(spec, [ci.I...,])
-         end
-      end
-   end
+#    function append_N!(::Val{N}) where {N} 
+#       for ci in CartesianIndices(ntuple(_ -> 1:2*M+1, N))
+#          mm = i2m.(ci.I)
+#          if (sum(mm) == 0) && (norm(mm, p) <= M) && issorted(ci.I)
+#             push!(spec, [ci.I...,])
+#          end
+#       end
+#    end
 
 
-   for N = 1:order 
-      append_N!(Val(N))
-   end
+#    for N = 1:order 
+#       append_N!(Val(N))
+#    end
 
-   return spec 
-end 
+#    return spec 
+# end 
 
 
 end
