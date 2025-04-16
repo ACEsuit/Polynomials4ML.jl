@@ -24,6 +24,11 @@ using Random: AbstractRNG
 function _generate_input end 
 function _generate_batch end 
 
+# TODO: unclear that natural_indices and index do. Is this specified properly? 
+#       it seems that natural_indices shouls give the "natural" indices for the 
+#       basis functions in the order that they are stored. But e.g. this 
+#       is not true for CTrigBasis; should make a decision and document this 
+#       properly.
 function natural_indices end   # could rename this get_spec or similar ... 
 function index end
 function orthpolybasis end
@@ -55,7 +60,7 @@ include("monomials.jl")
 include("chebbasis.jl")
 
 # 2d harmonics / trigonometric polynomials 
-# include("trig.jl")
+include("trig.jl")
 include("rtrig.jl")
 
 # 3d harmonics 

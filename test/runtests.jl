@@ -7,10 +7,10 @@ using Test
     # @testset "OrthPolyBasis1D3T" begin include("test_op1d3t.jl"); end
     # @testset "DiscreteWeights" begin include("test_discreteweights.jl"); end
     @testset "Chebyshev" begin include("test_cheb.jl"); end 
-    @testset "Chebyshev" begin include("test_mono.jl"); end 
+    @testset "Monomials" begin include("test_mono.jl"); end 
 
     # 2D Harmonics 
-    # @testset "TrigonometricPolynomials" begin include("test_trig.jl"); end
+    @testset "TrigonometricPolynomials" begin include("test_trig.jl"); end
     @testset "Real Trig Polys" begin include("test_rtrig.jl"); end
 
     # @testset "SpheriCart Interface" begin include("test_sphericart.jl"); end

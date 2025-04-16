@@ -1,10 +1,10 @@
 
 
 using Polynomials4ML, Test
-using Polynomials4ML: evaluate, evaluate_d, evaluate_dd, 
-                      natural_indices, index
+using Polynomials4ML: evaluate, natural_indices, index
 using Polynomials4ML.Testing: println_slim, print_tf, 
-            test_evaluate_xx, test_withalloc, test_chainrules
+            test_evaluate_xx, test_withalloc, test_chainrules, 
+            test_ka_evaluate
 
 
 ##
@@ -29,9 +29,6 @@ println()
 
 test_evaluate_xx(basis)
 test_chainrules(basis)
+test_ka_evaluate(basis)
+test_withalloc(basis)  
 
-##
-
-# very strange that this fails with the weirdest error 
-@error("       test withalloc => CTrigBasis fails the allocation test!")
-# test_withalloc(basis; allowed_allocs = 0)  
