@@ -30,9 +30,6 @@ _valtype(basis::ChebBasis, T::Type{<:Real}) = T
 
 _generate_input(basis::ChebBasis) = 2 * rand() - 1 
 
-_ref_evaluate(basis::ChebBasis, x::Real) = 
-      [ cos( (n-1) * acos(x)) for n = 1:length(basis) ]
-
 
 # --------------------------------------------------------- 
 # CPU SIMD kernel 
