@@ -58,7 +58,7 @@ include("chebbasis.jl")
 
 # 2d harmonics / trigonometric polynomials 
 # include("trig.jl")
-# include("rtrig.jl")
+include("rtrig.jl")
 
 # 3d harmonics 
 # include("sphericart.jl")

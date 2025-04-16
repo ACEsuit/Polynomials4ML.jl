@@ -1,10 +1,10 @@
 using Polynomials4ML, Test
-using Polynomials4ML: evaluate, evaluate_d, evaluate_dd
+using Polynomials4ML: evaluate, natural_indices
 using Polynomials4ML.Testing: println_slim, print_tf, 
                               test_evaluate_xx, 
                               test_withalloc, 
-                              test_chainrules
-
+                              test_chainrules, 
+                              test_ka_evaluate
 
 ##
 
@@ -29,3 +29,4 @@ println()
 test_evaluate_xx(basis)
 test_withalloc(basis) 
 test_chainrules(basis)
+test_ka_evaluate(basis)
