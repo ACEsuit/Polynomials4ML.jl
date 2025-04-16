@@ -3,6 +3,7 @@ module Testing
 using Polynomials4ML: evaluate!, evaluate_ed!, evaluate_ed2!, 
                evaluate, evaluate_d, evaluate_ed, evaluate_dd, evaluate_ed2, 
                pullback!,
+               ka_evaluate!, ka_evaluate_ed!,
                AbstractP4MLBasis
                # , AbstractP4MLTensor, AbstractP4MLLayer
 
@@ -148,6 +149,30 @@ function test_evaluate_xx(basis::AbstractP4MLBasis;
    #    println_slim(@test bddP4 ≈ bddP1)
    # end
    
+   return nothing 
+end
+
+
+function test_ka_evaluate(basis::AbstractP4MLBasis; 
+                          generate_x = () -> _generate_input(basis), 
+                          nXrg = 32:100, 
+                          ntest = 8, 
+                          dev = Array)
+   @info("Testing KA implementation of $basis")
+   for _ = 1:ntest                           
+      nX = rand(nXrg)                          
+      X = [ generate_x() for _ = 1:nX ]
+      Xdev = dev(X) 
+      P1, dP1 = evaluate_ed(basis, X)
+      P2 = dev(similar(P1)) 
+      P3 = dev(similar(P1))
+      dP3 = dev(similar(dP1))
+      ka_evaluate!(P2, basis, X)
+      ka_evaluate_ed!(P3, dP3, basis, X)
+      print_tf(@test P1 ≈ P2 ≈ P3)
+      print_tf(@test dP1 ≈ dP3)   
+   end
+   return nothing 
 end
 
 
@@ -173,6 +198,7 @@ function test_chainrules(basis::AbstractP4MLBasis;
       print_tf(@test fdtest(F, dF, 0.0; verbose = false))
    end    
    println()
+   return nothing 
 end
 
 

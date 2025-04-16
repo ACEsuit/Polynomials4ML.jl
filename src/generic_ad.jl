@@ -10,14 +10,14 @@ _promote_grad_type(::Type{SVector{D, T}}, ::Type{S}
          SVector{D, promote_type(T, S)}
 
 function whatalloc(::typeof(pullback!), 
-                    ∂P, basis::AbstractP4MLBasis, X::AbstractVector)
+                    ∂P, basis::AbstractP4MLBasis, X::BATCH)
    T∂X = _promote_grad_type(_gradtype(basis, X), eltype(∂P))
    return (T∂X, length(X))
 end
 
 function pullback!(∂X, 
-                  ∂P, basis::AbstractP4MLBasis, X::AbstractVector; 
-                  dP = evaluate_ed(basis, X)[2] )
+                   ∂P, basis::AbstractP4MLBasis, X::BATCH; 
+                   dP = evaluate_ed(basis, X)[2] )
    @assert size(∂P) == size(dP) == (length(X), length(basis))
    @assert length(∂X) == length(X)
    # manual loops to avoid any broadcasting of StrideArrays 
@@ -32,9 +32,13 @@ function pullback!(∂X,
    return ∂X
 end
 
+pullback(∂X, l::AbstractP4MLBasis, args...) = 
+      _with_safe_alloc(pullback!, ∂X, l, args...)
+
+
 function rrule(::typeof(evaluate), 
                   basis::AbstractP4MLBasis, 
-                  X::AbstractVector)
+                  X::BATCH)
    P = evaluate(basis, X)
    # TODO: here we could do evaluate_ed, but need to think about how this 
    #       works with the kwarg trick above...
@@ -85,16 +89,3 @@ end
 return ∂X, _pb 
 end
 =#
-
-
-# -------------------------------------------------------------
-# general rrules and frules for AbstractP4MLTensor 
-
-
-# function rrule(::typeof(evaluate), 
-#                   basis::AbstractP4MLTensor, 
-#                   X)
-#    P = evaluate(basis, X)
-#    return P, ∂P -> (NoTangent(), NoTangent(), pullback(∂P, basis, X))
-# end
-

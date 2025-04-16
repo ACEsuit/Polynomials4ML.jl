@@ -1,11 +1,12 @@
 import Polynomials4ML as P4ML
+using Polynomials4ML
 using Test
 using Polynomials4ML: evaluate, evaluate_ed, natural_indices
 using Polynomials4ML.Testing: println_slim, print_tf, 
                               test_evaluate_xx, 
                               test_withalloc, 
-                              test_chainrules
-
+                              test_chainrules, 
+                              test_ka_evaluate
 
 ##
 
@@ -32,23 +33,9 @@ println()
 
 test_evaluate_xx(basis)
 test_withalloc(basis)
-# test_chainrules(basis)
+test_chainrules(basis)
+test_ka_evaluate(basis)
 
-##
-
-# draft tests for kernelabstractions 
-for _ = 1:10 # run 30 random tests 
-   nX = rand(30:100)
-   X = [ P4ML._generate_input(basis) for i = 1:nX ]
-   P1, dP1 = evaluate_ed(basis, X)
-   P2 = similar(P1)
-   P3 = similar(P1)
-   dP3 = similar(dP1)
-   P4ML.ka_evaluate!(P2, basis, X)
-   P4ML.ka_evaluate_ed!(P3, dP3, basis, X)
-   print_tf(@test P1 ≈ P2 ≈ P3)
-   print_tf(@test dP1 ≈ dP3)
-end 
 
 ##
 # ----------------------------------------------------- 
