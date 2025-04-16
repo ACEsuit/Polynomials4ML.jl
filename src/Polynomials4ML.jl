@@ -3,8 +3,8 @@ module Polynomials4ML
 # -------------- import ACEbase, Bumper, WithAlloc, Lux and related
 
 import ACEbase
-import ACEbase: evaluate, evaluate_d, evaluate_ed, evaluate_dd, evaluate_ed2, 
-                evaluate!, evaluate_d!, evaluate_ed!, evaluate_ed2!
+import ACEbase: evaluate, evaluate_d, evaluate_ed, 
+                evaluate!, evaluate_d!, evaluate_ed!
 
 using Bumper, WithAlloc
 import WithAlloc: whatalloc 
@@ -31,8 +31,6 @@ function degree end
 
 function pullback! end
 function pullback end
-function pullback2! end
-function pullback2 end
 function pushforward end
 function pushforward! end
 
@@ -79,14 +77,6 @@ include("rtrig.jl")
 
 # generic machinery for wrapping poly4ml bases into lux layers 
 # include("lux.jl")
-
-# basis components to implement cluster expansion methods
-# RETIRE all of the following 
-# include("ace/sparseprodpool.jl")
-# include("ace/symmprod_dag.jl")
-# include("ace/symmprod_dag_kernels.jl")
-# include("ace/simpleprodbasis.jl")
-# include("ace/sparsesymmprod.jl")
 
 # some nice utility functions to generate basis sets and other things  
 include("utils/utils.jl")

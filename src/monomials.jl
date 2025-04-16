@@ -16,8 +16,6 @@ MonoBasis(N::Integer) = MonoBasis{N}(_make_reqfields()...)
 
 # ----------------- interface functions 
 
-
-
 natural_indices(basis::MonoBasis{N}) where {N} = 0:N
 
 index(basis::MonoBasis, m::Integer) = m+1
@@ -27,7 +25,7 @@ Base.length(basis::MonoBasis{N}) where {N} = N+1
 _valtype(basis::MonoBasis, T::Type{<: Number}) = T
 
 _generate_input(basis::MonoBasis) = 2 * rand() - 1
-            
+
 # ----------------- main evaluation code 
 
 
