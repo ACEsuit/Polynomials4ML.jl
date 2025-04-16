@@ -50,18 +50,18 @@ include("generic_ad.jl")
 include("staticprod.jl")
 
 # polynomials 
-include("orthopolybasis.jl")
-include("discreteweights.jl")
-include("jacobiweights.jl")
-include("monomials.jl")
+# include("orthopolybasis.jl")
+# include("discreteweights.jl")
+# include("jacobiweights.jl")
+# include("monomials.jl")
 include("chebbasis.jl")
 
 # 2d harmonics / trigonometric polynomials 
-include("trig.jl")
-include("rtrig.jl")
+# include("trig.jl")
+# include("rtrig.jl")
 
 # 3d harmonics 
-include("sphericart.jl")
+# include("sphericart.jl")
 
 # quantum chemistry 
 # TODO: RESTRUCTURE OR MOVE?
@@ -78,7 +78,7 @@ include("sphericart.jl")
 # include("linear.jl")
 
 # generic machinery for wrapping poly4ml bases into lux layers 
-include("lux.jl")
+# include("lux.jl")
 
 # basis components to implement cluster expansion methods
 # RETIRE all of the following 

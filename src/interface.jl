@@ -1,9 +1,8 @@
 using StaticArrays: StaticArray, SVector, StaticVector, similar_type
+using GPUArraysCore: AbstractGPUArray
 using ChainRulesCore
 import ChainRulesCore: rrule, frule 
 
-
-abstract type AbstractP4MLLayer end 
 
 """
 `abstract type AbstractP4MLBasis end`
@@ -11,16 +10,7 @@ abstract type AbstractP4MLLayer end
 Annotates types that map a low-dimensional input, scalar or `SVector`,
 to a vector of scalars (feature vector, embedding, basis...). 
 """
-abstract type AbstractP4MLBasis <: AbstractP4MLLayer end
-
-"""
-`abstract type AbstractP4MLTensor end`
-
-Annotates layers that map a vector to a vector. Each of the vectors may 
-represent a tensor (hence the name). Future interfaces may generalize the 
-allowed dimensionality of inputs to allow tensorial shapes.
-"""
-abstract type AbstractP4MLTensor <: AbstractP4MLLayer end 
+abstract type AbstractP4MLBasis end
 
 # ---------------------------------------------------------------------------
 # some helpers to deal with the required fields: 
@@ -40,18 +30,103 @@ _make_reqfields() = (_makemeta(), )
 
 # -------------------------------------------------------------------
 
-
-# NOTE: Because we don't have a use-case for general arrays, we assume that a 
-#       BATCH is always given as an AbstractVector of SINGLEs. But in principle 
-#       we could allow for more generality here if there is demand for it. 
-#       This is something to be explored in the future. 
-
+# a "single" input
 const SINGLE = Union{Number, StaticArray}
-const BATCH = AbstractVector{<: SINGLE}
 
-const TupVec = Tuple{Vararg{AbstractVector}}
-const TupMat = Tuple{Vararg{AbstractMatrix}}
-const TupVecMat = Union{TupVec, TupMat}
+"""
+`StaticBatch{N,T}` : an auxiliary StaticArray type that is distinct from 
+`SVector{N,T}`. It can be used to create a batch of inputs of static size N. 
+It is in particular used to convert function calls with single inputs to 
+function calls with a batch of inputs. 
+"""
+struct StaticBatch{N, T} <: StaticVector{N, T}
+	data::NTuple{N, T}
+end 
+
+StaticBatch(x::SINGLE) = StaticBatch((x,))
+
+Base.getindex(b::StaticBatch, i::Int) = b.data[i]
+Base.getindex(b::StaticBatch, i::Integer) = b.data[i]
+
+
+# a "batch" of inputs
+const BATCH = Union{AbstractVector{<: SINGLE}, StaticBatch{<: SINGLE}}
+
+# TODO: check that we can remove this 
+# const TupVec = Tuple{Vararg{AbstractVector}}
+# const TupMat = Tuple{Vararg{AbstractMatrix}}
+# const TupVecMat = Union{TupVec, TupMat}
+
+
+
+# ------------------------------------------------------------
+# In-place CPU interface 
+
+evaluate!(P, basis::AbstractP4MLBasis, x::SINGLE) = 
+		evaluate!(reshape(P, 1, :), basis, StaticBatch(x))
+
+evaluate_ed!(P, dP, basis::AbstractP4MLBasis, x::SINGLE) = 
+		evaluate_ed!(reshape(P, 1, :), reshape(dP, 1, :), 
+					    basis, StaticBatch(x))
+
+function evaluate!(P, basis::AbstractP4MLBasis, x::BATCH)
+   @assert size(P, 1) >= length(x) 
+   @assert size(P, 2) >= length(basis)
+   _evaluate!(P, nothing, basis, x)
+   return P
+end
+
+function evaluate_ed!(P, dP, basis::AbstractP4MLBasis, x::BATCH)
+   @assert size(P, 1) >= length(x) 
+   @assert size(P, 2) >= length(basis)
+   @assert size(dP, 1) >= length(x) 
+   @assert size(dP, 2) >= length(basis)
+   _evaluate!(P, dP, basis, x)
+   return P, dP 
+end
+
+# ------------------------------------------------------------
+# In-place KA interface 
+# evaluate! called with a GPUArray redirects to ka_evaluate!
+# But ka_evaluate! can also be called with CPU arrays to enable testing 
+# KA kernels also on the CPU. 
+
+evaluate!(P::AbstractGPUArray, basis::AbstractP4MLBasis, x::BATCH) = 
+		ka_evaluate!(P, basis, x)
+
+evaluate_ed!(P::AbstractGPUArray, dP::AbstractGPUArray, basis::AbstractP4MLBasis, x::BATCH) = 
+		ka_evaluate_ed!(P, dP, basis, x)
+
+function ka_evaluate!(P, basis::AbstractP4MLBasis, x::BATCH) 
+	_ka_evaluate_launcher!(P, nothing, basis, x)
+	return P
+end 
+
+function ka_evaluate_ed!(P, dP, basis::AbstractP4MLBasis, x::BATCH)
+   _ka_evaluate_launcher!(P, dP, basis, x)
+   return P, dP 
+end
+
+function _ka_evaluate_launcher!(P, dP, basis::AbstractP4MLBasis, x)
+      nX = length(x) 
+      len_basis = length(basis)
+      
+      @assert size(P, 1) >= nX 
+      @assert size(P, 2) >= len_basis 
+      if !isnothing(dP)
+         @assert size(dP, 1) >= nX
+         @assert size(dP, 2) >= len_basis
+      end
+   
+      backend = KernelAbstractions.get_backend(P)
+   
+      kernel! = _ka_evaluate!(backend)
+      kernel!(P, dP, basis, x; ndrange = (nX,))
+      
+      return nothing 
+   end
+   
+
 
 # ---------------------------------------
 # managing defaults for input-output types
@@ -60,18 +135,12 @@ const TupVecMat = Union{TupVec, TupMat}
 
 function _valtype end 
 function _gradtype end 
-function _hesstype end 
-function _laplacetype end
 
 # first redirect input to type 
 _valtype(basis, x::SINGLE) = _valtype(basis, typeof(x))
 _valtype(basis, x::BATCH) = _valtype(basis, eltype(x))
 _gradtype(basis, x::SINGLE) = _gradtype(basis, typeof(x))
 _gradtype(basis, x::BATCH) = _gradtype(basis, eltype(x))
-_hesstype(basis, x::SINGLE) = _hesstype(basis, typeof(x))
-_hesstype(basis, x::BATCH) = _hesstype(basis, eltype(x))
-_laplacetype(basis, x::SINGLE) = _laplacetype(basis, typeof(x))
-_laplacetype(basis, x::BATCH) = _laplacetype(basis, eltype(x))
 
 # default grad types
 _gradtype(basis::AbstractP4MLBasis, TX::Type{<:Number}) = 
@@ -116,20 +185,14 @@ function whatalloc(::typeof(evaluate_ed!), basis::AbstractP4MLBasis, x)
    return (TV, sz...), (TG, sz...)
 end
 
-function whatalloc(::typeof(evaluate_ed2!), basis::AbstractP4MLBasis, x)
-   TV = _valtype(basis, x)
-   TG = _gradtype(basis, x)
-   TH = _hesstype(basis, x)
-   sz = _out_size(basis, x)
-   return (TV, sz...), (TG, sz...), (TH, sz...)
-end
-
 # a helper that converts all whatalloc outputs to tuple form 
 function _tup_whatalloc(args...) 
    _to_tuple(wa::Tuple{Vararg{Tuple}}) = wa 
    _to_tuple(wa::Tuple{<: Type, Vararg{Integer}}) = (wa,)
    return _to_tuple(whatalloc(args...))
 end
+
+
 
 # _with_safe_alloc is a simple analogy of WithAlloc.@withalloc 
 # that allocates standard arrays on the heap instead of using Bumper 
@@ -140,70 +203,34 @@ function _with_safe_alloc(fcall, args...)
 end
 
 
-# --------------------------------------- 
-# allocating evaluation interface 
+# # --------------------------------------- 
+# # allocating evaluation interface 
 
-(l::AbstractP4MLLayer)(args...) = 
-      evaluate(l, args...)
+# (l::AbstractP4MLLayer)(args...) = 
+#       evaluate(l, args...)
             
-evaluate(l::AbstractP4MLLayer, args...) = 
-      _with_safe_alloc(evaluate!, l, args...) 
+# evaluate(l::AbstractP4MLLayer, args...) = 
+#       _with_safe_alloc(evaluate!, l, args...) 
 
-evaluate_ed(l::AbstractP4MLLayer, args...) = 
-      _with_safe_alloc(evaluate_ed!, l, args...)
+# evaluate_ed(l::AbstractP4MLLayer, args...) = 
+#       _with_safe_alloc(evaluate_ed!, l, args...)
 
-evaluate_ed2(l::AbstractP4MLLayer, args...) = 
-      _with_safe_alloc(evaluate_ed2!, l, args...)
+# evaluate_ed2(l::AbstractP4MLLayer, args...) = 
+#       _with_safe_alloc(evaluate_ed2!, l, args...)
 
-evaluate_d(l::AbstractP4MLLayer, args...) = 
-      evaluate_ed(l, args...)[2] 
+# evaluate_d(l::AbstractP4MLLayer, args...) = 
+#       evaluate_ed(l, args...)[2] 
 
-evaluate_dd(l::AbstractP4MLLayer, args...) = 
-      evaluate_ed2(l, args...)[3] 
+# evaluate_dd(l::AbstractP4MLLayer, args...) = 
+#       evaluate_ed2(l, args...)[3] 
 
-pullback(∂X, l::AbstractP4MLLayer, args...) = 
-      _with_safe_alloc(pullback!, ∂X, l, args...)
+# pullback(∂X, l::AbstractP4MLLayer, args...) = 
+#       _with_safe_alloc(pullback!, ∂X, l, args...)
 
-pushforward(l::AbstractP4MLLayer, args...) = 
-      _with_safe_alloc(pushforward!, l, args...)
+# pushforward(l::AbstractP4MLLayer, args...) = 
+#       _with_safe_alloc(pushforward!, l, args...)
 
-pullback2(∂P, ∂X, l::AbstractP4MLLayer, args...) = 
-      _with_safe_alloc(pullback2!, ∂P, ∂X, l, args...)
+# pullback2(∂P, ∂X, l::AbstractP4MLLayer, args...) = 
+#       _with_safe_alloc(pullback2!, ∂P, ∂X, l, args...)
 
 
-# ------------------------------------------------------------ 
-# KernelAbstractions Interface 
-
-# evaluate!(::GPUArray) and evaluate_ed!(::GPUArray) are function barriers that 
-# redirect evaluation with GPU arrays to KA kernels. 
-# the seprate ka_evaluate! is useful since it allows the KA kernels to be 
-# used also with CPU arrays. 
-
-evaluate!(P::GPUArray, 
-          basis::AbstractP4MLBasis,  X::GPUArray{<: SINGLE}) = 
-      ka_evaluate!(P, nothing, basis, X)
-
-evaluate_ed!(P::GPUArray, dP::GPUArray, 
-             basis::AbstractP4MLBasis,  X::GPUArray{<: SINGLE}) = 
-      ka_evaluate!(P, dP, basis, X)
-
-function ka_evaluate!(P, dP,
-                     basis::AbstractP4MLBasis, x::AbstractVector{<: SINGLE})
-      nX = length(x) 
-      len_basis = length(basis)
-      
-      @assert size(P, 1) >= nX 
-      @assert size(P, 2) >= len_basis 
-      if !isnothing(dP)
-         @assert size(dP, 1) >= nX
-         @assert size(dP, 2) >= len_basis
-      end
-   
-      backend = KernelAbstractions.get_backend(P)
-   
-      kernel! = _ka_evaluate!(backend)
-      kernel!(P, dP, basis, x; ndrange = (nX,))
-      
-      return nothing 
-   end
-   
