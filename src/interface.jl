@@ -31,7 +31,7 @@ _make_reqfields() = (_makemeta(), )
 # -------------------------------------------------------------------
 
 # a "single" input
-const SINGLE = Union{Number, StaticArray}
+const SINGLE = Union{Number, SArray}
 
 """
 `StaticBatch{N,T}` : an auxiliary StaticArray type that is distinct from 
@@ -112,23 +112,23 @@ function ka_evaluate_ed!(P, dP, basis::AbstractP4MLBasis, x::BATCH)
 end
 
 function _ka_evaluate_launcher!(P, dP, basis::AbstractP4MLBasis, x)
-      nX = length(x) 
-      len_basis = length(basis)
-      
-      @assert size(P, 1) >= nX 
-      @assert size(P, 2) >= len_basis 
-      if !isnothing(dP)
-         @assert size(dP, 1) >= nX
-         @assert size(dP, 2) >= len_basis
-      end
-   
-      backend = KernelAbstractions.get_backend(P)
-   
-      kernel! = _ka_evaluate!(backend)
-      kernel!(P, dP, basis, x; ndrange = (nX,))
-      
-      return nothing 
-   end
+	nX = length(x) 
+	len_basis = length(basis)
+	
+	@assert size(P, 1) >= nX 
+	@assert size(P, 2) >= len_basis 
+	if !isnothing(dP)
+		@assert size(dP, 1) >= nX
+		@assert size(dP, 2) >= len_basis
+	end
+
+	backend = KernelAbstractions.get_backend(P)
+
+	kernel! = _ka_evaluate!(backend)
+	kernel!(P, dP, basis, x; ndrange = (nX,))
+	
+	return nothing 
+end
    
 
 

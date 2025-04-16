@@ -1,13 +1,12 @@
 using LinearAlgebra, StaticArrays, Test, Printf, SparseArrays, 
-      ForwardDiff
+      ForwardDiff, Random 
 using Polynomials4ML, Polynomials4ML.Testing
 using Polynomials4ML: evaluate, evaluate_d, evaluate_ed, 
                       idx2lm, lm2idx, maxl
 using Polynomials4ML.Testing: print_tf, println_slim, 
                      test_evaluate_xx, test_withalloc, 
-                     test_chainrules
+                     test_chainrules, test_ka_evaluate
 using ACEbase.Testing: fdtest
-using HyperDualNumbers: Hyper
 import SpheriCart
 
 ##                  
@@ -109,12 +108,13 @@ rand_sphere() = ( u = (@SVector randn(3)); u ./ norm(u) )
 
 # this test confirms that the above reference implementation of 
 # sphericart -> complex spherical harmonics is consistent with 
-# out old implementation.
+# our old implementation.
 
 r_spher = real_sphericalharmonics(3)  # SphericalHarmonics(3)
 r_solid = real_solidharmonics(3)      # SolidHarmonics(3)
 c_spher = complex_sphericalharmonics(3)  # SphericalHarmonics(3)
 c_solid = complex_solidharmonics(3)      # SolidHarmonics(3)
+
 
 for ntest = 1:30 
    local 𝐫, θ, φ
@@ -145,15 +145,18 @@ println()
 ##
 
 @info("Confirm L2-orthonormalization - real")
+Random.seed!(1)
 R = [ rand_sphere() for _ = 1:1_000_000 ]
 Y = r_spher(R)
 G = (Y' * Y) * 4 * π / length(R)
-println_slim(@test norm(G - I, Inf) < 0.1)
+# @show norm(G - I, Inf)
+println_slim(@test norm(G - I, Inf) < 0.01)
 
 @info("Confirm L2-orthonormalization - complex")
 Y = c_spher(R)
 G = (Y' * Y) * 4 * π / length(R)
-println_slim(@test norm(G - I, Inf) < 0.1)
+# @show norm(G - I, Inf)
+println_slim(@test norm(G - I, Inf) < 0.01)
 
 ##
 
@@ -186,93 +189,16 @@ bases = [ real_sphericalharmonics(10),
           complex_sphericalharmonics(9), 
           complex_solidharmonics(11) ]
 
-for basis in bases[1:3]
+for basis in bases
    @info("Tests for $(basis)")
    test_chainrules(basis)
-   test_evaluate_xx(basis; ed2 = false)
-   test_withalloc(basis; ed2 = false)
+   test_evaluate_xx(basis)
+   test_withalloc(basis)
 end
 
-for basis in bases[4:5]
-   @info("Tests for $(basis)")
-   test_chainrules(basis)
-   test_evaluate_xx(basis; ed2 = false)
-   @error("withalloc test fails for complex spherical harmonics")
-   # test_withalloc(basis; ed2 = false)
+# testing the KA evaluation; this is currently restricted to just 
+# the real solid harmonics; this needs to be fixed at the SpheriCart end 
+for basis in bases[2:3]
+   test_ka_evaluate(basis)
 end
 
-
-
-
-##
-
-## -- check the laplacian implementation 
-#=
-x2dualwrtj(x, j) = SVector{3}([Hyper(x[i], i == j, i == j, 0) for i = 1:3])
-
-hX = [x2dualwrtj(x, 1) for x in X]
-
-# using LinearAlgebra: tr
-# using ForwardDiff
-# P4 = Polynomials4ML
-
-# function fwdΔ1(rYlm, x)
-#    Y = evaluate(rYlm, x)
-#    nY = length(Y)
-#    _j(x) = ForwardDiff.jacobian(x -> evaluate(rYlm, x), x)[:]
-#    _h(x) = reshape(ForwardDiff.jacobian(_j, x), (nY, 3, 3))
-#    H = _h(x)
-#    return [ tr(H[i, :, :]) for i = 1:nY ]
-# end
-
-# for x in X 
-#    ΔY = P4.laplacian(rSH, x)
-#    ΔYfwd = fwdΔ1(rSH, x)
-#    print_tf(@test ΔYfwd ≈ ΔY)
-# end
-# println() 
-
-# @info("check batched laplacian")
-# ΔY1 = P4.laplacian(rSH, X)
-# ΔY2 = similar(ΔY1)
-# for (i, x) in enumerate(X)
-#    ΔY2[i, :] = P4.laplacian(rSH, x)
-# end
-# println_slim(@test ΔY1 ≈ ΔY2)
-
-
-# @info("check eval_grad_laplace")
-# Y1, dY1, ΔY1 = P4.eval_grad_laplace(rSH, X)
-# Y2, dY2 = evaluate_ed(rSH, X)
-# ΔY2 = P4.laplacian(rSH, X)
-# println_slim(@test Y1 ≈ Y2)
-# println_slim(@test dY1 ≈ dY2)
-# println_slim(@test ΔY1 ≈ ΔY2)
-
-using Zygote
-@info("Test rrule")
-using LinearAlgebra: dot 
-rSH = SCYlmBasis(10)
-
-for ntest = 1:30
-    local X
-    local Y
-    local Rnl
-    local u
-    
-    X = [ rand_sphere() for i = 1:21 ]
-    Y = [ rand_sphere() for i = 1:21 ]
-    _x(t) = X + t * Y
-    A = evaluate(rSH, X)
-    u = randn(size(A))
-    F(t) = dot(u, evaluate(rSH, _x(t)))
-    dF(t) = begin
-        val, pb = Zygote.pullback(rSH, _x(t)) # TODO: write a pullback??
-        ∂BB = pb(u)[1] # pb(u)[1] returns NoTangent() for basis argument
-        return sum( dot(∂BB[i], Y[i]) for i = 1:length(Y) )
-    end
-    print_tf(@test fdtest(F, dF, 0.0; verbose = false))
-end
-println()
-
-=#

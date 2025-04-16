@@ -64,7 +64,7 @@ include("trig.jl")
 include("rtrig.jl")
 
 # 3d harmonics 
-# include("sphericart.jl")
+include("sphericart.jl")
 
 # quantum chemistry 
 # TODO: RESTRUCTURE OR MOVE?

@@ -164,7 +164,7 @@ function _allocations_inner(basis::AbstractP4MLBasis, x;
       s = sum(P)
       if ed 
          P1, dP1 = @withalloc evaluate_ed!(basis, x)
-         s += s + sum(P1) + sum(dP1)
+         s += s + sum(P1)
       end 
       nothing 
    end

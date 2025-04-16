@@ -1,3 +1,4 @@
+
 import SpheriCart
 import SpheriCart: idx2lm, lm2idx
 using SpheriCart: compute, compute_with_gradients, 
@@ -95,12 +96,9 @@ Base.show(io::IO, basis::SCWrapper) =
 natural_indices(basis::SCWrapper) = 
       [ NamedTuple{(:l, :m)}(idx2lm(i)) for i = 1:length(basis) ]
 
-_valtype(sh::RealSCWrapper, ::Type{<: StaticVector{3, S}}) where {S} = S
+_valtype(sh::RealSCWrapper, ::Type{<: SVector{3, S}}) where {S} = S
 
-_valtype(sh::ComplexSCWrapper, ::Type{<: StaticVector{3, S}}) where {S} = Complex{S}
-
-#    ::Type{<: StaticVector{3, Hyper{S}}}) where {L, NRM, STATIC, T <: Real, S <: Real} = 
-# promote_type(T, Hyper{S})
+_valtype(sh::ComplexSCWrapper, ::Type{<: SVector{3, S}}) where {S} = Complex{S}
 
 
 function evaluate!(Y::AbstractArray, basis::SCWrapper, x::SVector{3})
@@ -179,3 +177,29 @@ function _convert_R2C!(Y::AbstractMatrix, basis::ComplexSCWrapper)
 	return Y 
 end 
 
+# ---------------------- KernelAbstractions Interface
+#
+# only for real solid harmonics, since the rest aren't actually supported 
+# by the KA kernel in SpheriCart yet. 
+# this is a bit of a hack really and we need to iterate on with SC on 
+# getting this right. 
+
+function _ka_evaluate_launcher!(P, dP, 
+									basis::RealSCWrapper{<: SolidHarmonics}, 
+									x)
+	nX = length(x) 
+	len_basis = length(basis)
+	
+	@assert size(P, 1) >= nX 
+	@assert size(P, 2) >= len_basis 
+	if !isnothing(dP)
+		@assert size(dP, 1) >= nX
+		@assert size(dP, 2) >= len_basis
+	end
+
+	Flm = basis.scbasis.Flm.parent
+	valL = Val{maxl(basis)}()
+	SpheriCart.ka_solid_harmonics!(P, dP, valL, x, Flm)
+	
+	return nothing 
+end
