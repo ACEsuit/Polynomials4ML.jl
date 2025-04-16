@@ -13,7 +13,7 @@ using Test
     @testset "TrigonometricPolynomials" begin include("test_trig.jl"); end
     @testset "Real Trig Polys" begin include("test_rtrig.jl"); end
 
-    # @testset "SpheriCart Interface" begin include("test_sphericart.jl"); end
+    @testset "SpheriCart Interface" begin include("test_sphericart.jl"); end
 
     # Quantum Chemistry 
     # TODO: RESTRUCTURE OR MOVE?
