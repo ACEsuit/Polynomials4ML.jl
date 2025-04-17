@@ -10,7 +10,7 @@ using Test
     @testset "Monomials" begin include("test_mono.jl"); end 
 
     # 2D & 3D Harmonics 
-    @testset "Complex Trigonometric" begin include("test_trig.jl"); end
+    @testset "Complex Trigonometric" begin include("test_ctrig.jl"); end
     @testset "Real Trigonometric" begin include("test_rtrig.jl"); end
     @testset "SpheriCart Interface" begin include("test_sphericart.jl"); end
 
