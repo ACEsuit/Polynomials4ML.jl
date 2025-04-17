@@ -40,6 +40,16 @@ time_ed_batched!(P, dP, basis, X) = evaluate_ed!(P, dP, basis, X)
 
 # ------------------------ Test correctness of derivatives 
 
+function test_all(basis::AbstractP4MLBasis; evaluate = true, withalloc = true, 
+                                            chainrules = true, ka = true) 
+   evaluate && test_evaluate_xx(basis)
+   withalloc && test_withalloc(basis)
+   chainrules && test_chainrules(basis)
+   ka && test_ka_evaluate(basis)
+   nothing 
+end 
+
+
 function test_derivatives(basis::AbstractP4MLBasis, x::Number)
    P, dP = evaluate_ed(basis, x)
    adP = ForwardDiff.derivative(x -> evaluate(basis, x), x)

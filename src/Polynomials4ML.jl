@@ -60,7 +60,7 @@ include("monomials.jl")
 include("chebbasis.jl")
 
 # 2d harmonics / trigonometric polynomials 
-include("trig.jl")
+include("ctrig.jl")
 include("rtrig.jl")
 
 # 3d harmonics 

@@ -16,10 +16,8 @@ end
 
 CTrigBasis(N::Integer) = CTrigBasis{N}(_make_reqfields()...)
 
-natural_indices(basis::CTrigBasis{N}) where {N} = -N:N 
-
-index(basis::CTrigBasis, m::Integer) = 
-         2 * abs(m) + (sign(m) <= 0 ? 1 : 0)
+# natural_indices_trig is implemented in rtrig.jl 
+natural_indices(basis::CTrigBasis{N}) where {N} = natural_indices_trig(N)
 
 Base.length(basis::CTrigBasis{N}) where {N} = 2 * N + 1 
 

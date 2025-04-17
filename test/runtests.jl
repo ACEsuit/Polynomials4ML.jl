@@ -10,8 +10,8 @@ using Test
     @testset "Monomials" begin include("test_mono.jl"); end 
 
     # 2D & 3D Harmonics 
-    @testset "TrigonometricPolynomials" begin include("test_trig.jl"); end
-    @testset "Real Trig Polys" begin include("test_rtrig.jl"); end
+    @testset "Complex Trigonometric" begin include("test_trig.jl"); end
+    @testset "Real Trigonometric" begin include("test_rtrig.jl"); end
     @testset "SpheriCart Interface" begin include("test_sphericart.jl"); end
 
     # Quantum Chemistry 

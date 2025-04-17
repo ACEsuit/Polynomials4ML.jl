@@ -1,19 +1,14 @@
 import Polynomials4ML as P4ML
 using Polynomials4ML
 using Test
-using Polynomials4ML: evaluate, evaluate_ed, natural_indices
-using Polynomials4ML.Testing: println_slim, print_tf, 
-                              test_evaluate_xx, 
-                              test_withalloc, 
-                              test_chainrules, 
-                              test_ka_evaluate
+using Polynomials4ML: natural_indices
+using Polynomials4ML.Testing: print_tf, test_all 
 
 ##
 
 @info("Testing ChebBasis (Standard Chebyshev Polynomials)")
 N = 10
 basis = ChebBasis(N) 
-
 
 @info("      correctness")
 mm = natural_indices(basis)
@@ -31,9 +26,4 @@ println()
 
 ##
 
-test_evaluate_xx(basis)
-test_withalloc(basis)
-test_chainrules(basis)
-test_ka_evaluate(basis)
-
-
+test_all(basis)

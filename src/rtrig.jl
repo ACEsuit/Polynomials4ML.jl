@@ -18,8 +18,8 @@ RTrigBasis(N::Integer) = RTrigBasis{N}(_make_reqfields()...)
 
 Base.length(basis::RTrigBasis{N}) where {N} = 2 * N + 1
 
-function natural_indices(basis::RTrigBasis{N}) where {N} 
-   inds = zeros(Int, length(basis))
+function natural_indices_trig(N)
+   inds = zeros(Int, 2*N+1)
    inds[1] = 0 
    for k = 1:N
       inds[2*k] = k
@@ -27,6 +27,8 @@ function natural_indices(basis::RTrigBasis{N}) where {N}
    end
    return inds
 end
+
+natural_indices(basis::RTrigBasis{N}) where {N} = natural_indices_trig(N)
 
 _valtype(basis::RTrigBasis, T::Type{<: Real}) = T
 

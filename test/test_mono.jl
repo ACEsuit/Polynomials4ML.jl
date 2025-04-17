@@ -1,8 +1,6 @@
 using Polynomials4ML, Test
-using Polynomials4ML: evaluate
-using Polynomials4ML.Testing: print_tf, 
-                              test_withalloc, test_chainrules, 
-                              test_evaluate_xx, test_ka_evaluate
+using Polynomials4ML: natural_indices
+using Polynomials4ML.Testing: print_tf, test_all  
 
 ##
 
@@ -24,7 +22,4 @@ println()
 
 ##
 
-test_evaluate_xx(basis)
-test_withalloc(basis)
-test_chainrules(basis)
-test_ka_evaluate(basis)
+test_all(basis)
