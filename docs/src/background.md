@@ -3,6 +3,6 @@
 The following pages explain some of the mathematical background and/or conventions of the models implemented in P4ML.
 
 ```@contents
-Pages = ["SH.md", "ace.md", ]
+Pages = ["SH.md",  ]
 Depth = 2
 ```

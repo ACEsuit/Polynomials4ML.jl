@@ -36,7 +36,6 @@ makedocs(;
         "Public API" => Any[ 
             "API Index" => "api.md",
             "Bases / Embeddings" => "polynomials.md", 
-            "Tensors" => "tensors.md", 
             "Integration" => "integration.md", 
         ],
         "Tutorials" => Any[
@@ -45,8 +44,7 @@ makedocs(;
         ],
         "Background" => [ 
                 "Background Index" => "background.md",
-                "Spherical and Solid Harmonics" => "SH.md",
-                "Cluster Expansion" => "ace.md", ], 
+                "Spherical and Solid Harmonics" => "SH.md", ], 
         "Docstrings" => "docstrings.md",
         "Developer Documentation" => [
             "benchmarking.md",
