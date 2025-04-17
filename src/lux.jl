@@ -11,7 +11,7 @@ that the basis accepts a number or short vector as input and produces an output
 that is a vector. It also assumes that batched operations are implemented, 
 as well as some other functionality. 
 """
-function lux(basis::AbstractP4MLLayer; 
+function lux(basis::AbstractP4MLBasis; 
                name = String(nameof(typeof(basis))), 
                meta = Dict{String, Any}("name" => name),
             )

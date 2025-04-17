@@ -81,7 +81,7 @@ include("sphericart.jl")
 # include("linear.jl")
 
 # generic machinery for wrapping poly4ml bases into lux layers 
-# include("lux.jl")
+include("lux.jl")
 
 # some nice utility functions to generate basis sets and other things  
 include("utils/utils.jl")

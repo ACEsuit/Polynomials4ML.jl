@@ -1,4 +1,4 @@
-using Polynomials4ML, Test, StaticArrays, Lux 
+using Polynomials4ML, Test, StaticArrays, LuxCore
 using Polynomials4ML: lux
 using Random: default_rng
 using ACEbase.Testing: println_slim
@@ -22,25 +22,25 @@ for (basis, rnd) in test_bases
    local B1, B2, x
    local ps, st
    x = rnd() 
-   B1 = evaluate(basis, x)
+   B1 = basis(x)
    l = lux(basis)
-   ps, st = Lux.setup(rng, l)
+   ps, st = LuxCore.setup(rng, l)
    B2, _ = l(x, ps, st)
    println_slim(@test B1 == B2)
 end
 
 using Zygote
-using LuxCore
 
 x = [rand()]
 basis = legendre_basis(10)
-B1 = evaluate(basis, x)
+B1 = basis(x)
 l = lux(basis)
-ps, st = Lux.setup(rng, l)
+ps, st = LuxCore.setup(rng, l)
 val, pb = Zygote.pullback(LuxCore.apply, l, x, ps, st)
-val2, pb2 = Zygote.pullback(evaluate, basis, x)
+val2, pb2 = Zygote.pullback(Polynomials4ML.evaluate, basis, x)
 
 @assert val[1] ≈ val2
 
 pb(val)
 pb2(val2)
+
