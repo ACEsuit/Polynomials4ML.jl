@@ -53,9 +53,9 @@ include("generic_ad.jl")
 include("staticprod.jl")
 
 # polynomials 
-# include("orthopolybasis.jl")
-# include("discreteweights.jl")
-# include("jacobiweights.jl")
+include("orthopolybasis.jl")
+include("discreteweights.jl")
+include("jacobiweights.jl")
 include("monomials.jl")
 include("chebbasis.jl")
 

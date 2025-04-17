@@ -42,173 +42,37 @@ _valtype(basis::OrthPolyBasis1D3T{T1}, TX::Type{T2}) where {T1, T2} =
 
 _generate_input(basis::OrthPolyBasis1D3T) = 2 * rand() - 1
 
-# ----------------- main evaluation code 
-
-# P must be a preallocated output vector of suitable length 
-# x can be any object for which a polynomial could be defined, but normally 
-#     a number. x cannot be an abstractvector since this would dispatch to a 
-#     different method. 
-function evaluate!(P::AbstractArray, basis::OrthPolyBasis1D3T, x) 
-   N = length(basis.A)
-   @assert length(P) >= N 
-   @inbounds P[1] = basis.A[1]
-   if N > 1
-      @inbounds P[2] = basis.A[2]*x + basis.B[2]
-      @inbounds for n = 3:N
-         # NB : fma seems to make no difference here 
-         P[n] = (basis.A[n]*x + basis.B[n])*P[n-1] + basis.C[n]*P[n-2]
-      end
-   end
-   return P
-end
+# ----------------- CPU evaluation code 
 
 
-function evaluate_ed!(P::AbstractArray, dP::AbstractArray, basis::OrthPolyBasis1D3T, x)
-   N = length(basis.A)
-   @assert length(P) >= N 
-   @inbounds begin 
-      P[1] = basis.A[1]
-      dP[1] = 0
-      if N > 1
-         P[2] = basis.A[2] * x + basis.B[2]
-         dP[2] = basis.A[2]
-         for n = 3:N
-            axb = basis.A[n]*x + basis.B[n]
-            P[n] = axb * P[n-1] + basis.C[n] * P[n-2]
-            dP[n] = axb * dP[n-1] + basis.C[n] * dP[n-2] + basis.A[n] * P[n-1]
-         end
-      end
-   end
-   return P, dP 
-end
-
-
-function evaluate_ed2!(P::AbstractArray, dP::AbstractArray, ddP::AbstractArray, basis::OrthPolyBasis1D3T, x)
-   N = length(basis.A)
-   @assert length(P) >= N 
-   @inbounds begin 
-      P[1] = basis.A[1]
-      dP[1] = 0
-      ddP[1] = 0
-      if N > 1
-         P[2] = basis.A[2] * x + basis.B[2]
-         dP[2] = basis.A[2]
-         ddP[2] = 0
-         for n = 3:N
-            axb = basis.A[n]*x + basis.B[n]
-            P[n] = axb * P[n-1] + basis.C[n] * P[n-2]
-            dP[n] = axb * dP[n-1] + basis.C[n] * dP[n-2] + basis.A[n] * P[n-1]
-            ddP[n] = axb * ddP[n-1] + basis.C[n] * ddP[n-2] + 2 * basis.A[n] * dP[n-1]
-         end
-      end
-   end
-   return P, dP, ddP 
-end
-
-
-# P should be a matrix now and we will write basis(X[i]) into P[i, :]; 
-# this is the format the optimizes memory access. 
-function evaluate!(P::AbstractArray, basis::OrthPolyBasis1D3T, X::AbstractVector) 
+function _evaluate!(P, dP, basis::OrthPolyBasis1D3T, X::BATCH)
    N = length(basis.A)
    nX = length(X) 
-   # ------- do the bounds checks here 
-   @assert all( size(P) .>= (nX, N) )
-   # ---------------------------------
-
-   @inbounds begin
-      for i = 1:nX 
-         P[i, 1] = basis.A[1]
-      end
-      if N > 1
-         for i = 1:nX 
-            P[i, 2] = basis.A[2] * X[i] + basis.B[2]
-         end
-         for n = 3:N    # TODO -> try @threads here 
-            an = basis.A[n]; bn = basis.B[n]; cn = basis.C[n]
-            @simd ivdep for i = 1:nX 
-               p = muladd(X[i], an, bn)
-               P[i, n] = muladd(p, P[i, n-1], cn * P[i, n-2])
-            end
-         end
-      end
-   end
-   return P
-end    
-
-
-
-function evaluate_ed!(P::AbstractArray, dP::AbstractArray, basis::OrthPolyBasis1D3T, X::AbstractVector)
-   N = length(basis.A)
-   nX = length(X) 
-   # ------- do the bounds checks here 
-   @assert all( size(P) .>= (nX, N) )
-   @assert all( size(dP) .>= (nX, N) )
-   # ---------------------------------
+   WITHGRAD = !isnothing(dP)
 
    @inbounds begin 
       for i = 1:nX 
          P[i, 1] = basis.A[1]
-         dP[i, 1] = 0
+         WITHGRAD && (dP[i, 1] = 0)
       end
       if N > 1
          for i = 1:nX 
             P[i, 2] = basis.A[2] * X[i] + basis.B[2]
-            dP[i, 2] = basis.A[2]
+            WITHGRAD && (dP[i, 2] = basis.A[2])
          end
          for n = 3:N
             an = basis.A[n]; bn = basis.B[n]; cn = basis.C[n]
             @simd ivdep for i = 1:nX 
                axb = muladd(an, X[i], bn)
                P[i, n] = muladd(axb, P[i, n-1], cn * P[i, n-2]) 
-               q = muladd(cn,  dP[i, n-2], an * P[i, n-1])
-               dP[i, n] = muladd(axb, dP[i, n-1], q)
+               WITHGRAD && (
+                  q = muladd(cn,  dP[i, n-2], an * P[i, n-1]); 
+                  dP[i, n] = muladd(axb, dP[i, n-1], q) 
+                  )
             end
-            # P[n] = axb * P[n-1] + basis.C[n] * P[n-2]
-            # dP[n] = axb * dP[n-1] + basis.C[n] * dP[n-2] + basis.A[n] * P[n-1]
          end
       end
    end
-   return P, dP 
+   return nothing 
 end
 
-
-function evaluate_ed2!(P::AbstractArray, dP::AbstractArray, ddP::AbstractArray, basis::OrthPolyBasis1D3T, X::AbstractVector)
-   N = length(basis.A)
-   nX = length(X) 
-   # ------- do the bounds checks here 
-   @assert all( size(P)   .>= (nX, N) )
-   @assert all( size(dP)  .>= (nX, N) )
-   @assert all( size(ddP) .>= (nX, N) )
-   # ---------------------------------
-
-   @inbounds begin 
-      for i = 1:nX 
-         P[i, 1] = basis.A[1]
-         dP[i, 1] = 0
-         ddP[i, 1] = 0
-      end
-      if N > 1
-         for i = 1:nX 
-            P[i, 2] = basis.A[2] * X[i] + basis.B[2]
-            dP[i, 2] = basis.A[2]
-            ddP[i, 2] = 0
-         end
-         for n = 3:N
-            an = basis.A[n]; bn = basis.B[n]; cn = basis.C[n]
-            @simd ivdep for i = 1:nX 
-               axb = muladd(an, X[i], bn)
-               P[i, n] = muladd(axb, P[i, n-1], cn * P[i, n-2]) 
-               q = muladd(cn,  dP[i, n-2], an * P[i, n-1])
-               dP[i, n] = muladd(axb, dP[i, n-1], q)
-               q1 = 2 * an * dP[i, n-1]
-               q2 = muladd(cn, ddP[i, n-2], q1)
-               ddP[i, n] = muladd(axb, ddP[i, n-1], q2)
-            end
-            # P[n] = axb * P[n-1] + basis.C[n] * P[n-2]
-            # dP[n] = axb * dP[n-1] + basis.C[n] * dP[n-2] + basis.A[n] * P[n-1]
-            # ddP[n] = axb * ddP[n-1] + basis.C[n] * ddP[n-2] + 2 * basis.A[n] * dP[n-1]
-            end
-      end
-   end
-   return P, dP, ddP 
-end

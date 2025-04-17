@@ -4,15 +4,14 @@ using Test
 @testset "Polynomials4ML.jl" begin 
 
     # 1D Polynomials 
-    # @testset "OrthPolyBasis1D3T" begin include("test_op1d3t.jl"); end
-    # @testset "DiscreteWeights" begin include("test_discreteweights.jl"); end
+    @testset "OrthPolyBasis1D3T" begin include("test_op1d3t.jl"); end
+    @testset "DiscreteWeights" begin include("test_discreteweights.jl"); end
     @testset "Chebyshev" begin include("test_cheb.jl"); end 
     @testset "Monomials" begin include("test_mono.jl"); end 
 
-    # 2D Harmonics 
+    # 2D & 3D Harmonics 
     @testset "TrigonometricPolynomials" begin include("test_trig.jl"); end
     @testset "Real Trig Polys" begin include("test_rtrig.jl"); end
-
     @testset "SpheriCart Interface" begin include("test_sphericart.jl"); end
 
     # Quantum Chemistry 

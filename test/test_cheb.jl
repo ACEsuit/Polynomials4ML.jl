@@ -37,12 +37,3 @@ test_chainrules(basis)
 test_ka_evaluate(basis)
 
 
-##
-# ----------------------------------------------------- 
-# TODO: move to orthopolybasis tests
-# basis2 = chebyshev_basis(N; normalize=false)
-# r = basis(x) ./ basis2(x)
-   # P3 = basis2(x)
-# test_evaluate_xx(basis2)
-# test_withalloc(basis2)
-# # test_chainrules(basis2)

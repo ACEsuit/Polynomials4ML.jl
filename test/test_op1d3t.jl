@@ -1,15 +1,13 @@
 
 using Polynomials4ML, Test
-using Polynomials4ML: evaluate, evaluate_d, evaluate_dd, _generate_input
+using Polynomials4ML: evaluate, evaluate_d, _generate_input
 using Polynomials4ML.Testing: println_slim, test_evaluate_xx, print_tf, 
                               test_withalloc, test_chainrules
 using LinearAlgebra: I, norm, dot 
 using QuadGK
-using ACEbase.Testing: fdtest
 
 
 @info("Testing OrthPolyBasis1D3T")
-
 
 ##
 
@@ -41,7 +39,7 @@ for ntest = 1:3
    local N, G
    α = 1 + rand() 
    β = 1 + rand() 
-   @info("Test the Random Jacobi Polynomials")
+   @info("Test Random Jacobi Polynomials")
    @info("   α = $α, β = $β")
    @info("    orthogonality")
    N = 20 
@@ -75,6 +73,25 @@ test_evaluate_xx(cheb)
 test_withalloc(cheb)
 test_chainrules(cheb)
 
+## 
+
+@info("Test chebyshev_basis vs ChebBasis{N}")
+
+basis1 = ChebBasis(N)
+basis2 = chebyshev_basis(N; normalize=false)
+basis3 = chebyshev_basis(N; normalize=true)
+x = _generate_input(basis1)
+r13 = basis1(x) ./ basis3(x)
+for _ = 1:10 
+   local x 
+   x = _generate_input(basis1)
+   P1 = basis1(x)
+   P2 = basis2(x)
+   P3 = basis3(x)
+   print_tf(@test P1 ≈ P2)
+   print_tf(@test P1 ≈ P3 .* r13)
+end 
+println() 
 
 ##
 
