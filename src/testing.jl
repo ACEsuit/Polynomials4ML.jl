@@ -6,7 +6,7 @@ using Polynomials4ML: evaluate!, evaluate_ed!,
                ka_evaluate!, ka_evaluate_ed!,
                AbstractP4MLBasis
 
-import Polynomials4ML: _generate_input, _generate_batch
+import Polynomials4ML: _generate_input, _generate_batch 
 
 using ChainRulesCore: rrule 
 
@@ -181,8 +181,6 @@ function _allocations_inner(basis::AbstractP4MLBasis, x;
    return s 
 end
 
-_generate_batch(basis::AbstractP4MLBasis; nbatch = rand(7:16)) = 
-         [ _generate_input(basis) for _ = 1:nbatch ]
 
 function test_withalloc(basis::AbstractP4MLBasis; 
             generate_x = () -> _generate_input(basis),

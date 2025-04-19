@@ -14,7 +14,7 @@ for ntest = 1:3
    @info("Test a randomly generated polynomial basis - $ntest")
    N = rand(5:15)
    basis = OrthPolyBasis1D3T(randn(N), randn(N), randn(N))
-   test_all(basis; ka = false)
+   test_all(basis)
 end
 
 ##
@@ -26,7 +26,7 @@ legendre = legendre_basis(N, normalize=true)
 G = quadgk(x -> legendre(x) * legendre(x)', -1, 1)[1]
 println_slim(@test round.(G, digits=6) ≈ I)
 @info("    derivatives")
-test_all(legendre; ka = false)
+test_all(legendre)
 
 ##
 
@@ -42,7 +42,7 @@ for ntest = 1:3
    G = quadgk(x -> (1-x)^α * (x+1)^β * jacobi(x) * jacobi(x)', -1, 1)[1]
    println_slim(@test round.(G, digits=6) ≈ I)
    @info("    derivatives, etc")
-   test_all(jacobi; ka = false)
+   test_all(jacobi)
 end 
 
 ##
@@ -62,7 +62,7 @@ println_slim(@test all([
 G = quadgk(x -> (1-x)^(-0.5) * (x+1)^(-0.5) * cheb(x) * cheb(x)', -1, 1)[1]
 println_slim(@test round.(G, digits=6) ≈ I)
 @info("     derivatives, etc")
-test_all(cheb; ka = false)
+test_all(cheb)
 
 ## 
 

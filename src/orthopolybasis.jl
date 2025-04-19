@@ -76,3 +76,32 @@ function _evaluate!(P, dP, basis::OrthPolyBasis1D3T, X::BATCH)
    return nothing 
 end
 
+
+@kernel function _ka_evaluate!(P, dP, basis::OrthPolyBasis1D3T, X::BATCH)
+   @uniform N = length(basis.A)
+   @uniform nX = length(X) 
+   @uniform WITHGRAD = !isnothing(dP)
+   i = @index(Global)
+
+   @inbounds begin 
+      P[i, 1] = basis.A[1]
+      WITHGRAD && (dP[i, 1] = 0)
+
+      if N > 1
+         P[i, 2] = basis.A[2] * X[i] + basis.B[2]
+         WITHGRAD && (dP[i, 2] = basis.A[2])
+
+         for n = 3:N
+            an = basis.A[n]; bn = basis.B[n]; cn = basis.C[n]
+            axb = muladd(an, X[i], bn)
+            P[i, n] = muladd(axb, P[i, n-1], cn * P[i, n-2]) 
+            WITHGRAD && (
+               q = muladd(cn,  dP[i, n-2], an * P[i, n-1]); 
+               dP[i, n] = muladd(axb, dP[i, n-1], q) 
+               )
+         end
+      end
+   end
+   
+   nothing 
+end

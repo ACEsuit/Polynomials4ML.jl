@@ -4,13 +4,6 @@ using ChainRulesCore
 import ChainRulesCore: rrule, frule 
 
 
-"""
-`abstract type AbstractP4MLBasis end`
-
-Annotates types that map a low-dimensional input, scalar or `SVector`,
-to a vector of scalars (feature vector, embedding, basis...). 
-"""
-abstract type AbstractP4MLBasis end
 
 # ---------------------------------------------------------------------------
 # some helpers to deal with the required fields: 
