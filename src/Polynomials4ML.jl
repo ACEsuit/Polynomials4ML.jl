@@ -91,7 +91,7 @@ include("discreteweights.jl")
 include("jacobiweights.jl")
 include("monomials.jl")
 include("chebbasis.jl")
-
+include("bernstein.jl")
 # 2d harmonics / trigonometric polynomials 
 include("ctrig.jl")
 include("rtrig.jl")
