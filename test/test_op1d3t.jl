@@ -47,7 +47,6 @@ end
 
 ##
 
-
 @info("Test normalized cheb basis") 
 @info("   coeffs")
 cheb = chebyshev_basis(N, normalize=true)

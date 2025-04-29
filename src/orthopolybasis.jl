@@ -14,17 +14,21 @@ can be either continuous or discrete but must have a density function. See also
 * `chebyshev_basis`
 * `jacobi_basis`
 """
-struct OrthPolyBasis1D3T{T} <: AbstractP4MLBasis
-   # ----------------- the recursion coefficients
-   A::Vector{T}
-   B::Vector{T}
-   C::Vector{T}
-   # ----------------- required fields 
-   @reqfields()   
+struct OrthPolyBasis1D3T{N, T} <: AbstractP4MLBasis
+   A::SVector{N, T}
+   B::SVector{N, T}
+   C::SVector{N, T}
 end
 
-OrthPolyBasis1D3T(A, B, C) = 
-      OrthPolyBasis1D3T(A, B, C, _make_reqfields()...)
+function OrthPolyBasis1D3T(A::AbstractVector, B::AbstractVector, 
+                           C::AbstractVector)
+   N = length(A) 
+   @assert N == length(B) == length(C)
+   T = promote_type(eltype(A), eltype(B), eltype(C))
+   return OrthPolyBasis1D3T(SVector{N, T}(A), 
+                            SVector{N, T}(B), 
+                            SVector{N, T}(C))
+end
 
 export OrthPolyBasis1D3T
 
@@ -37,10 +41,15 @@ Base.length(basis::OrthPolyBasis1D3T) = length(basis.A)
 Base.show(io::IO, basis::OrthPolyBasis1D3T) = 
    print(io, "OrthPolyBasis1D3T(maxn = $(length(basis.A)))")
 
-_valtype(basis::OrthPolyBasis1D3T{T1}, TX::Type{T2}) where {T1, T2} = 
+_valtype(basis::OrthPolyBasis1D3T{N, T1}, TX::Type{T2}) where {N, T1, T2} = 
             promote_type(T1, T2)
 
 _generate_input(basis::OrthPolyBasis1D3T) = 2 * rand() - 1
+
+function (T::Type{<: AbstractFloat})(basis::OrthPolyBasis1D3T) 
+   return OrthPolyBasis1D3T(
+      T.(basis.A), T.(basis.B), T.(basis.C))
+end
 
 # ----------------- CPU evaluation code 
 

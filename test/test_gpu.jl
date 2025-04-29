@@ -5,18 +5,18 @@
 using Polynomials4ML
 import Polynomials4ML as P4ML 
 
-using Metal; GPUArray = MtlArray 
+using Metal; GPUArray = MtlArray; TFL = Float32
 # CUDA etc ... 
 
 ##
 
 # stolen from test_lux.jl 
-test_bases = [ # chebyshev_basis(10), 
-               ChebBasis(8), 
+test_bases = [ ChebBasis(8), 
                RTrigBasis(10), 
                CTrigBasis(10), 
                MonoBasis(10), 
-               # legendre_basis(10),
+               TFL(chebyshev_basis(10)),
+               TFL(legendre_basis(10)),
                #real_sphericalharmonics(5), 
                #real_solidharmonics(5), 
                #complex_sphericalharmonics(5), 

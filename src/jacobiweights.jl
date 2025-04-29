@@ -36,7 +36,7 @@ function orthpolybasis(N::Integer, W::JacobiWeights{T}) where {T}
       C[n+1] = T( big(-2*(n+α-1)*(n+β-1)*(2n+α+β)) / c1 )  
    end
    basis = OrthPolyBasis1D3T(A, B, C)
-   basis.meta["weights"] = W
+   # basis.meta["weights"] = W
    if W.normalize
       integrand = x -> evaluate(basis, x).^2 * ((1-x)^α * (1+x)^β)
       g = sqrt.(quadgk(integrand, -1.0+1e-15, 1.0-1e-15; atol=1e-10)[1])
@@ -49,14 +49,15 @@ function orthpolybasis(N::Integer, W::JacobiWeights{T}) where {T}
       # g = [ nrm_jacobi(n) for n = 0:N-1 ]
       # display([g g1])
 
-      basis.A[1] /= g[1] 
-      basis.A[2] /= g[2] 
-      basis.B[2] /= g[2] 
+      A[1] /= g[1] 
+      A[2] /= g[2] 
+      B[2] /= g[2] 
       for n = 3:N 
-         basis.A[n] *= g[n-1]/g[n] 
-         basis.B[n] *= g[n-1]/g[n] 
-         basis.C[n] *= g[n-2]/g[n] 
+         A[n] *= g[n-1]/g[n] 
+         B[n] *= g[n-1]/g[n] 
+         C[n] *= g[n-2]/g[n] 
       end
+      basis = OrthPolyBasis1D3T(A, B, C)
    end
    return basis 
 end
@@ -70,20 +71,22 @@ Careful: the normalisation may be non-standard.
 """
 function chebyshev_basis(N::Integer; normalize=false) 
    cheb = orthpolybasis(N, chebyshev_weights(normalize))
+   A = Vector(cheb.A); B = Vector(cheb.B); C = Vector(cheb.C)
    if normalize 
-      cheb.A[1] = sqrt(1/π)
-      cheb.A[2] = sqrt(2/π)
-      cheb.C[3] = - sqrt(2) 
-      cheb.A[3:end] .= 2 
-      cheb.B[:] .= 0 
-      cheb.C[4:end] .= -1 
+      A[1] = sqrt(1/π)
+      A[2] = sqrt(2/π)
+      C[3] = - sqrt(2) 
+      A[3:end] .= 2 
+      B[:] .= 0 
+      C[4:end] .= -1 
    else 
-      cheb.A[1] = 1
-      cheb.A[2] = 1
-      cheb.A[3:end] .= 2 
-      cheb.B[:] .= 0 
-      cheb.C[3:end] .= -1 
+      A[1] = 1
+      A[2] = 1
+      A[3:end] .= 2 
+      B[:] .= 0 
+      C[3:end] .= -1 
    end
+   cheb = OrthPolyBasis1D3T(A, B, C)
    return cheb 
 end 
       
