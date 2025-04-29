@@ -11,10 +11,9 @@ Real trigonometric polynomials up to degree `N` (inclusive). The basis is ordere
 where `θ` is input variable. 
 """
 struct RTrigBasis{N} <: AbstractP4MLBasis
-   @reqfields
 end
 
-RTrigBasis(N::Integer) = RTrigBasis{N}(_make_reqfields()...)
+RTrigBasis(N::Integer) = RTrigBasis{N}()
 
 Base.length(basis::RTrigBasis{N}) where {N} = 2 * N + 1
 

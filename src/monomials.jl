@@ -7,11 +7,9 @@ Standard Monomials basis. This should very rarely be used. Possibly useful
 in combination with a transformation of the inputs, e.g. exponential. 
 """
 struct MonoBasis{N} <: AbstractP4MLBasis
-   # ----------------- metadata 
-   @reqfields()
 end
 
-MonoBasis(N::Integer) = MonoBasis{N}(_make_reqfields()...)
+MonoBasis(N::Integer) = MonoBasis{N}()
 
 
 # ----------------- interface functions 

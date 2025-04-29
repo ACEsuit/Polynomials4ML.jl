@@ -92,7 +92,7 @@ evaluate!(P::AbstractGPUArray, basis::AbstractP4MLBasis, x::BATCH) =
 		ka_evaluate!(P, basis, x)
 
 evaluate_ed!(P::AbstractGPUArray, dP::AbstractGPUArray, basis::AbstractP4MLBasis, x::BATCH) = 
-		ka_evaluate_ed!(P, dP, basis, x)
+		ka_evaluate_ed!(P, dP, basis, x)      
 
 function ka_evaluate!(P, basis::AbstractP4MLBasis, x::BATCH) 
 	_ka_evaluate_launcher!(P, nothing, basis, x)

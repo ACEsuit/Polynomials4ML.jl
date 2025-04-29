@@ -17,10 +17,9 @@ performance benefit from this.
 Secondly, `ChebBasis` and `chebyshev_basis` use different normalization.
 """
 struct ChebBasis{N} <: AbstractP4MLBasis where {N} 
-   @reqfields
 end
 
-ChebBasis(N::Integer) = ChebBasis{N}(_make_reqfields()...)
+ChebBasis(N::Integer) = ChebBasis{N}()
 
 Base.length(basis::ChebBasis{N}) where {N} = N
 
