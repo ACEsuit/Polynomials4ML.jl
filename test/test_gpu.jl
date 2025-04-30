@@ -5,7 +5,11 @@
 using Polynomials4ML
 import Polynomials4ML as P4ML 
 
-using Metal; GPUArray = MtlArray; TFL = Float32
+# For Metal: 
+using Metal
+GPUArray = MtlArray
+TFL = Float32
+
 # or CUDA or ...
 
 ##
@@ -18,7 +22,7 @@ test_bases = [ ChebBasis(8),
                TFL(chebyshev_basis(10)),
                TFL(legendre_basis(10)),
                #real_sphericalharmonics(5), 
-               #real_solidharmonics(5), 
+               real_solidharmonics(5; T = TFL, static=true), 
                #complex_sphericalharmonics(5), 
                #complex_solidharmonics(5), 
                ]
@@ -48,4 +52,3 @@ for basis in test_bases
    @show P1 ≈ P2 ≈ P3
 end
    
-##

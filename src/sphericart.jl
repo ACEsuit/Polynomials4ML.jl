@@ -82,7 +82,6 @@ function _generate_input(scbasis::SolidHarmonics)
 	return rand() * (u / norm(u))
 end
 
-
 # ---------------------- Nicer output 
 
 _ℝℂ(::RealSCWrapper) = "ℝ"
@@ -197,7 +196,7 @@ function _ka_evaluate_launcher!(P, dP,
 		@assert size(dP, 2) >= len_basis
 	end
 
-	Flm = basis.scbasis.Flm.parent
+	Flm = basis.scbasis.Flm
 	valL = Val{maxl(basis)}()
 	SpheriCart.ka_solid_harmonics!(P, dP, valL, x, Flm)
 	
