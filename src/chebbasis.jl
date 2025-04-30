@@ -23,7 +23,7 @@ ChebBasis(N::Integer) = ChebBasis{N}()
 
 Base.length(basis::ChebBasis{N}) where {N} = N
 
-natural_indices(basis::ChebBasis) = 0:length(basis)-1
+natural_indices(basis::ChebBasis) = [ (n = n,) for n = 0:length(basis)-1 ]
 
 _valtype(basis::ChebBasis, T::Type{<:Real}) = T
 

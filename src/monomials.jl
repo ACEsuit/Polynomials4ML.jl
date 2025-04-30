@@ -14,11 +14,12 @@ MonoBasis(N::Integer) = MonoBasis{N}()
 
 # ----------------- interface functions 
 
-natural_indices(basis::MonoBasis{N}) where {N} = 0:N
+natural_indices(basis::MonoBasis) = 
+         [ (n = n,) for n = 0:length(basis)-1 ]
 
 index(basis::MonoBasis, m::Integer) = m+1
 
-Base.length(basis::MonoBasis{N}) where {N} = N+1
+Base.length(basis::MonoBasis{N}) where {N} = N
 
 _valtype(basis::MonoBasis, T::Type{<: Number}) = T
 
@@ -27,8 +28,9 @@ _generate_input(basis::MonoBasis) = 2 * rand() - 1
 # ----------------- main evaluation code 
 
 
-function _evaluate!(P, dP, basis::MonoBasis{N}, X::BATCH)  where {N}
+function _evaluate!(P, dP, basis::MonoBasis, X::BATCH)
    nX = length(X)
+   N = length(basis)
    WITHGRAD = !isnothing(dP)
 
    @inbounds begin 
@@ -36,7 +38,7 @@ function _evaluate!(P, dP, basis::MonoBasis{N}, X::BATCH)  where {N}
          P[i, 1] = 1 
          WITHGRAD && (dP[i, 1] = 0)
       end
-      for n = 1:N 
+      for n = 1:N-1 
          @simd ivdep for i = 1:nX
             P[i, n+1] = X[i] * P[i, n]
             WITHGRAD && (dP[i, n+1] = n * P[i, n])
@@ -47,14 +49,15 @@ function _evaluate!(P, dP, basis::MonoBasis{N}, X::BATCH)  where {N}
 end
 
 
-@kernel function _ka_evaluate!(P, dP, basis::MonoBasis{N}, X::BATCH)  where {N}
+@kernel function _ka_evaluate!(P, dP, basis::MonoBasis, X::BATCH)
    i = @index(Global)
    WITHGRAD = !isnothing(dP)
+   N = length(basis)
 
    @inbounds begin 
       P[i, 1] = 1 
       WITHGRAD && (dP[i, 1] = 0)
-      for n = 1:N 
+      for n = 1:N-1 
          P[i, n+1] = X[i] * P[i, n]
          WITHGRAD && (dP[i, n+1] = n * P[i, n])
       end

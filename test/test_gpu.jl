@@ -6,7 +6,7 @@ using Polynomials4ML
 import Polynomials4ML as P4ML 
 
 using Metal; GPUArray = MtlArray; TFL = Float32
-# CUDA etc ... 
+# or CUDA or ...
 
 ##
 

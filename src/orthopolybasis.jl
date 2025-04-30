@@ -32,7 +32,8 @@ end
 
 export OrthPolyBasis1D3T
 
-natural_indices(basis::OrthPolyBasis1D3T) = 0:length(basis.A)-1
+natural_indices(basis::OrthPolyBasis1D3T) = 
+      [ (n = n,) for n in 0:length(basis)-1 ]
 
 index(basis::OrthPolyBasis1D3T, m::Integer) = m + 1
 

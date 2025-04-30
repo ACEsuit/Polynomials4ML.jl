@@ -85,7 +85,6 @@ function orthpolybasis(N::Integer, W::DiscreteWeights{TW}; TX = Float64) where {
    end
    
    basis = OrthPolyBasis1D3T(A, B, C) 
-   basis.meta["weights"] = W
    return basis
 end
 

@@ -24,7 +24,7 @@ function natural_indices_trig(N)
       inds[2*k] = k
       inds[2*k+1] = -k
    end
-   return inds
+   return [ (n = k,) for k in inds ]
 end
 
 natural_indices(basis::RTrigBasis{N}) where {N} = natural_indices_trig(N)

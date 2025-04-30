@@ -7,7 +7,7 @@ function rand_basis(nX, N)
    xx = 2 * (rand(nX) .- 0.5) 
    ww = 1 .+ rand(nX)
    W = DiscreteWeights(xx, ww, :normalize)
-   return orthpolybasis(N, W)
+   return orthpolybasis(N, W), W
 end
 
 ##
@@ -17,9 +17,8 @@ end
 for ntest = 1:30 
    local N, basis, G 
    N = rand(5:20)
-   nX = rand(100:300) 
-   basis = rand_basis(nX, N)
-   W = basis.meta["weights"]
+   nX = rand(30:100) 
+   basis, W = rand_basis(nX, N)
    G = zeros(N, N)
    for (i, (x, w)) in enumerate(zip(W.X, W.W))
       P = basis(x)
