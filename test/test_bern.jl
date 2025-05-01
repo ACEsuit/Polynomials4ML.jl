@@ -12,12 +12,12 @@ basis = BernsteinBasis(N)
 
 @info("correctness")
 mm = natural_indices(basis)
-print_tf(@test mm == 0:N-1)
+print_tf(@test mm == [ (n=n,) for n = 0:N-1] )
 
 for ntest = 1:30
    x = rand()  
    P = basis(x)
-   P_ref = [binomial(N-1, k) * x^k * (1 - x)^(N-1 - k) for k in mm]
+   P_ref = [binomial(N-1, k.n) * x^k.n * (1 - x)^(N-1 - k.n) for k in mm]
    print_tf(@test P ≈ P_ref)
 end
 

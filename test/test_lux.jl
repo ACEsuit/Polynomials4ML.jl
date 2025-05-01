@@ -11,6 +11,7 @@ rng = default_rng()
 
 test_bases = [ chebyshev_basis(10), 
                ChebBasis(8), 
+               BernsteinBasis(8), 
                RTrigBasis(10), 
                CTrigBasis(10), 
                MonoBasis(10), 

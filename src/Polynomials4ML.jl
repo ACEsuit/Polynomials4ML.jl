@@ -15,7 +15,7 @@ using LuxCore, Random, StaticArrays
 import ChainRulesCore: rrule, frule, NoTangent, ZeroTangent
 using HyperDualNumbers: Hyper
 using ForwardDiff: Dual, extract_derivative
-
+using StaticArrays
 import LuxCore: AbstractLuxLayer, initialparameters, initialstates                 
 
 using Random: AbstractRNG   
