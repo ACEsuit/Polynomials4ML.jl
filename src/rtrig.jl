@@ -11,10 +11,9 @@ Real trigonometric polynomials up to degree `N` (inclusive). The basis is ordere
 where `θ` is input variable. 
 """
 struct RTrigBasis{N} <: AbstractP4MLBasis
-   @reqfields
 end
 
-RTrigBasis(N::Integer) = RTrigBasis{N}(_make_reqfields()...)
+RTrigBasis(N::Integer) = RTrigBasis{N}()
 
 Base.length(basis::RTrigBasis{N}) where {N} = 2 * N + 1
 
@@ -25,7 +24,7 @@ function natural_indices_trig(N)
       inds[2*k] = k
       inds[2*k+1] = -k
    end
-   return inds
+   return [ (n = k,) for k in inds ]
 end
 
 natural_indices(basis::RTrigBasis{N}) where {N} = natural_indices_trig(N)

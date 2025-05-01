@@ -14,6 +14,8 @@ for ntest = 1:3
    @info("Test a randomly generated polynomial basis - $ntest")
    N = rand(5:15)
    basis = OrthPolyBasis1D3T(randn(N), randn(N), randn(N))
+   spec = Polynomials4ML.natural_indices(basis)
+   print_tf(@test spec == [ (n=n,) for n = 0:N-1] ); println()  
    test_all(basis)
 end
 
@@ -46,7 +48,6 @@ for ntest = 1:3
 end 
 
 ##
-
 
 @info("Test normalized cheb basis") 
 @info("   coeffs")

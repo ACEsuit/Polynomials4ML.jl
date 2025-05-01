@@ -70,3 +70,17 @@ end
 ```
 The arrays `P1, P2, dP2` are Bumper-allocated i.e. are not allowed to leave the no-escape block. Please see `[WithAlloc.jl](https://github.com/ACEsuit/WithAlloc.jl)` and `[Bumper.jl](https://github.com/MasonProtter/Bumper.jl)` for more details. If output arrays are to be used outside of the local scope then the allocating functions `evaluate`, `evaluate_ed` etc, should be used or array allocation managed differently. 
 
+### Utility functions
+
+The basis specification can be obtained using [`Polynomials4ML.natural_indices`](@ref)
+```julia
+spec = natural_indices(basis)
+```
+This produces a `Vector{<: NamedTuple}`; e.g., for a Chebyshev basis it will be of the form 
+```
+spec == [ (n = 0,), (n = 1,), ... ] 
+```
+while for spherical or solid harmonics, it will be of the form 
+```
+spec == [ (l = 0, m = 0), (l = 1, m = -1), (l = 1, m = 0), ... ]
+```

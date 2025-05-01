@@ -17,7 +17,7 @@ for ntest = 1:10
    local x 
    x = 2*π * rand()
    P = basis(x)
-   P_ref = [ exp(im * m * x) for m in mm ]
+   P_ref = [ exp(im * m.n * x) for m in mm ]
    print_tf(@test P ≈ P_ref)
 end
 println() 

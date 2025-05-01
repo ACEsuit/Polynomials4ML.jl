@@ -14,7 +14,7 @@ for ntest = 1:30
    local x 
    x = 2*π * rand()
    P = basis(x)
-   P2 = [ (m >= 0 ? cos(m*x) : sin(abs(m)*x)) for m in mm ]
+   P2 = [ (m.n >= 0 ? cos(m.n*x) : sin(abs(m.n)*x)) for m in mm ]
    print_tf(@test P ≈ P2)
 end
 println() 

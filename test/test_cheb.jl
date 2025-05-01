@@ -12,14 +12,14 @@ basis = ChebBasis(N)
 
 @info("      correctness")
 mm = natural_indices(basis)
-print_tf(@test mm == 0:N-1)
+print_tf(@test mm == [ (n=n,) for n = 0:N-1] )
 
 for ntest = 1:30
    local θ, x
    θ = 2*π * rand()
    x = cos(θ)
    P = basis(x)
-   P_ref = [ cos(m*θ) for m in mm ]
+   P_ref = [ cos(m.n*θ) for m in mm ]
    print_tf(@test P ≈ P_ref)
 end
 println() 

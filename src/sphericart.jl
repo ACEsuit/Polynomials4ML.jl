@@ -13,19 +13,14 @@ abstract type SCWrapper <: AbstractP4MLBasis end
 
 struct RealSCWrapper{SCT} <: SCWrapper
 	scbasis::SCT
-	@reqfields
 end						
 
 struct ComplexSCWrapper{SCT} <: SCWrapper
 	scbasis::SCT
-	@reqfields
 end			
 
 
 # ---------------------- Convenience constructors & Accessors 
-
-RealSCWrapper(scbasis) = RealSCWrapper(scbasis, _make_reqfields()...)
-ComplexSCWrapper(scbasis) = ComplexSCWrapper(scbasis, _make_reqfields()...)
 
 
 """
@@ -82,7 +77,6 @@ function _generate_input(scbasis::SolidHarmonics)
 	return rand() * (u / norm(u))
 end
 
-
 # ---------------------- Nicer output 
 
 _ℝℂ(::RealSCWrapper) = "ℝ"
@@ -125,6 +119,14 @@ function evaluate!(Y::AbstractArray,
 	return Y 
 end
 
+function evaluate!(Y::AbstractGPUArray, 
+		    basis::SCWrapper, X::AbstractVector{<: SVector{3}}) 
+	compute!(Y, basis.scbasis, X)
+	_convert_R2C!(Y, basis)
+	return Y 
+end
+
+
 function evaluate_ed!(Y::AbstractArray, dY::AbstractArray, 
 			    basis::SCWrapper, X::AbstractVector{<: SVector{3}}) 
 	compute_with_gradients!(Y, dY, basis.scbasis, X)
@@ -132,6 +134,15 @@ function evaluate_ed!(Y::AbstractArray, dY::AbstractArray,
 	_convert_R2C!(dY, basis)
 	return Y, dY
 end
+
+function evaluate_ed!(Y::AbstractGPUArray, dY::AbstractGPUArray, 
+			    basis::SCWrapper, X::AbstractVector{<: SVector{3}}) 
+	compute_with_gradients!(Y, dY, basis.scbasis, X)
+	_convert_R2C!(Y, basis)
+	_convert_R2C!(dY, basis)
+	return Y, dY
+end
+
 
 # ---------------------- Real to complex conversion 
 
@@ -197,7 +208,7 @@ function _ka_evaluate_launcher!(P, dP,
 		@assert size(dP, 2) >= len_basis
 	end
 
-	Flm = basis.scbasis.Flm.parent
+	Flm = basis.scbasis.Flm
 	valL = Val{maxl(basis)}()
 	SpheriCart.ka_solid_harmonics!(P, dP, valL, x, Flm)
 	

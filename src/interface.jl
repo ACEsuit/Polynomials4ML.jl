@@ -92,7 +92,7 @@ evaluate!(P::AbstractGPUArray, basis::AbstractP4MLBasis, x::BATCH) =
 		ka_evaluate!(P, basis, x)
 
 evaluate_ed!(P::AbstractGPUArray, dP::AbstractGPUArray, basis::AbstractP4MLBasis, x::BATCH) = 
-		ka_evaluate_ed!(P, dP, basis, x)
+		ka_evaluate_ed!(P, dP, basis, x)      
 
 function ka_evaluate!(P, basis::AbstractP4MLBasis, x::BATCH) 
 	_ka_evaluate_launcher!(P, nothing, basis, x)
@@ -183,6 +183,13 @@ function _with_safe_alloc(fcall, args...)
    return fcall(outputs..., args...)
 end
 
+function _with_safe_alloc(fcall, basis::AbstractP4MLBasis, X::BATCH) 
+   _alczero(T, args...) = fill!( similar(X, T, args...), zero(T) )
+      
+   allocinfo = _tup_whatalloc(fcall, basis, X)
+   outputs = ntuple(i -> _alczero(allocinfo[i]...), length(allocinfo))
+   return fcall(outputs..., basis, X)
+end
 
 # --------------------------------------- 
 # allocating evaluation interface 

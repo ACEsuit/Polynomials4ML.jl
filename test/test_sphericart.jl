@@ -201,4 +201,3 @@ end
 for basis in bases[2:3]
    test_ka_evaluate(basis)
 end
-

@@ -11,10 +11,9 @@ constructed in the order
 where `θ` is input variable. 
 """
 struct CTrigBasis{N} <: AbstractP4MLBasis
-   @reqfields
 end
 
-CTrigBasis(N::Integer) = CTrigBasis{N}(_make_reqfields()...)
+CTrigBasis(N::Integer) = CTrigBasis{N}()
 
 # natural_indices_trig is implemented in rtrig.jl 
 natural_indices(basis::CTrigBasis{N}) where {N} = natural_indices_trig(N)

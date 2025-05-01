@@ -14,7 +14,7 @@ for ntest = 1:30
    local x 
    x = 2*π * rand()
    P = basis(x)
-   P2 = [ x^m for m in mm ]
+   P2 = [ x^(m.n) for m in mm ]
    print_tf(@test P ≈ P2)
 end
 println() 
