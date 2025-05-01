@@ -49,6 +49,10 @@ for basis in test_bases
    P4ML.ka_evaluate!(P3_dev, basis, X_dev)
    P3 = Array(P3_dev)
 
-   @show P1 ≈ P2 ≈ P3
+   # allocating GPU evaluation 
+   P4_dev = basis(X_dev)
+   P4 = Array(P4_dev)
+
+   @show P1 ≈ P2 ≈ P3 ≈ P4
 end
    

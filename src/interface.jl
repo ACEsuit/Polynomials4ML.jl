@@ -183,6 +183,13 @@ function _with_safe_alloc(fcall, args...)
    return fcall(outputs..., args...)
 end
 
+function _with_safe_alloc(fcall, basis::AbstractP4MLBasis, X::BATCH) 
+   _alczero(T, args...) = fill!( similar(X, T, args...), zero(T) )
+      
+   allocinfo = _tup_whatalloc(fcall, basis, X)
+   outputs = ntuple(i -> _alczero(allocinfo[i]...), length(allocinfo))
+   return fcall(outputs..., basis, X)
+end
 
 # --------------------------------------- 
 # allocating evaluation interface 
