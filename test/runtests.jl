@@ -15,12 +15,14 @@ using Test
     @testset "SpheriCart Interface" begin include("test_sphericart.jl"); end
 
     # Quantum Chemistry 
-    # TODO: RESTRUCTURE OR MOVE?
-    # @testset "Atomic Orbitals Radials" begin include("test_atorbrad.jl"); end
-    # @testset "Sparse Product" begin include("test_sparseproduct.jl"); end 
-    # @testset "Linear layer" begin include("test_linear.jl"); end 
+    @testset "Atomic Orbitals" begin include("test_atorbrad.jl"); end
     
     # Misc
     @testset "Static Prod" begin include("test_staticprod.jl"); end
-    # @testset "Lux" begin include("test_lux.jl"); end 
+    @testset "Lux" begin include("test_lux.jl"); end 
+
+    # TODO: restructure or move?? 
+    # @testset "Sparse Product" begin include("test_sparseproduct.jl"); end 
+    # @testset "Linear layer" begin include("test_linear.jl"); end 
+
 end

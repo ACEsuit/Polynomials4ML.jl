@@ -100,8 +100,7 @@ include("rtrig.jl")
 include("sphericart.jl")
 
 # quantum chemistry 
-# TODO: RESTRUCTURE OR MOVE?
-# include("atomicorbitalsradials/atomicorbitalsradials.jl")
+include("atomicorbitals/atomicorbitals.jl")
 
 # generating product bases (generalisation of tensor products)
 # RETIRE - to be discussed?

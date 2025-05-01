@@ -1,0 +1,73 @@
+mutable struct STO_NG{TSMAT} <: AbstractP4MLBasis
+    ζ::TSMAT
+    D::TSMAT
+end
+
+function STO_NG(ζ::AbstractMatrix, D::AbstractMatrix) 
+    LEN, K = size(ζ)
+    T = eltype(ζ)
+    @assert size(D) == (LEN, K)
+    sζ = SMatrix{LEN, K, T}(ζ)
+    sD = SMatrix{LEN, K, T}(D)
+    return STO_NG{typeof(ζ)}(sζ, sD)
+end
+
+Base.length(basis::STO_NG) = size(basis.ζ, 1)
+
+Base.show(io::IO, basis::STO_NG) = print(io, "STO_NG$(size(basis.ζ))")
+
+_valtype(::STO_NG, T::Type{<: Real}) = T
+
+function _evaluate!(P, dP, basis::STO_NG, x::AbstractVector) 
+    ζ, D = basis.ζ, basis.D
+    N, K = size(ζ)
+    nX = length(x)
+    WITHGRAD = !isnothing(dP)
+
+    fill!(P, zero(eltype(P)))
+    if WITHGRAD
+        fill!(dP, zero(eltype(dP)))
+    end
+
+    @inbounds begin 
+        for n = 1:N, m = 1:K
+            @simd ivdep for i = 1:nX 
+                a = D[n, m] * exp(-ζ[n, m] * x[i]^2)
+                P[i, n] += a 
+                if WITHGRAD
+                    dP[i, n] += -2 * ζ[n, m] * x[i] * a
+                end
+            end
+        end
+    end
+
+    return nothing 
+end
+
+
+#=
+function evaluate_ed2!(P, dP, ddP, basis::STO_NG, x::AbstractVector{<: Real})
+    ζ, D = basis.ζ[1], basis.ζ[2]
+    N = size(ζ, 1)
+    nX = length(x)
+    fill!(P, zero(eltype(P)))
+    fill!(dP, zero(eltype(dP)))
+    fill!(ddP, zero(eltype(ddP)))
+    @inbounds begin 
+        for n = 1:N
+            for m = 1:length(D[n])
+                @simd ivdep for i = 1:nX 
+                    Z = D[n][m] * exp(-ζ[n][m] * x[i]^2)
+                    dZ = -2 * ζ[n][m] * x[i] * Z
+                    P[i,n] += Z
+                    dP[i,n] += dZ
+                    ddP[i,n] += -2 * ζ[n][m] * Z -2 * ζ[n][m] * x[i] * dZ
+                end
+            end
+        end
+    end
+
+    return P, dP, ddP 
+end 
+
+=#

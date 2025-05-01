@@ -1,42 +1,32 @@
-mutable struct SlaterBasis{T} <: AbstractP4MLBasis
-    ζ::Vector{T}
-    # ----------------- metadata 
-    @reqfields
+mutable struct SlaterBasis{N, T} <: AbstractP4MLBasis
+    ζ::SVector{N, T}
 end
 
-SlaterBasis(ζ::Vector{T}) where {T} = SlaterBasis(ζ, _make_reqfields()...)
+function SlaterBasis(ζ::AbstractVector) 
+    N = length(ζ); T = eltype(ζ)
+    return SlaterBasis{N, T}(SVector{N, T}(ζ))
+end
 
 Base.length(basis::SlaterBasis) = length(basis.ζ)
 
-Base.show(io::IO, basis::SlaterBasis) = print(io, "SlaterBasis(...)")
+Base.show(io::IO, basis::SlaterBasis) = print(io, "SlaterBasis($(length(basis)))")
 
 _valtype(::SlaterBasis, T::Type{<: Real}) = T
-_valtype(::SlaterBasis, T::Type{<: Hyper{<:Real}}) = T
 
 
-function evaluate!(P, basis::SlaterBasis, x::AbstractVector) 
+function _evaluate!(P, dP, basis::SlaterBasis, x::AbstractVector)
     N = size(P, 2)
     nX = length(x)
+    WITHGRAD = !isnothing(dP)
 
     @inbounds begin 
         for n = 1:N
             @simd ivdep for i = 1:nX 
-                P[i,n] = exp(-basis.ζ[n] * x[i])
-            end
-        end
-    end
-    return P 
-end
-
-function evaluate_ed!(P, dP, basis::SlaterBasis, x)
-    N = size(P, 2)
-    nX = length(x)
-
-    @inbounds begin 
-        for n = 1:N
-            @simd ivdep for i = 1:nX 
-                P[i, n] = exp(-basis.ζ[n] * x[i])
-                dP[i, n] = -basis.ζ[n] * P[i,n]
+                P_in = exp(-basis.ζ[n] * x[i])
+                P[i, n] = P_in
+                if WITHGRAD
+                    dP[i, n] = -basis.ζ[n] * P_in
+                end
             end
         end
     end
@@ -44,7 +34,7 @@ function evaluate_ed!(P, dP, basis::SlaterBasis, x)
    return P, dP 
 end 
 
-
+#=
 function evaluate_ed_dp!(P, dP, dpP, basis::SlaterBasis, x)
     N = length(basis.ζ)
     nX = length(x)
@@ -62,21 +52,6 @@ function evaluate_ed_dp!(P, dP, dpP, basis::SlaterBasis, x)
     return P, dP, dpP
 end 
 
-function evaluate_ed2!(P, dP, ddP, basis::SlaterBasis, x)
-    N = size(P, 2)
-    nX = length(x)
-    
-    @inbounds begin 
-        for n = 1:N
-            @simd ivdep for i = 1:nX 
-                P[i, n] = exp(-basis.ζ[n] * x[i])
-                dP[i, n] = -basis.ζ[n] * P[i, n]
-                ddP[i, n] = -basis.ζ[n] * dP[i, n]
-            end
-        end
-    end
-   return P, dP, ddP 
-end 
 
 function ChainRulesCore.rrule(::typeof(evaluate), basis::SlaterBasis{T}, R::AbstractVector{<: Real}) where {T}
     A, dR, dζ = evaluate_ed_dp(basis, R)
@@ -95,3 +70,5 @@ function ChainRulesCore.rrule(::typeof(evaluate), basis::SlaterBasis{T}, R::Abst
     end
     return A, pb
 end
+
+=#
