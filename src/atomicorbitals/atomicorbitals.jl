@@ -38,7 +38,7 @@ include("sto_ng.jl")
 _static_params(basis::AbstractP4MLBasis) = NamedTuple() 
 
 _static_params(basis::AtomicOrbitalsRadials) = 
-        (Pn = _static_params(basis.Pn), Dn = _static_params(basis.Dn))
+        (Pn = _static_params(basis.Pn), Dn = _static_params(basis.Dn), )
 
 
 # -------- Evaluation Code 
@@ -47,7 +47,7 @@ _evaluate!(Rnl, dRnl, basis::AtomicOrbitalsRadials, X) =
             _evaluate!(Rnl, dRnl, basis, X, _static_params(basis), nothing)
 
 function _evaluate!(Rnl, dRnl, basis::AtomicOrbitalsRadials, R::AbstractVector, 
-                    ps, st)
+                     ps, st)
     nR = length(R)
     WITHGRAD = !isnothing(dRnl)
 
@@ -56,8 +56,17 @@ function _evaluate!(Rnl, dRnl, basis::AtomicOrbitalsRadials, R::AbstractVector,
 
     @no_escape begin 
         if WITHGRAD
-            Pn, dPn = @withalloc evaluate_ed!(basis.Pn, R, ps.Pn, nothing)
-            Dn, dDn = @withalloc evaluate_ed!(basis.Dn, R, ps.Dn, nothing)
+            # this is a hack that circumvents an unexplained allocation in 
+            # the @withalloc macro 
+            T = eltype(Rnl)
+            Pn = @alloc(T, nR, length(basis.Pn))
+            dPn = @alloc(T, nR, length(basis.Pn))
+            _evaluate!(Pn, dPn, basis.Pn, R, ps.Pn, nothing)
+            Dn = @alloc(T, nR, length(basis.Dn))
+            dDn = @alloc(T, nR, length(basis.Dn))
+            _evaluate!(Dn, dDn, basis.Dn, R, ps.Dn, nothing)
+            # Pn, dPn = @withalloc evaluate_ed!(basis.Pn, R)
+            # Dn, dDn = @withalloc evaluate_ed!(basis.Dn, R)
         else 
             Pn = @withalloc evaluate!(basis.Pn, R, ps.Pn, nothing)   # Pn(r)
             Dn = @withalloc evaluate!(basis.Dn, R, ps.Dn, nothing)   # Dn(r)  (ζ are the parameters -> reorganize the Lux way)

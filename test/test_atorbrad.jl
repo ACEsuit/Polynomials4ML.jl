@@ -20,6 +20,7 @@ bRnl = AtomicOrbitalsRadials(Pn, Dn, spec)
 @info("      correctness of evaluation")
 x = P4ML._generate_input(bRnl)
 P = evaluate(bRnl, x)
+P1, dP1 = evaluate_ed(bRnl, x)
 L = Pn(x)
 G = Dn(x)
 G1 = exp.( - ζ * x^2)
@@ -28,11 +29,9 @@ P1 = [ L[b.n1] * G1[i] for (i, b) in enumerate(spec)  ]
 print_tf(@test P ≈ P1) 
 println() 
 
-
 P4ML.Testing.test_evaluate_xx(bRnl)
 P4ML.Testing.test_chainrules(bRnl)
 P4ML.Testing.test_withalloc(bRnl; allowed_allocs = 0)
-
 
 ##
 
@@ -86,7 +85,6 @@ print_tf(@test P ≈ P1)
 P4ML.Testing.test_evaluate_xx(bRnl)
 P4ML.Testing.test_chainrules(bRnl)
 P4ML.Testing.test_withalloc(bRnl; allowed_allocs = 0)
-
 
 
 ##

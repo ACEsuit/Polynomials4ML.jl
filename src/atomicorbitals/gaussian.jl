@@ -20,19 +20,19 @@ _static_params(basis::GaussianBasis) = (ζ = basis.ζ,)
 _evaluate!(P, dP, basis::GaussianBasis, x)  = 
     _evaluate!(P, dP, basis, x, _static_params(basis), nothing)
 
-
 function _evaluate!(P, dP, basis::GaussianBasis, x::AbstractVector, ps, st)
-    N = length(basis.ζ)
+    ζ = ps.ζ
+    N = length(ζ)
     nX = length(x)
     WITHGRAD = !isnothing(dP)
 
     @inbounds begin 
         for n = 1:N
             @simd ivdep for j = 1:nX 
-                p_jn = exp(- ps.ζ[n] * x[j]^2)
+                p_jn = exp(- ζ[n] * x[j]^2)
                 P[j,n] = p_jn
                 if WITHGRAD
-                    dP[j,n] = -2 * ps.ζ[n] * x[j] * p_jn
+                    dP[j,n] = -2 * ζ[n] * x[j] * p_jn
                 end
             end
         end

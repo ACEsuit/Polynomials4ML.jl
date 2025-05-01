@@ -20,6 +20,7 @@ _evaluate!(P, dP, basis::SlaterBasis, x)  =
 
 
 function _evaluate!(P, dP, basis::SlaterBasis, x::AbstractVector, ps, st)
+    ζ = ps.ζ
     N = size(P, 2)
     nX = length(x)
     WITHGRAD = !isnothing(dP)
@@ -27,10 +28,10 @@ function _evaluate!(P, dP, basis::SlaterBasis, x::AbstractVector, ps, st)
     @inbounds begin 
         for n = 1:N
             @simd ivdep for i = 1:nX 
-                P_in = exp(- ps.ζ[n] * x[i])
+                P_in = exp(- ζ[n] * x[i])
                 P[i, n] = P_in
                 if WITHGRAD
-                    dP[i, n] = - ps.ζ[n] * P_in
+                    dP[i, n] = - ζ[n] * P_in
                 end
             end
         end
