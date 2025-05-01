@@ -35,11 +35,16 @@ include("sto_ng.jl")
 
 # AORBAS = Union{AtomicOrbitalsRadials, GaussianBasis, SlaterBasis, STO_NG}
 
+_static_params(basis::AbstractP4MLBasis) = NamedTuple() 
+
+_static_params(basis::AtomicOrbitalsRadials) = 
+        (Pn = _static_params(basis.Pn), Dn = _static_params(basis.Dn))
+
 
 # -------- Evaluation Code 
 
-_evaluate!(Rnl, dRnl, basis::AtomicOrbitalsRadials) = 
-    _evaluate!(Rnl, dRnl, basis::AtomicOrbitalsRadials, 
+_evaluate!(Rnl, dRnl, basis::AtomicOrbitalsRadials, X) = 
+            _evaluate!(Rnl, dRnl, basis, X, _static_params(basis), nothing)
 
 function _evaluate!(Rnl, dRnl, basis::AtomicOrbitalsRadials, R::AbstractVector, 
                     ps, st)
@@ -51,11 +56,11 @@ function _evaluate!(Rnl, dRnl, basis::AtomicOrbitalsRadials, R::AbstractVector,
 
     @no_escape begin 
         if WITHGRAD
-            Pn, dPn = @withalloc evaluate_ed!(basis.Pn, R, ps.Pn, st.Pn)
-            Dn, dDn = @withalloc evaluate_ed!(basis.Dn, R, ps.Dn, st.Dn)
+            Pn, dPn = @withalloc evaluate_ed!(basis.Pn, R, ps.Pn, nothing)
+            Dn, dDn = @withalloc evaluate_ed!(basis.Dn, R, ps.Dn, nothing)
         else 
-            Pn = @withalloc evaluate!(basis.Pn, R, ps.Pn, st.Pn)   # Pn(r)
-            Dn = @withalloc evaluate!(basis.Dn, R, ps.Dn, st.Dn)   # Dn(r)  (ζ are the parameters -> reorganize the Lux way)
+            Pn = @withalloc evaluate!(basis.Pn, R, ps.Pn, nothing)   # Pn(r)
+            Dn = @withalloc evaluate!(basis.Dn, R, ps.Dn, nothing)   # Dn(r)  (ζ are the parameters -> reorganize the Lux way)
             dPn = nothing
             dDn = nothing
         end

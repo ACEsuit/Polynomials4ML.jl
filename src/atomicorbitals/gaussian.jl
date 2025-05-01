@@ -15,6 +15,11 @@ Base.show(io::IO, basis::GaussianBasis) =
 
 _valtype(::GaussianBasis, T::Type{<: Real}) = T
 
+_static_params(basis::GaussianBasis) = (ζ = basis.ζ,)
+
+_evaluate!(P, dP, basis::GaussianBasis, x)  = 
+    _evaluate!(P, dP, basis, x, _static_params(basis), nothing)
+
 
 function _evaluate!(P, dP, basis::GaussianBasis, x::AbstractVector, ps, st)
     N = length(basis.ζ)

@@ -18,6 +18,11 @@ Base.show(io::IO, basis::STO_NG) = print(io, "STO_NG$(size(basis.ζ))")
 
 _valtype(::STO_NG, T::Type{<: Real}) = T
 
+_static_params(basis::STO_NG) = (ζ = basis.ζ, D = basis.D)
+
+_evaluate!(P, dP, basis::STO_NG, x)  = 
+    _evaluate!(P, dP, basis, x, _static_params(basis), nothing)
+
 function _evaluate!(P, dP, basis::STO_NG, x::AbstractVector, ps, st) 
     ζ, D = ps.ζ, ps.D
     N, K = size(ζ)

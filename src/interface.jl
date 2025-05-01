@@ -155,13 +155,13 @@ _out_size(basis::AbstractP4MLBasis, x::SINGLE) = (length(basis),)
 
 _out_size(basis::AbstractP4MLBasis, X::BATCH) = (length(X), length(basis))
 
-function whatalloc(::typeof(evaluate!), basis::AbstractP4MLBasis, x)
+function whatalloc(::typeof(evaluate!), basis::AbstractP4MLBasis, x, args...)
    T = _valtype(basis, x)
    sz = _out_size(basis, x)
    return (T, sz...) 
 end
 
-function whatalloc(::typeof(evaluate_ed!), basis::AbstractP4MLBasis, x)
+function whatalloc(::typeof(evaluate_ed!), basis::AbstractP4MLBasis, x, args...)
    TV = _valtype(basis, x)
    TG = _gradtype(basis, x)
    sz = _out_size(basis, x)

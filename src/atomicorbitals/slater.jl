@@ -13,6 +13,11 @@ Base.show(io::IO, basis::SlaterBasis) = print(io, "SlaterBasis($(length(basis)))
 
 _valtype(::SlaterBasis, T::Type{<: Real}) = T
 
+_static_params(basis::SlaterBasis) = (ζ = basis.ζ,)
+
+_evaluate!(P, dP, basis::SlaterBasis, x)  = 
+    _evaluate!(P, dP, basis, x, _static_params(basis), nothing)
+
 
 function _evaluate!(P, dP, basis::SlaterBasis, x::AbstractVector, ps, st)
     N = size(P, 2)
