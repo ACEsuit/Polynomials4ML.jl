@@ -39,7 +39,7 @@ _generate_input(basis::RTrigBasis) = 2 * π * rand() - π
 ##
 
 
-function _evaluate!(P, dP, basis::RTrigBasis{N}, θ::BATCH) where {N}
+function _evaluate!(P, dP, basis::RTrigBasis{N}, θ::BATCH, ps, st) where {N}
    nX = length(θ)
    @assert N  >= 1 
    WITHGRAD = !isnothing(dP)

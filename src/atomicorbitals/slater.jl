@@ -14,7 +14,7 @@ Base.show(io::IO, basis::SlaterBasis) = print(io, "SlaterBasis($(length(basis)))
 _valtype(::SlaterBasis, T::Type{<: Real}) = T
 
 
-function _evaluate!(P, dP, basis::SlaterBasis, x::AbstractVector)
+function _evaluate!(P, dP, basis::SlaterBasis, x::AbstractVector, ps, st)
     N = size(P, 2)
     nX = length(x)
     WITHGRAD = !isnothing(dP)
@@ -22,10 +22,10 @@ function _evaluate!(P, dP, basis::SlaterBasis, x::AbstractVector)
     @inbounds begin 
         for n = 1:N
             @simd ivdep for i = 1:nX 
-                P_in = exp(-basis.ζ[n] * x[i])
+                P_in = exp(- ps.ζ[n] * x[i])
                 P[i, n] = P_in
                 if WITHGRAD
-                    dP[i, n] = -basis.ζ[n] * P_in
+                    dP[i, n] = - ps.ζ[n] * P_in
                 end
             end
         end

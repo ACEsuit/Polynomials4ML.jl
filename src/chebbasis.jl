@@ -36,7 +36,8 @@ _generate_input(basis::ChebBasis) = 2 * rand() - 1
 
 function _evaluate!(P, dP, 
                     basis::ChebBasis{N},
-                    x::AbstractVector{<:Real}) where {N} 
+                    x::AbstractVector{<:Real}, 
+                    ps, st) where {N} 
    nX = length(x)
    WITHGRAD = !isnothing(dP)
 

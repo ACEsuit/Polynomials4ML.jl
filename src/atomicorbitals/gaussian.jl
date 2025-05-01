@@ -16,7 +16,7 @@ Base.show(io::IO, basis::GaussianBasis) =
 _valtype(::GaussianBasis, T::Type{<: Real}) = T
 
 
-function _evaluate!(P, dP, basis::GaussianBasis, x::AbstractVector)
+function _evaluate!(P, dP, basis::GaussianBasis, x::AbstractVector, ps, st)
     N = length(basis.ζ)
     nX = length(x)
     WITHGRAD = !isnothing(dP)
@@ -24,10 +24,10 @@ function _evaluate!(P, dP, basis::GaussianBasis, x::AbstractVector)
     @inbounds begin 
         for n = 1:N
             @simd ivdep for j = 1:nX 
-                p_jn = exp(-basis.ζ[n] * x[j]^2)
+                p_jn = exp(- ps.ζ[n] * x[j]^2)
                 P[j,n] = p_jn
                 if WITHGRAD
-                    dP[j,n] = -2 * basis.ζ[n] * x[j] * p_jn
+                    dP[j,n] = -2 * ps.ζ[n] * x[j] * p_jn
                 end
             end
         end

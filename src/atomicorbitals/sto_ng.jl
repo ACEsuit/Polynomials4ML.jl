@@ -18,8 +18,8 @@ Base.show(io::IO, basis::STO_NG) = print(io, "STO_NG$(size(basis.ζ))")
 
 _valtype(::STO_NG, T::Type{<: Real}) = T
 
-function _evaluate!(P, dP, basis::STO_NG, x::AbstractVector) 
-    ζ, D = basis.ζ, basis.D
+function _evaluate!(P, dP, basis::STO_NG, x::AbstractVector, ps, st) 
+    ζ, D = ps.ζ, ps.D
     N, K = size(ζ)
     nX = length(x)
     WITHGRAD = !isnothing(dP)

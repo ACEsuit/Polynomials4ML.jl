@@ -38,8 +38,11 @@ include("sto_ng.jl")
 
 # -------- Evaluation Code 
 
+_evaluate!(Rnl, dRnl, basis::AtomicOrbitalsRadials) = 
+    _evaluate!(Rnl, dRnl, basis::AtomicOrbitalsRadials, 
 
-function _evaluate!(Rnl, dRnl, basis::AtomicOrbitalsRadials, R::AbstractVector)
+function _evaluate!(Rnl, dRnl, basis::AtomicOrbitalsRadials, R::AbstractVector, 
+                    ps, st)
     nR = length(R)
     WITHGRAD = !isnothing(dRnl)
 
@@ -48,11 +51,11 @@ function _evaluate!(Rnl, dRnl, basis::AtomicOrbitalsRadials, R::AbstractVector)
 
     @no_escape begin 
         if WITHGRAD
-            Pn, dPn = @withalloc evaluate_ed!(basis.Pn, R)
-            Dn, dDn = @withalloc evaluate_ed!(basis.Dn, R)
+            Pn, dPn = @withalloc evaluate_ed!(basis.Pn, R, ps.Pn, st.Pn)
+            Dn, dDn = @withalloc evaluate_ed!(basis.Dn, R, ps.Dn, st.Dn)
         else 
-            Pn = @withalloc evaluate!(basis.Pn, R)      # Pn(r)
-            Dn = @withalloc evaluate!(basis.Dn, R)      # Dn(r)  (ζ are the parameters -> reorganize the Lux way)
+            Pn = @withalloc evaluate!(basis.Pn, R, ps.Pn, st.Pn)   # Pn(r)
+            Dn = @withalloc evaluate!(basis.Dn, R, ps.Dn, st.Dn)   # Dn(r)  (ζ are the parameters -> reorganize the Lux way)
             dPn = nothing
             dDn = nothing
         end

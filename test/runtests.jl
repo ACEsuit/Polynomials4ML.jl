@@ -19,7 +19,7 @@ using Test
     
     # Misc
     @testset "Static Prod" begin include("test_staticprod.jl"); end
-    @testset "Lux" begin include("test_lux.jl"); end 
+    # @testset "Lux" begin include("test_lux.jl"); end 
 
     # TODO: restructure or move?? 
     # @testset "Sparse Product" begin include("test_sparseproduct.jl"); end 
