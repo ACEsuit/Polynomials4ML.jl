@@ -10,7 +10,7 @@ natural_indices(basis::BernsteinBasis) = [ (n = n,) for n = 0:length(basis)-1 ]
 
 _valtype(basis::BernsteinBasis, T::Type{<:Real}) = T
 
-_generate_input(basis::BernsteinBasis) = 2 * rand() - 1 
+_generate_input(basis::BernsteinBasis) = rand()
 
 @generated function static_binomial(::Val{N}) where {N}
    b = [ binomial(N - 1, k) for k in 0:N - 1 ]
