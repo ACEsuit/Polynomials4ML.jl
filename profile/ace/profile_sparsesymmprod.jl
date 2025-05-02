@@ -4,7 +4,6 @@ using Polynomials4ML: SimpleProdBasis, release!, SparseSymmProd
 using Polynomials4ML.Testing: generate_SO2_spec
 using Random
 using ChainRulesCore: rrule 
-using StrideArrays
 # using Zygote
 
 P4ML = Polynomials4ML

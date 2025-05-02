@@ -10,14 +10,14 @@ _promote_grad_type(::Type{SVector{D, T}}, ::Type{S}
          SVector{D, promote_type(T, S)}
 
 function whatalloc(::typeof(pullback!), 
-                    ∂P, basis::AbstractP4MLBasis, X::AbstractVector)
+                    ∂P, basis::AbstractP4MLBasis, X::BATCH)
    T∂X = _promote_grad_type(_gradtype(basis, X), eltype(∂P))
    return (T∂X, length(X))
 end
 
 function pullback!(∂X, 
-                  ∂P, basis::AbstractP4MLBasis, X::AbstractVector; 
-                  dP = evaluate_ed(basis, X)[2] )
+                   ∂P, basis::AbstractP4MLBasis, X::BATCH; 
+                   dP = evaluate_ed(basis, X)[2] )
    @assert size(∂P) == size(dP) == (length(X), length(basis))
    @assert length(∂X) == length(X)
    # manual loops to avoid any broadcasting of StrideArrays 
@@ -32,14 +32,61 @@ function pullback!(∂X,
    return ∂X
 end
 
+pullback(∂X, l::AbstractP4MLBasis, args...) = 
+      _with_safe_alloc(pullback!, ∂X, l, args...)
+
+
 function rrule(::typeof(evaluate), 
                   basis::AbstractP4MLBasis, 
-                  X::AbstractVector)
+                  X::BATCH)
    P = evaluate(basis, X)
    # TODO: here we could do evaluate_ed, but need to think about how this 
    #       works with the kwarg trick above...
    return P, ∂P -> (NoTangent(), NoTangent(), pullback(∂P, basis, X))
 end
+
+# -------- pullback w.r.t. params 
+
+EMPTY_NT = typeof(NamedTuple())
+
+pullback_ps(∂P, basis::AbstractP4MLBasis, X::BATCH, ps::Nothing, st) = 
+         NoTangent() 
+
+pullback_ps(∂P, basis::AbstractP4MLBasis, X::BATCH, ps::EMPTY_NT, st) = 
+         NamedTuple() 
+
+
+function rrule(::typeof(evaluate), 
+               basis::AbstractP4MLBasis, 
+               X::BATCH, 
+               ps, st)
+   P, dP = evaluate_ed(basis, X, ps, st)
+
+   function _pb(_∂P)
+      ∂P = unthunk(_∂P)
+      # compute the pullback w.r.t. X 
+      T∂X, N∂X = whatalloc(pullback!, ∂P, basis, X)
+      ∂X = zeros(T∂X, N∂X)
+      pullback!(∂X, ∂P, basis, X; dP = dP)
+      
+      ∂X = pullback(∂P, basis, X)
+      ∂ps = pullback_ps(∂P, basis, X, ps, st)
+
+      return NoTangent(), NoTangent(), ∂X, ∂ps, NoTangent() 
+   end
+
+   return P, _pb 
+end
+
+
+# function rrule(::typeof(evaluate_ed), 
+#                basis::AbstractP4MLBasis, 
+#                X::BATCH, 
+#                ps, st)
+#    P, dP = evaluate_ed(basis, X, ps, st)
+
+#    return (P, dP), ∂P -> (NoTangent(), NoTangent(), pullback(∂P, basis, X))
+# end
 
 
 #= 
@@ -85,16 +132,3 @@ end
 return ∂X, _pb 
 end
 =#
-
-
-# -------------------------------------------------------------
-# general rrules and frules for AbstractP4MLTensor 
-
-
-function rrule(::typeof(evaluate), 
-                  basis::AbstractP4MLTensor, 
-                  X)
-   P = evaluate(basis, X)
-   return P, ∂P -> (NoTangent(), NoTangent(), pullback(∂P, basis, X))
-end
-

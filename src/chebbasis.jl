@@ -14,169 +14,77 @@ computes the basis on the fly when it is compiled and it does not store the
 recursion coefficients as in `chebyshev_basis`. There might be a small 
 performance benefit from this. 
 
-Warning: `ChebBasis` and `chebyshev_basis` have different normalization.
+Secondly, `ChebBasis` and `chebyshev_basis` use different normalization.
 """
-struct ChebBasis <: AbstractP4MLBasis
-   N::Int
-   @reqfields
+struct ChebBasis{N} <: AbstractP4MLBasis where {N} 
 end
 
-ChebBasis(N::Integer) = ChebBasis(N, _make_reqfields()...)
+ChebBasis(N::Integer) = ChebBasis{N}()
 
-Base.length(basis::ChebBasis) = basis.N
+function Base.show(io::IO, l::ChebBasis{N}) where {N}
+   print(io, "ChebBasis($N)")
+end
 
-natural_indices(basis::ChebBasis) = 0:length(basis)-1
+Base.length(basis::ChebBasis{N}) where {N} = N
+
+natural_indices(basis::ChebBasis) = [ (n = n,) for n = 0:length(basis)-1 ]
 
 _valtype(basis::ChebBasis, T::Type{<:Real}) = T
 
 _generate_input(basis::ChebBasis) = 2 * rand() - 1 
 
 
-function evaluate!(P::AbstractVector, basis::ChebBasis, x::Real)
-   N = basis.N
-   @assert N >= 2
-   @assert length(P) >= length(basis) # N
+# --------------------------------------------------------- 
+# CPU SIMD kernel 
+# 
 
-   P[1] = 1
-   P[2] = x
-   for k = 3:N
-      @inbounds P[k] = 2 * x * P[k-1] - P[k-2]
-   end
-   return P
-end
-
-
-
-function evaluate!(P::AbstractMatrix, basis::ChebBasis,
-                   x::AbstractVector{<:Real})
-   N = basis.N
+function _evaluate!(P, dP, 
+                    basis::ChebBasis{N},
+                    x::AbstractVector{<:Real}, 
+                    ps, st) where {N} 
    nX = length(x)
-   @assert N >= 2
-   @assert size(P, 2) >= length(basis) # N
-   @assert size(P, 1) >= nX
+   WITHGRAD = !isnothing(dP)
 
    @inbounds begin
       @simd ivdep for i = 1:nX
          P[i, 1] = 1
+         WITHGRAD && (dP[i, 1] = 0)
          P[i, 2] = x[i]
+         WITHGRAD && (dP[i, 2] = 1)
       end
 
       for k = 3:N
          @simd ivdep for i = 1:nX
             P[i, k] = 2 * x[i] * P[i, k-1] - P[i, k-2]
+            WITHGRAD && (dP[i, k] = 2 * P[i, k-1] + 2 * x[i] * dP[i, k-1] - dP[i, k-2])
          end
       end
    end
-   return P
+   return nothing 
 end
 
 
-function evaluate_ed!(P::AbstractVector, dP::AbstractVector,
-                      basis::ChebBasis, x::Real)
-   N = basis.N
-   nX = length(x)
-   @assert N >= 2
-   @assert length(P) >= length(basis)
-   @assert length(dP) >= length(basis)
+# --------------------------------------------------------- 
+# KernelAbstractions kernel
+# 
+
+@kernel function _ka_evaluate!(P, dP, basis::ChebBasis{N}, x::AbstractVector{T}
+         ) where {T, N}
+            
+   i = @index(Global)
+   @uniform WITHGRAD = !isnothing(dP)
 
    @inbounds begin
-      P[1] = 1
-      dP[1] = 0
-      P[2] = x
-      dP[2] = 1
-      for k = 3:N
-         P[k] = 2 * x * P[k-1] - P[k-2]
-         dP[k] = 2 * P[k-1] + 2 * x * dP[k-1] - dP[k-2]
-      end
-   end
-   return P, dP
-end
-
-
-function evaluate_ed!(P::AbstractMatrix, dP::AbstractMatrix, basis::ChebBasis,
-                      x::AbstractVector{<:Real})
-   N = basis.N
-   nX = length(x)
-   @assert N >= 2
-   @assert size(P, 2) >= length(basis) # N
-   @assert size(P, 1) >= nX
-   @assert size(dP, 2) >= length(basis) # N
-   @assert size(dP, 1) >= nX
-
-   @inbounds begin
-      @simd ivdep for i = 1:nX
-         P[i, 1] = 1
-         dP[i, 1] = 0
+      P[i, 1] = 1
+      WITHGRAD && (dP[i, 1] = 0)
+      if N > 1
          P[i, 2] = x[i]
-         dP[i, 2] = 1
-      end
-
-      for k = 3:N
-         @simd ivdep for i = 1:nX
-            P[i, k] = 2 * x[i] * P[i, k-1] - P[i, k-2]
-            dP[i, k] = 2 * P[i, k-1] + 2 * x[i] * dP[i, k-1] - dP[i, k-2]
-         end
+         WITHGRAD && (dP[i, 2] = 1)
+      end 
+      for n = 3:N 
+         P[i, n] = 2 * x[i] * P[i, n-1] - P[i, n-2]
+         WITHGRAD && ( 
+            dP[i, n] = 2 * P[i, n-1] + 2 * x[i] * dP[i, n-1] - dP[i, n-2] )
       end
    end
-   return P, dP
-end
-
-
-function evaluate_ed2!(P::AbstractVector, dP::AbstractVector, ddP::AbstractVector,
-                       basis::ChebBasis, x::Real)
-   N = basis.N
-   @assert N >= 2
-   @assert length(P) >= length(basis) # N
-   @assert length(dP) >= length(basis) # N
-   @assert length(ddP) >= length(basis) # N
-
-   @inbounds begin
-      P[1] = 1
-      P[2] = x
-      dP[1] = 0
-      dP[2] = 1
-      ddP[1] = 0
-      ddP[2] = 0
-
-      for k = 3:N
-         P[k] = 2 * x * P[k-1] - P[k-2]
-         dP[k] = 2 * P[k-1] + 2 * x * dP[k-1] - dP[k-2]
-         ddP[k] = 2 * dP[k-1] + 2 * dP[k-1] + 2 * x * ddP[k-1] - ddP[k-2]
-      end
-   end
-   return P, dP, ddP
-end
-
-
-function evaluate_ed2!(P::AbstractMatrix, dP::AbstractMatrix, ddP::AbstractMatrix, 
-                       basis::ChebBasis, x::AbstractVector{<:Real})
-   N = basis.N
-   nX = length(x)
-   @assert N >= 2
-   @assert size(P, 2) >= length(basis) # N
-   @assert size(P, 1) >= nX
-   @assert size(dP, 2) >= length(basis) # N
-   @assert size(dP, 1) >= nX
-   @assert size(ddP, 2) >= length(basis) # N
-   @assert size(ddP, 1) >= nX
-
-   @inbounds begin
-      @simd ivdep for i = 1:nX
-         P[i, 1] = 1
-         P[i, 2] = x[i]
-         dP[i, 1] = 0
-         dP[i, 2] = 1
-         ddP[i, 1] = 0
-         ddP[i, 2] = 0
-      end
-
-      for k = 3:N
-         @simd ivdep for i = 1:nX
-            P[i, k] = 2 * x[i] * P[i, k-1] - P[i, k-2]
-            dP[i, k] = 2 * P[i, k-1] + 2 * x[i] * dP[i, k-1] - dP[i, k-2]
-            ddP[i, k] = 2 * dP[i, k-1] + 2 * dP[i, k-1] + 2 * x[i] * ddP[i, k-1] - ddP[i, k-2]
-         end
-      end
-   end
-   return P, dP, ddP
 end

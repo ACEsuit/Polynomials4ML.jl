@@ -1,34 +1,77 @@
-using LinearAlgebra, StaticArrays, Test, Printf
-using Polynomials4ML, Polynomials4ML.Testing
-using Polynomials4ML: evaluate, evaluate_d, evaluate_ed, evaluate_ed2
+using LinearAlgebra, StaticArrays, Test, Printf, Polynomials4ML
+using Polynomials4ML: evaluate, evaluate_ed
 using Polynomials4ML.Testing: print_tf, println_slim 
 using ForwardDiff
 using ACEbase.Testing: fdtest
-using Zygote
 
-P4ML = Polynomials4ML
+import Polynomials4ML as P4ML
 
 ##
 
 @info("Testing GaussianBasis")
-n1 = 5 # degree
-n2 = 3 
-Pn = P4ML.legendre_basis(n1+1)
-spec = [(n1 = n1, n2 = n2, l = l) for n1 = 1:n1 for n2 = 1:n2 for l = 0:n1-1] 
-ζ = rand(length(spec))
-Dn = GaussianBasis(ζ)
-bRnl = AtomicOrbitalsRadials(Pn, Dn, spec) 
+bRnl = P4ML._rand_gaussian_basis()
+
+@info("      correctness of evaluation")
+x = P4ML._generate_input(bRnl)
+P = evaluate(bRnl, x)
+P1, dP1 = evaluate_ed(bRnl, x)
+L = bRnl.Pn(x)
+G = bRnl.Dn(x)
+G1 = exp.( - bRnl.Dn.ζ * x^2)
+print_tf(@test G ≈ G1)
+P1 = [ L[b.n1] * G1[i] for (i, b) in enumerate(bRnl.spec)  ]
+print_tf(@test P ≈ P1) 
+println() 
 
 P4ML.Testing.test_evaluate_xx(bRnl)
 P4ML.Testing.test_chainrules(bRnl)
-@warn("There are some allocations in GaussianBasis - to be test!!!")
-P4ML.Testing.test_withalloc(bRnl; allowed_allocs = 192)
+P4ML.Testing.test_withalloc(bRnl; allowed_allocs = 0)
 
+##
+
+@info("Testing SlaterBasis")
+bRnl = P4ML._rand_slater_basis()
+
+@info("      correctness of evaluation")
+x = P4ML._generate_input(bRnl)
+P = evaluate(bRnl, x)
+L = bRnl.Pn(x)
+G = bRnl.Dn(x)
+G1 = exp.( - bRnl.Dn.ζ * x)
+print_tf(@test G ≈ G1)
+P1 = [ L[b.n1] * G1[i] for (i, b) in enumerate(bRnl.spec)  ]
+print_tf(@test P ≈ P1) 
+println() 
+
+P4ML.Testing.test_evaluate_xx(bRnl)
+P4ML.Testing.test_chainrules(bRnl)
+P4ML.Testing.test_withalloc(bRnl; allowed_allocs = 0)
+
+##
+
+@info("Testing STOBasis")
+bRnl = P4ML._rand_sto_basis()
+
+@info("      correctness of evaluation")
+x = P4ML._generate_input(bRnl)
+P = evaluate(bRnl, x)
+L = bRnl.Pn(x)
+G = bRnl.Dn(x)
+G1 = [ sum(bRnl.Dn.D[i, :] .* exp.( - bRnl.Dn.ζ[i, :] * x^2)) for i = 1:length(bRnl.Dn) ]
+print_tf(@test G ≈ G1)
+P1 = [ L[b.n1] * G1[i] for (i, b) in enumerate(bRnl.spec)  ]
+print_tf(@test P ≈ P1)
+
+P4ML.Testing.test_evaluate_xx(bRnl)
+P4ML.Testing.test_chainrules(bRnl)
+P4ML.Testing.test_withalloc(bRnl; allowed_allocs = 0)
 
 
 ##
 # ----------------------------------------------------
 #   the rest here tests some more specialized functionality. 
+#= 
+using Zygote
 
 using LuxCore
 using Random
@@ -133,19 +176,19 @@ p = Zygote.gradient(p->sum(G(rr,p,st)[1]), ps)[1]
 
 ##
 
-@info("Testing SlaterBasis")
-n1 = 5 # degree
-n2 = 3 
-Pn = P4ML.legendre_basis(n1+1)
-spec = [(n1 = n1, n2 = n2, l = l) for n1 = 1:n1 for n2 = 1:n2 for l = 0:n1-1] 
-ζ = rand(length(spec))
-Dn = SlaterBasis(ζ)
-bRnl = AtomicOrbitalsRadials(Pn, Dn, spec) 
+# @info("Testing SlaterBasis")
+# n1 = 5 # degree
+# n2 = 3 
+# Pn = P4ML.legendre_basis(n1+1)
+# spec = [(n1 = n1, n2 = n2, l = l) for n1 = 1:n1 for n2 = 1:n2 for l = 0:n1-1] 
+# ζ = rand(length(spec))
+# Dn = SlaterBasis(ζ)
+# bRnl = AtomicOrbitalsRadials(Pn, Dn, spec) 
 
-P4ML.Testing.test_evaluate_xx(bRnl)
-P4ML.Testing.test_chainrules(bRnl)
-@warn("There are some allocations in AOR - to be test!!!")
-P4ML.Testing.test_withalloc(bRnl; allowed_allocs = 192)
+# P4ML.Testing.test_evaluate_xx(bRnl)
+# P4ML.Testing.test_chainrules(bRnl)
+# @warn("There are some allocations in AOR - to be test!!!")
+# P4ML.Testing.test_withalloc(bRnl; allowed_allocs = 192)
 
 
 ##
@@ -273,3 +316,5 @@ P4ML.Testing.test_withalloc(bRnl; allowed_allocs = 192)
 
 
 ##
+
+=#

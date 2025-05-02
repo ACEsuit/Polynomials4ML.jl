@@ -1,17 +1,12 @@
 
 using Polynomials4ML, Test
-using Polynomials4ML: evaluate, evaluate_d, evaluate_dd, _generate_input
-using Polynomials4ML.Testing: println_slim, test_evaluate_xx, print_tf, 
-                              test_withalloc, test_chainrules
+using Polynomials4ML: _generate_input
+using Polynomials4ML.Testing: println_slim, print_tf, test_all 
 using LinearAlgebra: I, norm, dot 
 using QuadGK
-using ACEbase.Testing: fdtest
-using Printf
-using ChainRulesCore: rrule 
-using Zygote
+
 
 @info("Testing OrthPolyBasis1D3T")
-
 
 ##
 
@@ -19,9 +14,9 @@ for ntest = 1:3
    @info("Test a randomly generated polynomial basis - $ntest")
    N = rand(5:15)
    basis = OrthPolyBasis1D3T(randn(N), randn(N), randn(N))
-   test_evaluate_xx(basis)
-   test_withalloc(basis)
-   test_chainrules(basis)
+   spec = Polynomials4ML.natural_indices(basis)
+   print_tf(@test spec == [ (n=n,) for n = 0:N-1] ); println()  
+   test_all(basis)
 end
 
 ##
@@ -33,9 +28,7 @@ legendre = legendre_basis(N, normalize=true)
 G = quadgk(x -> legendre(x) * legendre(x)', -1, 1)[1]
 println_slim(@test round.(G, digits=6) ≈ I)
 @info("    derivatives")
-test_evaluate_xx(legendre)
-test_withalloc(legendre)
-test_chainrules(legendre)
+test_all(legendre)
 
 ##
 
@@ -43,21 +36,18 @@ for ntest = 1:3
    local N, G
    α = 1 + rand() 
    β = 1 + rand() 
-   @info("Test the Random Jacobi Polynomials")
+   @info("Test Random Jacobi Polynomials")
    @info("   α = $α, β = $β")
    @info("    orthogonality")
    N = 20 
    jacobi = jacobi_basis(N, α, β, normalize=true)
    G = quadgk(x -> (1-x)^α * (x+1)^β * jacobi(x) * jacobi(x)', -1, 1)[1]
    println_slim(@test round.(G, digits=6) ≈ I)
-   @info("    derivatives")
-   test_evaluate_xx(jacobi)
-   test_withalloc(jacobi)
-   test_chainrules(jacobi)
+   @info("    derivatives, etc")
+   test_all(jacobi)
 end 
 
 ##
-
 
 @info("Test normalized cheb basis") 
 @info("   coeffs")
@@ -72,11 +62,28 @@ println_slim(@test all([
 @info("   orthogonality")
 G = quadgk(x -> (1-x)^(-0.5) * (x+1)^(-0.5) * cheb(x) * cheb(x)', -1, 1)[1]
 println_slim(@test round.(G, digits=6) ≈ I)
-@info("     derivatives")
-test_evaluate_xx(cheb)
-test_withalloc(cheb)
-test_chainrules(cheb)
+@info("     derivatives, etc")
+test_all(cheb)
 
+## 
+
+@info("Test chebyshev_basis vs ChebBasis{N}")
+
+basis1 = ChebBasis(N)
+basis2 = chebyshev_basis(N; normalize=false)
+basis3 = chebyshev_basis(N; normalize=true)
+x = _generate_input(basis1)
+r13 = basis1(x) ./ basis3(x)
+for _ = 1:10 
+   local x 
+   x = _generate_input(basis1)
+   P1 = basis1(x)
+   P2 = basis2(x)
+   P3 = basis3(x)
+   print_tf(@test P1 ≈ P2)
+   print_tf(@test P1 ≈ P3 .* r13)
+end 
+println() 
 
 ##
 
