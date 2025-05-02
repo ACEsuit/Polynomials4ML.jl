@@ -41,11 +41,11 @@ jobs:
     permissions:
       contents: write
     steps:
-      - uses: actions/checkout@v2
-      - uses: julia-actions/setup-julia@v1
+      - uses: actions/checkout@v4
+      - uses: julia-actions/setup-julia@v2
         with:
           version: '1'
-      - run: julia --project=docs -e 'using Pkg; pkg"registry add https://github.com/ACEsuit/ACEregistry.git"'
+      # - run: julia --project=docs -e 'using Pkg; pkg"registry add https://github.com/ACEsuit/ACEregistry.git"'
       - uses: julia-actions/julia-buildpkg@v1
       - uses: julia-actions/julia-docdeploy@v1
         env:
