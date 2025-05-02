@@ -45,6 +45,49 @@ function rrule(::typeof(evaluate),
    return P, ∂P -> (NoTangent(), NoTangent(), pullback(∂P, basis, X))
 end
 
+# -------- pullback w.r.t. params 
+
+EMPTY_NT = typeof(NamedTuple())
+
+pullback_ps(∂P, basis::AbstractP4MLBasis, X::BATCH, ps::Nothing, st) = 
+         NoTangent() 
+
+pullback_ps(∂P, basis::AbstractP4MLBasis, X::BATCH, ps::EMPTY_NT, st) = 
+         NamedTuple() 
+
+
+function rrule(::typeof(evaluate), 
+               basis::AbstractP4MLBasis, 
+               X::BATCH, 
+               ps, st)
+   P, dP = evaluate_ed(basis, X, ps, st)
+
+   function _pb(_∂P)
+      ∂P = unthunk(_∂P)
+      # compute the pullback w.r.t. X 
+      T∂X, N∂X = whatalloc(pullback!, ∂P, basis, X)
+      ∂X = zeros(T∂X, N∂X)
+      pullback!(∂X, ∂P, basis, X; dP = dP)
+      
+      ∂X = pullback(∂P, basis, X)
+      ∂ps = pullback_ps(∂P, basis, X, ps, st)
+
+      return NoTangent(), NoTangent(), ∂X, ∂ps, NoTangent() 
+   end
+
+   return P, _pb 
+end
+
+
+# function rrule(::typeof(evaluate_ed), 
+#                basis::AbstractP4MLBasis, 
+#                X::BATCH, 
+#                ps, st)
+#    P, dP = evaluate_ed(basis, X, ps, st)
+
+#    return (P, dP), ∂P -> (NoTangent(), NoTangent(), pullback(∂P, basis, X))
+# end
+
 
 #= 
 function whatalloc(::typeof(pullback2!), 

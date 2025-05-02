@@ -22,14 +22,14 @@ Base.length(basis::CTrigBasis{N}) where {N} = 2 * N + 1
 
 _valtype(basis::CTrigBasis, T::Type{<: Real}) = complex(T)
 
-_valtype(::CTrigBasis, T::Type{<: Hyper{<: Real}}) = complex(T)
+# _valtype(::CTrigBasis, T::Type{<: Hyper{<: Real}}) = complex(T)
   
 _generate_input(basis::CTrigBasis) = 2 * π * rand() - π
 
 # ----------------- main evaluation code 
 
 
-function _evaluate!(P, dP, basis::CTrigBasis{N}, X::BATCH) where {N}
+function _evaluate!(P, dP, basis::CTrigBasis{N}, X::BATCH, ps, st) where {N}
    nX = length(X) 
    WITHGRAD = !isnothing(dP)
    @assert N >= 1

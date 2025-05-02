@@ -12,14 +12,39 @@ function STO_NG(ζ::AbstractMatrix, D::AbstractMatrix)
     return STO_NG{typeof(ζ)}(sζ, sD)
 end
 
+function _rand_sto_basis(n1 = 4, n2 = 2, K = 4, T = Float64)
+    Pn = legendre_basis(n1+1)
+    spec = [(n1 = n1, n2 = n2, l = l) for n1 = 1:n1 for n2 = 1:n2 for l = 0:n1-1] 
+    ζ = rand(length(spec), K) .= 0.5
+    D = rand(length(spec), K) .= 0.5
+    Dn = STO_NG(ζ, D)
+    return AtomicOrbitalsRadials(Pn, Dn, spec) 
+end
+
+
 Base.length(basis::STO_NG) = size(basis.ζ, 1)
 
 Base.show(io::IO, basis::STO_NG) = print(io, "STO_NG$(size(basis.ζ))")
 
 _valtype(::STO_NG, T::Type{<: Real}) = T
 
-function _evaluate!(P, dP, basis::STO_NG, x::AbstractVector) 
-    ζ, D = basis.ζ, basis.D
+_valtype(::STO_NG, T::Type{<: Real}, 
+         ps::Union{Nothing, @NamedTuple{}}, st) = T
+
+_valtype(::STO_NG, T::Type{<: Real}, 
+         ps, st) = promote_type(T, eltype(ps.ζ), eltype(ps.D))
+
+_static_params(basis::STO_NG) = (ζ = basis.ζ, D = basis.D)
+
+_init_luxparams(basis::STO_NG) = 
+            ( ζ = Matrix(basis.ζ), D = Matrix(basis.D) )
+
+
+_evaluate!(P, dP, basis::STO_NG, x)  = 
+    _evaluate!(P, dP, basis, x, _static_params(basis), nothing)
+
+function _evaluate!(P, dP, basis::STO_NG, x::AbstractVector, ps, st) 
+    ζ, D = ps.ζ, ps.D
     N, K = size(ζ)
     nX = length(x)
     WITHGRAD = !isnothing(dP)
@@ -43,6 +68,28 @@ function _evaluate!(P, dP, basis::STO_NG, x::AbstractVector)
 
     return nothing 
 end
+
+
+function pullback_ps(∂P, basis::STO_NG, x::BATCH, ps, st)
+    ζ, D = ps.ζ, ps.D
+    N, K = size(ζ)
+    nX = length(x)
+
+    ∂ζ = fill!(similar(ζ), 0)
+    ∂D = fill!(similar(D), 0)
+
+    @inbounds for n = 1:N, m = 1:K
+        @simd ivdep for j = 1:nX 
+            # P[i, n] += D[n, m] * exp(-ζ[n, m] * x[j]^2)
+            a1 = exp(-ζ[n, m] * x[j]^2)
+            ∂ζ[n, m] += ∂P[j, n] * D[n, m] * a1 * (-x[j]^2)
+            ∂D[n, m] += ∂P[j, n] * a1
+        end
+    end
+
+    return (ζ = ∂ζ, D = ∂D)
+end
+
 
 
 #=

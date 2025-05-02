@@ -5,6 +5,8 @@ export AtomicOrbitalsRadials, GaussianBasis, SlaterBasis, STO_NG
 
 const NT_NNL = NamedTuple{(:n1, :n2, :l), Tuple{Int, Int, Int}}
 
+# AORBAS = Union{AtomicOrbitalsRadials, GaussianBasis, SlaterBasis, STO_NG}
+
 mutable struct AtomicOrbitalsRadials{LEN, TP, TD}  <: AbstractP4MLBasis
    Pn::TP
    Dn::TD
@@ -20,7 +22,16 @@ Base.length(basis::AtomicOrbitalsRadials) = length(basis.spec)
 
 natural_indices(basis::AtomicOrbitalsRadials) = basis.spec
 
-_valtype(basis::AtomicOrbitalsRadials, T::Type{<: Real}) = T
+_valtype(basis::AtomicOrbitalsRadials, T::Type{<: Real}) = 
+        promote_type(_valtype(basis.Pn, T), _valtype(basis.Dn, T))
+
+_valtype(basis::AtomicOrbitalsRadials, T::Type{<: Real}, 
+            ps::Union{Nothing, @NamedTuple{}}, st) = 
+        promote_type(_valtype(basis.Pn, T), _valtype(basis.Dn, T))
+
+_valtype(basis::AtomicOrbitalsRadials, T::Type{<: Real}, ps, st) = 
+        promote_type(_valtype(basis.Pn, T, ps.Dn, st.Dn), 
+                     _valtype(basis.Dn, T, ps.Dn, st.Dn))
 
 _generate_input(basis::AtomicOrbitalsRadials) = 0.1 + 0.9 * rand()
 
@@ -33,13 +44,35 @@ include("gaussian.jl")
 include("slater.jl")
 include("sto_ng.jl")
 
-# AORBAS = Union{AtomicOrbitalsRadials, GaussianBasis, SlaterBasis, STO_NG}
+# _static_params is used to extract parameters from the basis set when 
+# the basis is evaluated with the old parameter-free convention. In that case, 
+# the internally stored parameters are used. 
+#
+# _init_luxparams is used to initialize parameters in the lux style, as a 
+# NamedTuple. This is used when the basis as a learnable Lux layer.
 
+_static_params(basis::AbstractP4MLBasis) = NamedTuple() 
+
+_static_params(basis::AtomicOrbitalsRadials) = 
+        (Pn = _static_params(basis.Pn), Dn = _static_params(basis.Dn), )
+
+_init_luxparams(rng::Random.AbstractRNG, l::AtomicOrbitalsRadials) = 
+        ( Pn = _init_luxparams(rng, l.Pn), 
+          Dn = _init_luxparams(rng, l.Dn), )
+
+_init_luxstate(rng::Random.AbstractRNG, l::AtomicOrbitalsRadials) = 
+        ( Pn = _init_luxstate(rng, l.Pn), 
+          Dn = _init_luxstate(rng, l.Dn), )          
 
 # -------- Evaluation Code 
 
+_evaluate!(Rnl, dRnl, basis::AtomicOrbitalsRadials, X) = 
+            _evaluate!(Rnl, dRnl, basis, X, 
+                       _static_params(basis), 
+                       (Pn = nothing, Dn = nothing))
 
-function _evaluate!(Rnl, dRnl, basis::AtomicOrbitalsRadials, R::AbstractVector)
+function _evaluate!(Rnl, dRnl, basis::AtomicOrbitalsRadials, R::BATCH, 
+                     ps, st)
     nR = length(R)
     WITHGRAD = !isnothing(dRnl)
 
@@ -48,11 +81,20 @@ function _evaluate!(Rnl, dRnl, basis::AtomicOrbitalsRadials, R::AbstractVector)
 
     @no_escape begin 
         if WITHGRAD
-            Pn, dPn = @withalloc evaluate_ed!(basis.Pn, R)
-            Dn, dDn = @withalloc evaluate_ed!(basis.Dn, R)
+            # this is a hack that circumvents an unexplained allocation in 
+            # the @withalloc macro 
+            T = promote_type(eltype(Rnl), eltype(R))
+            Pn = @alloc(T, nR, length(basis.Pn))
+            dPn = @alloc(T, nR, length(basis.Pn))
+            _evaluate!(Pn, dPn, basis.Pn, R, ps.Pn, st.Pn)
+            Dn = @alloc(T, nR, length(basis.Dn))
+            dDn = @alloc(T, nR, length(basis.Dn))
+            _evaluate!(Dn, dDn, basis.Dn, R, ps.Dn, st.Dn)
+            # Pn, dPn = @withalloc evaluate_ed!(basis.Pn, R)
+            # Dn, dDn = @withalloc evaluate_ed!(basis.Dn, R)
         else 
-            Pn = @withalloc evaluate!(basis.Pn, R)      # Pn(r)
-            Dn = @withalloc evaluate!(basis.Dn, R)      # Dn(r)  (ζ are the parameters -> reorganize the Lux way)
+            Pn = @withalloc evaluate!(basis.Pn, R, ps.Pn, st.Pn)   # Pn(r)
+            Dn = @withalloc evaluate!(basis.Dn, R, ps.Dn, st.Dn)   # Dn(r)  (ζ are the parameters -> reorganize the Lux way)
             dPn = nothing
             dDn = nothing
         end
@@ -70,6 +112,31 @@ function _evaluate!(Rnl, dRnl, basis::AtomicOrbitalsRadials, R::AbstractVector)
     return nothing 
 end
 
+
+function pullback_ps(∂Rnl, basis::AtomicOrbitalsRadials, X::BATCH,
+                     ps::NamedTuple, st)
+    T = promote_type(eltype(∂Rnl), eltype(X)) 
+    nR = length(X)
+
+    # Rnl = output of evaluate(basis, X, ...)
+    Pn = evaluate(basis.Pn, X, ps.Pn, st.Pn)
+    Dn = evaluate(basis.Dn, X, ps.Dn, st.Dn)
+    ∂Pn = zeros(T, size(Pn))
+    ∂Dn = zeros(T, size(Dn))
+
+    for (i, b) in enumerate(basis.spec)
+        @simd ivdep for j = 1:nR
+            #             Rnl[j, i] =             Pn[j, b.n1] * Dn[j, i]
+            # ∂Rnl[j,i] * Rnl[j, i] = ∂Rnl[j,i] * Pn[j, b.n1] * Dn[j, i]
+            ∂Pn[j, b.n1] += ∂Rnl[j, i] * Dn[j, i]
+            ∂Dn[j, i] += ∂Rnl[j, i] * Pn[j, b.n1]
+        end 
+    end 
+
+    ∂p_Pn = pullback_ps(∂Pn, basis.Pn, X, ps.Pn, st.Pn)
+    ∂p_Dn = pullback_ps(∂Dn, basis.Dn, X, ps.Dn, st.Dn)
+    return (Pn = ∂p_Pn, Dn = ∂p_Dn,)
+end
 
 # ---------------------------------------- 
 #  gradient w.r.t. parameters 

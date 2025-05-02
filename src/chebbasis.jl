@@ -21,6 +21,10 @@ end
 
 ChebBasis(N::Integer) = ChebBasis{N}()
 
+function Base.show(io::IO, l::ChebBasis{N}) where {N}
+   print(io, "ChebBasis($N)")
+end
+
 Base.length(basis::ChebBasis{N}) where {N} = N
 
 natural_indices(basis::ChebBasis) = [ (n = n,) for n = 0:length(basis)-1 ]
@@ -36,7 +40,8 @@ _generate_input(basis::ChebBasis) = 2 * rand() - 1
 
 function _evaluate!(P, dP, 
                     basis::ChebBasis{N},
-                    x::AbstractVector{<:Real}) where {N} 
+                    x::AbstractVector{<:Real}, 
+                    ps, st) where {N} 
    nX = length(x)
    WITHGRAD = !isnothing(dP)
 

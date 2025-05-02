@@ -28,7 +28,7 @@ _generate_input(basis::MonoBasis) = 2 * rand() - 1
 # ----------------- main evaluation code 
 
 
-function _evaluate!(P, dP, basis::MonoBasis, X::BATCH)
+function _evaluate!(P, dP, basis::MonoBasis, X::BATCH, ps, st)
    nX = length(X)
    N = length(basis)
    WITHGRAD = !isnothing(dP)

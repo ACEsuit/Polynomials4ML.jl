@@ -55,7 +55,7 @@ end
 # ----------------- CPU evaluation code 
 
 
-function _evaluate!(P, dP, basis::OrthPolyBasis1D3T, X::BATCH)
+function _evaluate!(P, dP, basis::OrthPolyBasis1D3T, X::BATCH, ps, st)
    N = length(basis.A)
    nX = length(X) 
    WITHGRAD = !isnothing(dP)

@@ -4,33 +4,18 @@ using ChainRulesCore
 import ChainRulesCore: rrule, frule 
 
 
-
-# ---------------------------------------------------------------------------
-# some helpers to deal with the required fields: 
-# TODO: now that there is only meta, should this be removed? 
-
-using ACEbase: @def 
-
-const META = Dict{String, Any} 
-_makemeta() = Dict{String, Any}()
-
-@def reqfields begin
-   meta::META
-end
-
-_make_reqfields() = (_makemeta(), )
-
-
 # -------------------------------------------------------------------
 
-# a "single" input
+# any number of SArray are interpreted as a "single" input 
+# by contrast an AbstractVector OTHER THAN an SVector are interpreted as a 
+# "batch" of inputs.
 const SINGLE = Union{Number, SArray}
 
 """
 `StaticBatch{N,T}` : an auxiliary StaticArray type that is distinct from 
 `SVector{N,T}`. It can be used to create a batch of inputs of static size N. 
-It is in particular used to convert function calls with single inputs to 
-function calls with a batch of inputs. 
+It is in used to convert function calls with single inputs to function calls 
+with a batch of inputs. 
 """
 struct StaticBatch{N, T} <: StaticVector{N, T}
 	data::NTuple{N, T}
@@ -45,42 +30,42 @@ Base.getindex(b::StaticBatch, i::Integer) = b.data[i]
 # a "batch" of inputs
 const BATCH = Union{AbstractVector{<: SINGLE}, StaticBatch{<: SINGLE}}
 
-# TODO: check that we can remove this 
-# const TupVec = Tuple{Vararg{AbstractVector}}
-# const TupMat = Tuple{Vararg{AbstractMatrix}}
-# const TupVecMat = Union{TupVec, TupMat}
-
-
 
 # ------------------------------------------------------------
 # In-place CPU interface 
 
-function evaluate!(P, basis::AbstractP4MLBasis, x::SINGLE) 
-	evaluate!(reshape(P, 1, :), basis, StaticBatch(x))
+function evaluate!(P, basis::AbstractP4MLBasis, x::SINGLE, args...) 
+	evaluate!(reshape(P, 1, :), basis, StaticBatch(x), args...)
 	return P
 end
 
-function evaluate_ed!(P, dP, basis::AbstractP4MLBasis, x::SINGLE) 
+function evaluate_ed!(P, dP, basis::AbstractP4MLBasis, x::SINGLE, args...) 
 	evaluate_ed!(reshape(P, 1, :), reshape(dP, 1, :), 
-					 basis, StaticBatch(x))
+					 basis, StaticBatch(x), args...)
 	return P, dP
 end					 
 
-function evaluate!(P, basis::AbstractP4MLBasis, x::BATCH)
+function evaluate!(P, basis::AbstractP4MLBasis, x::BATCH, args...)
    @assert size(P, 1) >= length(x) 
    @assert size(P, 2) >= length(basis)
-   _evaluate!(P, nothing, basis, x)
+   _evaluate!(P, nothing, basis, x, args...)
    return P
 end
 
-function evaluate_ed!(P, dP, basis::AbstractP4MLBasis, x::BATCH)
+function evaluate_ed!(P, dP, basis::AbstractP4MLBasis, x::BATCH, args...)
    @assert size(P, 1) >= length(x) 
    @assert size(P, 2) >= length(basis)
    @assert size(dP, 1) >= length(x) 
    @assert size(dP, 2) >= length(basis)
-   _evaluate!(P, dP, basis, x)
+   _evaluate!(P, dP, basis, x, args...)
    return P, dP 
 end
+
+# default for inner kernel which assumes that the basis has no parameters 
+# and no state (it can still store static parameters and state within 
+# the basis object).
+_evaluate!(P, dP, basis::AbstractP4MLBasis, X) = 
+      _evaluate!(P, dP, basis, X, nothing, nothing)
 
 # ------------------------------------------------------------
 # In-place KA interface 
@@ -128,42 +113,61 @@ end
 # -----------------------------------------------------------
 # managing defaults for input-output types
 # We deliberately provide no defaults for `valtype` but we try to guess 
-# gradtype, hesstype and laplacetype based on the valtype. 
+# gradtype based on the valtype. 
 
+"""
+   _valtype(basis, x) 
+
+If the intention is that `P = basis(x)` where `P` is a `Vector{T}` 
+then `_valtype(basis, x)` should return `T`. 
+
+Here, `x` can be a single input, a batch or a type. A new basis type `TB` only 
+needs to implement `_valtype(::TB, x::Type)`. 
+"""
 function _valtype end 
+
+"""
+   _gradtype(basis, x)
+
+If the intention is that `P, dP = evaluate_ed(basis, x)` then 
+then `_gradtype(basis, x)` should return `etype(dP)`. 
+"""
 function _gradtype end 
 
 # first redirect input to type 
-_valtype(basis, x::SINGLE) = _valtype(basis, typeof(x))
-_valtype(basis, x::BATCH) = _valtype(basis, eltype(x))
-_gradtype(basis, x::SINGLE) = _gradtype(basis, typeof(x))
-_gradtype(basis, x::BATCH) = _gradtype(basis, eltype(x))
+_valtype(basis, x::SINGLE, args...) = _valtype(basis, typeof(x), args...)
+_valtype(basis, x::BATCH, args...) = _valtype(basis, eltype(x), args...)
+_gradtype(basis, x::SINGLE, args...) = _gradtype(basis, typeof(x), args...)
+_gradtype(basis, x::BATCH, args...) = _gradtype(basis, eltype(x), args...)
+
+_valtype(basis, TX::Type, ps, st) = _valtype(basis, TX)
+_gradtype(basis, TX::Type, ps, st) = _gradtype(basis, TX)
 
 # default grad types
-_gradtype(basis::AbstractP4MLBasis, TX::Type{<:Number}) = 
+_gradtype(basis::AbstractP4MLBasis, TX::Type{<:Number}, args...) = 
       _valtype(basis, TX)
 
-_gradtype(basis::AbstractP4MLBasis, Tx::Type{<: StaticArray}) = 
+_gradtype(basis::AbstractP4MLBasis, Tx::Type{<: StaticArray}, args...) = 
       StaticArrays.similar_type(Tx, 
                      promote_type(eltype(Tx), _valtype(basis, Tx)))
 
 # ------------------------------------------------------------
 # allocation interface & WithAlloc Interface 
 
-_out_size(basis::AbstractP4MLBasis, x::SINGLE) = (length(basis),)
+_out_size(basis::AbstractP4MLBasis, x::SINGLE, args...) = (length(basis),)
 
-_out_size(basis::AbstractP4MLBasis, X::BATCH) = (length(X), length(basis))
+_out_size(basis::AbstractP4MLBasis, X::BATCH, args...) = (length(X), length(basis))
 
-function whatalloc(::typeof(evaluate!), basis::AbstractP4MLBasis, x)
-   T = _valtype(basis, x)
-   sz = _out_size(basis, x)
+function whatalloc(::typeof(evaluate!), basis::AbstractP4MLBasis, x, args...)
+   T = _valtype(basis, x, args...)
+   sz = _out_size(basis, x, args...)
    return (T, sz...) 
 end
 
-function whatalloc(::typeof(evaluate_ed!), basis::AbstractP4MLBasis, x)
-   TV = _valtype(basis, x)
-   TG = _gradtype(basis, x)
-   sz = _out_size(basis, x)
+function whatalloc(::typeof(evaluate_ed!), basis::AbstractP4MLBasis, x, args...)
+   TV = _valtype(basis, x, args...)
+   TG = _gradtype(basis, x, args...)
+   sz = _out_size(basis, x, args...)
    return (TV, sz...), (TG, sz...)
 end
 

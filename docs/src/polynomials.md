@@ -1,5 +1,5 @@
 
-## API for Polynomial Bases
+# API for Polynomial Bases
 
 This page documents the public API for polynomial bases: the list of bases and functions that are considered relatively stable and for which we aim to strictly impose semver backward compatibility. The basis sets that are considered stable are the following (please see inline documentation for initialization): 
 

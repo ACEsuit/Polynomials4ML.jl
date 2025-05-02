@@ -94,8 +94,11 @@ _valtype(sh::RealSCWrapper, ::Type{<: SVector{3, S}}) where {S} = S
 
 _valtype(sh::ComplexSCWrapper, ::Type{<: SVector{3, S}}) where {S} = Complex{S}
 
+# NB: the args... in each of the calls below stands for calls with or without 
+#     ps, st. It ought to be possible to just use the generic interface here 
+#     this should be looked into. 
 
-function evaluate!(Y::AbstractArray, basis::SCWrapper, x::SVector{3})
+function evaluate!(Y::AbstractArray, basis::SCWrapper, x::SVector{3}, args...)
 	Y_temp = reshape(Y, 1, :)
 	compute!(Y_temp, basis.scbasis, SA[x,])
 	_convert_R2C!(Y, basis)
@@ -103,7 +106,7 @@ function evaluate!(Y::AbstractArray, basis::SCWrapper, x::SVector{3})
 end
 
 function evaluate_ed!(Y::AbstractArray, dY::AbstractArray, 
-							 basis::SCWrapper, x::SVector{3})
+							 basis::SCWrapper, x::SVector{3}, args...)
 	Y_temp = reshape(Y, 1, :)
 	dY_temp = reshape(dY, 1, :)
 	compute_with_gradients!(Y_temp, dY_temp, basis.scbasis, SA[x,])
@@ -113,14 +116,14 @@ function evaluate_ed!(Y::AbstractArray, dY::AbstractArray,
 end
 
 function evaluate!(Y::AbstractArray, 
-		    basis::SCWrapper, X::AbstractVector{<: SVector{3}}) 
+		    basis::SCWrapper, X::AbstractVector{<: SVector{3}}, args...) 
 	compute!(Y, basis.scbasis, X)
 	_convert_R2C!(Y, basis)
 	return Y 
 end
 
 function evaluate!(Y::AbstractGPUArray, 
-		    basis::SCWrapper, X::AbstractVector{<: SVector{3}}) 
+		    basis::SCWrapper, X::AbstractVector{<: SVector{3}}, args...) 
 	compute!(Y, basis.scbasis, X)
 	_convert_R2C!(Y, basis)
 	return Y 
@@ -128,7 +131,7 @@ end
 
 
 function evaluate_ed!(Y::AbstractArray, dY::AbstractArray, 
-			    basis::SCWrapper, X::AbstractVector{<: SVector{3}}) 
+			    basis::SCWrapper, X::AbstractVector{<: SVector{3}}, args...) 
 	compute_with_gradients!(Y, dY, basis.scbasis, X)
 	_convert_R2C!(Y, basis)
 	_convert_R2C!(dY, basis)
@@ -136,7 +139,7 @@ function evaluate_ed!(Y::AbstractArray, dY::AbstractArray,
 end
 
 function evaluate_ed!(Y::AbstractGPUArray, dY::AbstractGPUArray, 
-			    basis::SCWrapper, X::AbstractVector{<: SVector{3}}) 
+			    basis::SCWrapper, X::AbstractVector{<: SVector{3}}, args...) 
 	compute_with_gradients!(Y, dY, basis.scbasis, X)
 	_convert_R2C!(Y, basis)
 	_convert_R2C!(dY, basis)

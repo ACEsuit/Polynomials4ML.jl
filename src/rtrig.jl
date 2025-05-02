@@ -31,7 +31,7 @@ natural_indices(basis::RTrigBasis{N}) where {N} = natural_indices_trig(N)
 
 _valtype(basis::RTrigBasis, T::Type{<: Real}) = T
 
-_valtype(::RTrigBasis, T::Type{<: Hyper{<: Real}}) = T
+# _valtype(::RTrigBasis, T::Type{<: Hyper{<: Real}}) = T
 
 _generate_input(basis::RTrigBasis) = 2 * π * rand() - π
 
@@ -39,7 +39,7 @@ _generate_input(basis::RTrigBasis) = 2 * π * rand() - π
 ##
 
 
-function _evaluate!(P, dP, basis::RTrigBasis{N}, θ::BATCH) where {N}
+function _evaluate!(P, dP, basis::RTrigBasis{N}, θ::BATCH, ps, st) where {N}
    nX = length(θ)
    @assert N  >= 1 
    WITHGRAD = !isnothing(dP)
