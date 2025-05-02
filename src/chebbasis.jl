@@ -21,6 +21,10 @@ end
 
 ChebBasis(N::Integer) = ChebBasis{N}()
 
+function Base.show(io::IO, l::ChebBasis{N}) where {N}
+   print(io, "ChebBasis($N)")
+end
+
 Base.length(basis::ChebBasis{N}) where {N} = N
 
 natural_indices(basis::ChebBasis) = [ (n = n,) for n = 0:length(basis)-1 ]

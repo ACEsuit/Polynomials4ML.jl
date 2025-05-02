@@ -5,6 +5,18 @@ using ACEbase.Testing: println_slim, print_tf
 using LinearAlgebra: dot, I 
 rng = default_rng()
 
+function _fd_pb(basis, X::AbstractVector{<: Number}, Δ)
+   return ForwardDiff.gradient(_X -> real(sum(basis(_X) .* Δ)), X) 
+end
+
+function _fd_pb(basis, X::AbstractVector{SVector{N, T}}, Δ) where {N, T}
+   _F(Xv) = dot(basis(reinterpret(SVector{N, eltype(Xv)}, Xv)), Δ)
+   Xvec = collect( reinterpret(T, X) )
+   Gvec = ForwardDiff.gradient(_F, Xvec)
+   return collect(reinterpret(SVector{N, T}, Gvec))
+end
+
+
 ##
 
 @info("Testing Lux Layers for basic basis sets")
@@ -23,6 +35,7 @@ test_bases = [ chebyshev_basis(10),
 ##
 
 for basis in test_bases
+# basis = test_bases[8]
    @info("Lux layer test for $(typeof(basis).name.name)")
    local B1, B2, x
    local ps, st
@@ -39,27 +52,33 @@ for basis in test_bases
       continue 
    end
 
+   # evaluate the basis and get the pullback operator  
    val1, pb1 = Zygote.pullback(LuxCore.apply, l, X, ps, st)
-   val2, pb2 = Zygote.pullback(Polynomials4ML.evaluate, basis, X)
+   val2, pb2 = Zygote.pullback(Polynomials4ML.evaluate, basis, X, ps, st)
+   # evaluate the pullback on a random cotangent 
    Δ = randn(eltype(val2), size(val2))
    ∂1 = pb1( (Δ, NamedTuple()) )
    ∂2 = pb2(Δ)
-
-   function _fd_pb(basis, X::AbstractVector{<: Number}, Δ)
-      return ForwardDiff.gradient(_X -> real(sum(basis(_X) .* Δ)), X) 
-   end
-
-   function _fd_pb(basis, X::AbstractVector{SVector{N, T}}, Δ) where {N, T}
-      _F(Xv) = dot(basis(reinterpret(SVector{N, eltype(Xv)}, Xv)), Δ)
-      Xvec = collect( reinterpret(T, X) )
-      Gvec = ForwardDiff.gradient(_F, Xvec)
-      return collect(reinterpret(SVector{N, T}, Gvec))
-   end
-
+   # compute the gradient again using ForwardDiff to compare 
    ∂_ad = _fd_pb(basis, X, Δ)
-
-   println_slim(@test val1[1] == val2)
+   # check that all three give the same result 
+   println_slim(@test val1[1] ≈ val2)
    println_slim(@test ∂1[2] ≈ ∂2[2] ≈ ∂_ad) 
+
+   # look at gradients with respect to the parameters 
+   _foo = p -> dot(Δ, LuxCore.apply(l, X, p, st)[1])
+   g = Zygote.gradient(_foo, ps)[1] 
+   if sizeof(ps) == 0 
+      println_slim(@test (isnothing(g) || isempty(g)))
+   else
+      pvec, _restruct = destructure(ps) 
+      g2 = _restruct( ForwardDiff.gradient(p -> _foo(_restruct(p)), pvec) )
+      println_slim(@test g ≈ g2)
+   end
+
 end 
 
 
+##
+
+@info("Test Second-order derivatices with Lux")
