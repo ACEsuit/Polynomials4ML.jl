@@ -8,6 +8,14 @@ function GaussianBasis(ζ::AbstractVector)
     return GaussianBasis{N, T}(SVector{N, T}(ζ))
 end
 
+function _rand_gaussian_basis(N1 = 5, N2 = 3, T = Float64)
+    Pn = legendre_basis(N1+1)
+    spec = [(n1 = n1, n2 = n2, l = l) for n1 = 1:N1 for n2 = 1:N2 for l = 0:N1-1] 
+    ζ = rand(length(spec))
+    Dn = GaussianBasis(ζ)
+    return AtomicOrbitalsRadials(Pn, Dn, spec) 
+end
+
 Base.length(basis::GaussianBasis) = length(basis.ζ)
 
 Base.show(io::IO, basis::GaussianBasis) = 

@@ -12,6 +12,16 @@ function STO_NG(ζ::AbstractMatrix, D::AbstractMatrix)
     return STO_NG{typeof(ζ)}(sζ, sD)
 end
 
+function _rand_sto_basis(n1 = 4, n2 = 2, K = 4, T = Float64)
+    Pn = legendre_basis(n1+1)
+    spec = [(n1 = n1, n2 = n2, l = l) for n1 = 1:n1 for n2 = 1:n2 for l = 0:n1-1] 
+    ζ = rand(length(spec), K) .= 0.5
+    D = rand(length(spec), K) .= 0.5
+    Dn = STO_NG(ζ, D)
+    return AtomicOrbitalsRadials(Pn, Dn, spec) 
+end
+
+
 Base.length(basis::STO_NG) = size(basis.ζ, 1)
 
 Base.show(io::IO, basis::STO_NG) = print(io, "STO_NG$(size(basis.ζ))")

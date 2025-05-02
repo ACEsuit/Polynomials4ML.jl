@@ -9,23 +9,17 @@ import Polynomials4ML as P4ML
 ##
 
 @info("Testing GaussianBasis")
-n1 = 5 # degree
-n2 = 3 
-Pn = P4ML.legendre_basis(n1+1)
-spec = [(n1 = n1, n2 = n2, l = l) for n1 = 1:n1 for n2 = 1:n2 for l = 0:n1-1] 
-ζ = rand(length(spec))
-Dn = GaussianBasis(ζ)
-bRnl = AtomicOrbitalsRadials(Pn, Dn, spec) 
+bRnl = P4ML._rand_gaussian_basis()
 
 @info("      correctness of evaluation")
 x = P4ML._generate_input(bRnl)
 P = evaluate(bRnl, x)
 P1, dP1 = evaluate_ed(bRnl, x)
-L = Pn(x)
-G = Dn(x)
-G1 = exp.( - ζ * x^2)
+L = bRnl.Pn(x)
+G = bRnl.Dn(x)
+G1 = exp.( - bRnl.Dn.ζ * x^2)
 print_tf(@test G ≈ G1)
-P1 = [ L[b.n1] * G1[i] for (i, b) in enumerate(spec)  ]
+P1 = [ L[b.n1] * G1[i] for (i, b) in enumerate(bRnl.spec)  ]
 print_tf(@test P ≈ P1) 
 println() 
 
@@ -36,22 +30,16 @@ P4ML.Testing.test_withalloc(bRnl; allowed_allocs = 0)
 ##
 
 @info("Testing SlaterBasis")
-n1 = 5 # degree
-n2 = 3 
-Pn = P4ML.legendre_basis(n1+1)
-spec = [(n1 = n1, n2 = n2, l = l) for n1 = 1:n1 for n2 = 1:n2 for l = 0:n1-1] 
-ζ = rand(length(spec))
-Dn = SlaterBasis(ζ)
-bRnl = AtomicOrbitalsRadials(Pn, Dn, spec) 
+bRnl = P4ML._rand_slater_basis()
 
 @info("      correctness of evaluation")
 x = P4ML._generate_input(bRnl)
 P = evaluate(bRnl, x)
-L = Pn(x)
-G = Dn(x)
-G1 = exp.( - ζ * x)
+L = bRnl.Pn(x)
+G = bRnl.Dn(x)
+G1 = exp.( - bRnl.Dn.ζ * x)
 print_tf(@test G ≈ G1)
-P1 = [ L[b.n1] * G1[i] for (i, b) in enumerate(spec)  ]
+P1 = [ L[b.n1] * G1[i] for (i, b) in enumerate(bRnl.spec)  ]
 print_tf(@test P ≈ P1) 
 println() 
 
@@ -62,24 +50,16 @@ P4ML.Testing.test_withalloc(bRnl; allowed_allocs = 0)
 ##
 
 @info("Testing STOBasis")
-maxn1 = 5 # degree
-maxn2 = 2
-K = 5
-Pn = Polynomials4ML.legendre_basis(maxn1+1)
-spec = [(n1 = n1, n2 = n2, l = l) for n1 = 1:maxn1 for n2 = 1:maxn2 for l = 0:maxn1-1] 
-ζ = rand(length(spec), K) .= 0.5
-D = rand(length(spec), K) .= 0.5
-Dn = STO_NG(ζ, D)
-bRnl = AtomicOrbitalsRadials(Pn, Dn, spec) 
+bRnl = P4ML._rand_sto_basis()
 
 @info("      correctness of evaluation")
 x = P4ML._generate_input(bRnl)
 P = evaluate(bRnl, x)
-L = Pn(x)
-G = Dn(x)
-G1 = [ sum(Dn.D[i, :] .* exp.( - Dn.ζ[i, :] * x^2)) for i = 1:length(Dn) ]
+L = bRnl.Pn(x)
+G = bRnl.Dn(x)
+G1 = [ sum(bRnl.Dn.D[i, :] .* exp.( - bRnl.Dn.ζ[i, :] * x^2)) for i = 1:length(bRnl.Dn) ]
 print_tf(@test G ≈ G1)
-P1 = [ L[b.n1] * G1[i] for (i, b) in enumerate(spec)  ]
+P1 = [ L[b.n1] * G1[i] for (i, b) in enumerate(bRnl.spec)  ]
 print_tf(@test P ≈ P1)
 
 P4ML.Testing.test_evaluate_xx(bRnl)

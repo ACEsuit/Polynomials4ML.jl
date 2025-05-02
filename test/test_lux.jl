@@ -30,7 +30,9 @@ test_bases = [ chebyshev_basis(10),
                real_sphericalharmonics(5), 
                real_solidharmonics(5), 
                complex_sphericalharmonics(5), 
-               complex_solidharmonics(5), ]
+               complex_solidharmonics(5), 
+               
+               ]
 
 ##
 

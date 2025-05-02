@@ -7,6 +7,14 @@ function SlaterBasis(ζ::AbstractVector)
     return SlaterBasis{N, T}(SVector{N, T}(ζ))
 end
 
+function _rand_slater_basis(n1 = 5, n2 = 3, T = Float64)
+    Pn = legendre_basis(n1+1)
+    spec = [(n1 = n1, n2 = n2, l = l) for n1 = 1:n1 for n2 = 1:n2 for l = 0:n1-1] 
+    ζ = rand(length(spec))
+    Dn = SlaterBasis(ζ)
+    return AtomicOrbitalsRadials(Pn, Dn, spec) 
+end
+
 Base.length(basis::SlaterBasis) = length(basis.ζ)
 
 Base.show(io::IO, basis::SlaterBasis) = print(io, "SlaterBasis($(length(basis)))")
