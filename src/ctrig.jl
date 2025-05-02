@@ -22,7 +22,7 @@ Base.length(basis::CTrigBasis{N}) where {N} = 2 * N + 1
 
 _valtype(basis::CTrigBasis, T::Type{<: Real}) = complex(T)
 
-_valtype(::CTrigBasis, T::Type{<: Hyper{<: Real}}) = complex(T)
+# _valtype(::CTrigBasis, T::Type{<: Hyper{<: Real}}) = complex(T)
   
 _generate_input(basis::CTrigBasis) = 2 * π * rand() - π
 

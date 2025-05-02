@@ -62,7 +62,8 @@ function rrule(::typeof(evaluate),
                ps, st)
    P, dP = evaluate_ed(basis, X, ps, st)
 
-   function _pb(∂P)
+   function _pb(_∂P)
+      ∂P = unthunk(_∂P)
       # compute the pullback w.r.t. X 
       T∂X, N∂X = whatalloc(pullback!, ∂P, basis, X)
       ∂X = zeros(T∂X, N∂X)

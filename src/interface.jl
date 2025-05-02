@@ -135,36 +135,39 @@ then `_gradtype(basis, x)` should return `etype(dP)`.
 function _gradtype end 
 
 # first redirect input to type 
-_valtype(basis, x::SINGLE) = _valtype(basis, typeof(x))
-_valtype(basis, x::BATCH) = _valtype(basis, eltype(x))
-_gradtype(basis, x::SINGLE) = _gradtype(basis, typeof(x))
-_gradtype(basis, x::BATCH) = _gradtype(basis, eltype(x))
+_valtype(basis, x::SINGLE, args...) = _valtype(basis, typeof(x), args...)
+_valtype(basis, x::BATCH, args...) = _valtype(basis, eltype(x), args...)
+_gradtype(basis, x::SINGLE, args...) = _gradtype(basis, typeof(x), args...)
+_gradtype(basis, x::BATCH, args...) = _gradtype(basis, eltype(x), args...)
+
+_valtype(basis, TX::Type, ps, st) = _valtype(basis, TX)
+_gradtype(basis, TX::Type, ps, st) = _gradtype(basis, TX)
 
 # default grad types
-_gradtype(basis::AbstractP4MLBasis, TX::Type{<:Number}) = 
+_gradtype(basis::AbstractP4MLBasis, TX::Type{<:Number}, args...) = 
       _valtype(basis, TX)
 
-_gradtype(basis::AbstractP4MLBasis, Tx::Type{<: StaticArray}) = 
+_gradtype(basis::AbstractP4MLBasis, Tx::Type{<: StaticArray}, args...) = 
       StaticArrays.similar_type(Tx, 
                      promote_type(eltype(Tx), _valtype(basis, Tx)))
 
 # ------------------------------------------------------------
 # allocation interface & WithAlloc Interface 
 
-_out_size(basis::AbstractP4MLBasis, x::SINGLE) = (length(basis),)
+_out_size(basis::AbstractP4MLBasis, x::SINGLE, args...) = (length(basis),)
 
-_out_size(basis::AbstractP4MLBasis, X::BATCH) = (length(X), length(basis))
+_out_size(basis::AbstractP4MLBasis, X::BATCH, args...) = (length(X), length(basis))
 
 function whatalloc(::typeof(evaluate!), basis::AbstractP4MLBasis, x, args...)
-   T = _valtype(basis, x)
-   sz = _out_size(basis, x)
+   T = _valtype(basis, x, args...)
+   sz = _out_size(basis, x, args...)
    return (T, sz...) 
 end
 
 function whatalloc(::typeof(evaluate_ed!), basis::AbstractP4MLBasis, x, args...)
-   TV = _valtype(basis, x)
-   TG = _gradtype(basis, x)
-   sz = _out_size(basis, x)
+   TV = _valtype(basis, x, args...)
+   TG = _gradtype(basis, x, args...)
+   sz = _out_size(basis, x, args...)
    return (TV, sz...), (TG, sz...)
 end
 

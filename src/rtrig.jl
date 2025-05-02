@@ -31,7 +31,7 @@ natural_indices(basis::RTrigBasis{N}) where {N} = natural_indices_trig(N)
 
 _valtype(basis::RTrigBasis, T::Type{<: Real}) = T
 
-_valtype(::RTrigBasis, T::Type{<: Hyper{<: Real}}) = T
+# _valtype(::RTrigBasis, T::Type{<: Hyper{<: Real}}) = T
 
 _generate_input(basis::RTrigBasis) = 2 * π * rand() - π
 

@@ -8,7 +8,7 @@ function GaussianBasis(ζ::AbstractVector)
     return GaussianBasis{N, T}(SVector{N, T}(ζ))
 end
 
-function _rand_gaussian_basis(N1 = 5, N2 = 3, T = Float64)
+function _rand_gaussian_basis(N1 = 4, N2 = 3, T = Float64)
     Pn = legendre_basis(N1+1)
     spec = [(n1 = n1, n2 = n2, l = l) for n1 = 1:N1 for n2 = 1:N2 for l = 0:N1-1] 
     ζ = rand(length(spec))
@@ -23,12 +23,20 @@ Base.show(io::IO, basis::GaussianBasis) =
 
 _valtype(::GaussianBasis, T::Type{<: Real}) = T
 
+_valtype(::GaussianBasis, T::Type{<: Real}, 
+         ps::Union{Nothing, @NamedTuple{}}, st) = T
+
+_valtype(::GaussianBasis, T::Type{<: Real}, 
+         ps, st) = promote_type(T, eltype(ps.ζ), )
+
 _static_params(basis::GaussianBasis) = (ζ = basis.ζ,)
+
+_init_luxparams(basis::GaussianBasis) = ( ζ = Vector(basis.ζ), )
 
 _evaluate!(P, dP, basis::GaussianBasis, x)  = 
     _evaluate!(P, dP, basis, x, _static_params(basis), nothing)
 
-function _evaluate!(P, dP, basis::GaussianBasis, x::AbstractVector, ps, st)
+function _evaluate!(P, dP, basis::GaussianBasis, x::BATCH, ps, st)
     ζ = ps.ζ
     N = length(ζ)
     nX = length(x)
@@ -47,6 +55,26 @@ function _evaluate!(P, dP, basis::GaussianBasis, x::AbstractVector, ps, st)
     end
 
     return nothing 
+end
+
+
+function pullback_ps(∂P, basis::GaussianBasis, x::BATCH, ps, st)
+    ζ = ps.ζ
+    N = length(ζ)
+    nX = length(x)
+
+    ∂ζ = fill!(similar(ζ), 0)
+
+    @inbounds for n = 1:N
+        ζₙ = ζ[n]
+        @simd ivdep for j = 1:nX 
+            # P[j,n] = p_jn => ∂P[j,n]*P[j,n] = ∂P[j,n] * p_jn
+            p_jn = exp(- ζₙ * x[j]^2)
+            ∂ζ[n] += ∂P[j,n] * p_jn * (-x[j]^2)
+        end
+    end
+
+    return (ζ = ∂ζ,)
 end
 
 #=

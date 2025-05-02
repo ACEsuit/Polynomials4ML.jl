@@ -21,7 +21,17 @@ Base.show(io::IO, basis::SlaterBasis) = print(io, "SlaterBasis($(length(basis)))
 
 _valtype(::SlaterBasis, T::Type{<: Real}) = T
 
+_valtype(::SlaterBasis, T::Type{<: Real}, 
+         ps::Union{Nothing, @NamedTuple{}}, st) = T
+
+_valtype(::SlaterBasis, T::Type{<: Real}, 
+         ps, st) = promote_type(T, eltype(ps.ζ), )
+
+
 _static_params(basis::SlaterBasis) = (ζ = basis.ζ,)
+
+_init_luxparams(basis::SlaterBasis) = ( ζ = Vector(basis.ζ), )
+
 
 _evaluate!(P, dP, basis::SlaterBasis, x)  = 
     _evaluate!(P, dP, basis, x, _static_params(basis), nothing)
@@ -35,11 +45,11 @@ function _evaluate!(P, dP, basis::SlaterBasis, x::AbstractVector, ps, st)
 
     @inbounds begin 
         for n = 1:N
-            @simd ivdep for i = 1:nX 
-                P_in = exp(- ζ[n] * x[i])
-                P[i, n] = P_in
+            @simd ivdep for j = 1:nX 
+                P_jn = exp(- ζ[n] * x[j])
+                P[j, n] = P_jn
                 if WITHGRAD
-                    dP[i, n] = - ζ[n] * P_in
+                    dP[j, n] = - ζ[n] * P_jn
                 end
             end
         end
@@ -47,6 +57,28 @@ function _evaluate!(P, dP, basis::SlaterBasis, x::AbstractVector, ps, st)
 
    return P, dP 
 end 
+
+
+function pullback_ps(∂P, basis::SlaterBasis, x::BATCH, ps, st)
+    ζ = ps.ζ
+    N = length(ζ)
+    nX = length(x)
+
+    ∂ζ = fill!(similar(ζ), 0)
+
+    @inbounds for n = 1:N
+        ζₙ = ζ[n]
+        @simd ivdep for j = 1:nX 
+            # P[j,n] = p_jn => ∂P[j,n]*P[j,n] = ∂P[j,n] * p_jn
+            p_jn = exp(- ζ[n] * x[j])
+            ∂ζ[n] += ∂P[j,n] * p_jn * (-x[j])
+        end
+    end
+
+    return (ζ = ∂ζ,)
+end
+
+
 
 #=
 function evaluate_ed_dp!(P, dP, dpP, basis::SlaterBasis, x)

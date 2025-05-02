@@ -21,7 +21,7 @@ should overload
 _init_luxparams(rng::AbstractRNG, l::Any) = _init_luxparams(l)
 _init_luxparams(l) = NamedTuple() 
 
-_init_luxstate(rng::AbstractRNG, l) = _init_luxstate(l)
+_init_luxstate(rng::AbstractRNG, l::Any) = _init_luxstate(l)
 _init_luxstate(l) = NamedTuple() 
 
 
@@ -46,8 +46,10 @@ end
 
 Base.length(l::PolyLuxLayer) = length(l.basis)
 
-initialparameters(rng::AbstractRNG, l::PolyLuxLayer) = _init_luxparams(rng, l)
+initialparameters(rng::AbstractRNG, l::PolyLuxLayer) = 
+      _init_luxparams(rng, l.basis)
 
-initialstates(rng::AbstractRNG, l::PolyLuxLayer) = _init_luxstate(rng, l)
+initialstates(rng::AbstractRNG, l::PolyLuxLayer) = 
+      _init_luxstate(rng, l.basis)
 
 (l::PolyLuxLayer)(X, ps, st) = evaluate(l.basis, X, ps, st), st
