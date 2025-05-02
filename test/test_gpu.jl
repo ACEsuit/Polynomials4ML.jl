@@ -16,6 +16,7 @@ TFL = Float32
 
 # stolen from test_lux.jl 
 test_bases = [ ChebBasis(8), 
+               BernsteinBasis(8), 
                RTrigBasis(10), 
                CTrigBasis(10), 
                MonoBasis(10), 

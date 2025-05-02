@@ -15,7 +15,7 @@ using LuxCore, Random, StaticArrays
 import ChainRulesCore: rrule, frule, NoTangent, ZeroTangent
 using HyperDualNumbers: Hyper
 using ForwardDiff: Dual, extract_derivative
-
+using StaticArrays
 import LuxCore: AbstractLuxLayer, initialparameters, initialstates                 
 
 using Random: AbstractRNG   
@@ -91,7 +91,7 @@ include("discreteweights.jl")
 include("jacobiweights.jl")
 include("monomials.jl")
 include("chebbasis.jl")
-
+include("bernstein.jl")
 # 2d harmonics / trigonometric polynomials 
 include("ctrig.jl")
 include("rtrig.jl")
