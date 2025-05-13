@@ -1,7 +1,7 @@
 name = "Polynomials4ML"
 uuid = "03c4bcba-a943-47e9-bfa1-b1661fc2974f"
 authors = ["Christoph Ortner <christophortner@gmail.com> and contributors"]
-version = "0.4.0"
+version = "0.4.1"
 
 [deps]
 ACEbase = "14bae519-eb20-449c-a949-9c58ed33163e"
@@ -30,7 +30,7 @@ BenchmarkTools = "1"
 Bumper = "0.7.0"
 ChainRulesCore = "1"
 Combinatorics = "1"
-ForwardDiff = "1.0"
+ForwardDiff = "0.10, 1.0"
 GPUArraysCore = "0.2.0"
 KernelAbstractions = "0.9.34"
 LinearAlgebra = "1.10"
