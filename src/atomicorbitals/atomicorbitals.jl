@@ -1,7 +1,14 @@
-
 using LinearAlgebra: dot 
 
-export AtomicOrbitalsRadials, GaussianBasis, SlaterBasis, STO_NG
+export AtomicOrbitalsRadials
+
+abstract type AbstractDecayFunction end
+
+struct RadialDecay{TSMAT, DF<:AbstractDecayFunction} <: AbstractP4MLBasis
+    ζ::TSMAT
+    D::TSMAT
+    decay::DF
+end
 
 const NT_NNL = NamedTuple{(:n1, :n2, :l), Tuple{Int, Int, Int}}
 
@@ -40,9 +47,7 @@ Base.show(io::IO, basis::AtomicOrbitalsRadials) =
 
 # Type of atomic orbital type basis sets         
 
-include("gaussian.jl")
-include("slater.jl")
-include("sto_ng.jl")
+include("radialdecay.jl")
 
 # _static_params is used to extract parameters from the basis set when 
 # the basis is evaluated with the old parameter-free convention. In that case, 
