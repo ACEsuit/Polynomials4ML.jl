@@ -84,6 +84,9 @@ include("generic_ad.jl")
 # static product - used throughout several layers
 include("staticprod.jl")
 
+# transformed basis 
+include("transformed.jl")
+
 # polynomials 
 include("orthopolybasis.jl")
 include("discreteweights.jl")
@@ -91,6 +94,7 @@ include("jacobiweights.jl")
 include("monomials.jl")
 include("chebbasis.jl")
 include("bernstein.jl")
+
 # 2d harmonics / trigonometric polynomials 
 include("ctrig.jl")
 include("rtrig.jl")
