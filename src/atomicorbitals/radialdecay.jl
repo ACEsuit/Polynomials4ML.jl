@@ -1,3 +1,5 @@
+using SpecialFunctions
+
 struct GaussianDecay <: AbstractDecayFunction
 end
 
@@ -19,37 +21,13 @@ Construct a `RadialDecay` object from raw matrix data `ζ_raw`, `D_raw`
 and a `DecayFunction(f, df)` representing the decay form and its derivative.
 All input is converted to statically-sized `SMatrix` for efficiency.
 """
-function construct_basis(::Type{RadialDecay}, ζ_raw, D_raw, decay::AbstractDecayFunction)
+function construct_basis(ζ_raw, D_raw, decay::AbstractDecayFunction, spec_list)
     LEN, K = size(ζ_raw)
     T = promote_type(eltype(ζ_raw), eltype(D_raw))
     ζ = SMatrix{LEN, K, T}(ζ_raw)
     D = SMatrix{LEN, K, T}(D_raw)
-    return RadialDecay{typeof(ζ), typeof(decay)}(ζ, D, decay)
-end
-
-"""
-    construct_basis(RadialDecay, ζ_vec, D_vec, decay)
-
-Overload for vector input. Converts to N×1 matrix and calls the full constructor.
-"""
-function construct_basis(::Type{RadialDecay}, ζ_vec::AbstractVector, D_vec::AbstractVector, decay::AbstractDecayFunction)
-    @assert length(ζ_vec) == length(D_vec)
-    N = length(ζ_vec)
-    ζ = reshape(ζ_vec, N, 1)
-    D = reshape(D_vec, N, 1)
-    return construct_basis(RadialDecay, ζ, D, decay)
-end
-
-"""
-    construct_basis(RadialDecay, ζ_vec, decay)
-
-Simplified overload where D is taken as all ones.
-"""
-function construct_basis(::Type{RadialDecay}, ζ_vec::AbstractVector, decay::AbstractDecayFunction)
-    N = length(ζ_vec)
-    ζ = reshape(ζ_vec, N, 1)
-    D = ones(eltype(ζ_vec), N, 1)
-    return construct_basis(RadialDecay, ζ, D, decay)
+    spec = SVector{length(spec_list)}(spec_list)
+    return RadialDecay{length(spec), typeof(ζ), typeof(decay)}(ζ, D, decay, spec)
 end
 
 Base.length(basis::RadialDecay) = size(basis.ζ, 1)
@@ -69,6 +47,8 @@ _init_luxparams(basis::RadialDecay) =
 
 _evaluate!(P, dP, basis::RadialDecay, x)  = 
     _evaluate!(P, dP, basis, x, _static_params(basis), nothing)
+
+natural_indices(basis::RadialDecay) = basis.spec
 
 function _evaluate!(P, dP, basis::RadialDecay, x::AbstractVector, ps, st) 
     ζ, D = ps.ζ, ps.D
@@ -91,7 +71,7 @@ function _evaluate!(P, dP, basis::RadialDecay, x::AbstractVector, ps, st)
                 P[i, n] += a 
                 if WITHGRAD
                     dfx = df(decay, x[i])
-                    dP[i, n] += - ζ[n, m] * dfx * a
+                    dP[i, n] += -ζ[n, m] * dfx * a
                 end
             end
         end
@@ -121,43 +101,61 @@ function pullback_ps(∂P, basis::RadialDecay, x::BATCH, ps, st)
     return (ζ = ∂ζ, D = ∂D)
 end
 
+function _rand_basis(N1=4, N2=3; 
+    K::Int=1, 
+    T::Type=Float64, 
+    decay_type::AbstractDecayFunction=GaussianDecay(),
+    ζinit = () -> rand(T, N1 * N2 * N1^2, K), 
+    Dinit = () -> ones(T, N1 * N2 * N1^2, K))
 
-function construct_gaussian(ζ_vec::AbstractVector)
-    return construct_basis(RadialDecay, ζ_vec, GaussianDecay())
-end
-
-function construct_slater(ζ_vec::AbstractVector)
-    return construct_basis(RadialDecay, ζ_vec, SlaterDecay())
-end
-
-function construct_sto_ng(ζ::AbstractMatrix, D::AbstractMatrix)
-    return construct_basis(RadialDecay, ζ, D, GaussianDecay())
-end
-
-function _rand_gaussian_basis(N1 = 4, N2 = 3, T = Float64)
-    Pn = legendre_basis(N1 + 1)
-    spec_list = [(n1 = n1, n2 = n2, l = l) for n1 in 1:N1, n2 in 1:N2, l in 0:N1-1]
+    Pn = MonoBasis(N1 + 1)
+    Ylm = real_solidharmonics(N1 - 1)
+    spec_list = [(n1=n1, n2=n2, l=l, m=m) for n1 in 1:N1, n2 in 1:N2, l in 0:N1-1 for m in -l:l]
     spec = SVector{length(spec_list)}(spec_list)
-    ζ = rand(T, length(spec))
-    Dn = construct_gaussian(ζ)
-    return AtomicOrbitalsRadials{length(spec), typeof(Pn), typeof(Dn)}(Pn, Dn, spec)
+    spec_ln = unique((n1=s.n1, n2=s.n2, l=s.l) for s in spec)
+    Dn = construct_basis(ζinit(), Dinit(), decay_type, spec_ln)
+    specidx = _specidx(spec, Pn, Dn, Ylm)
+
+    return AtomicOrbitals{length(spec), typeof(Pn), typeof(Dn), typeof(Ylm)}(Pn, Dn, Ylm, spec, specidx)
 end
 
-function _rand_slater_basis(N1 = 4, N2 = 3, T = Float64)
-    Pn = legendre_basis(N1 + 1)
-    spec_list = [(n1 = n1, n2 = n2, l = l) for n1 in 1:N1, n2 in 1:N2, l in 0:N1-1]
-    spec = SVector{length(spec_list)}(spec_list)
-    ζ = rand(T, length(spec))
-    Dn = construct_slater(ζ)
-    return AtomicOrbitalsRadials{length(spec), typeof(Pn), typeof(Dn)}(Pn, Dn, spec)
+_rand_gaussian_basis(N1=4, N2=3, T=Float64) = _rand_basis(N1, N2; T=T)
+
+_rand_slater_basis(N1=4, N2=3, T=Float64) = _rand_basis(N1, N2; T=T, decay_type = SlaterDecay())
+
+_rand_sto_basis(N1=4, N2=2, K=4, T=Float64) = _rand_basis(N1, N2; T=T, K=K, 
+        ζinit = () -> rand(T, N1 * N2 * N1^2, K),
+        Dinit = () -> rand(T, N1 * N2 * N1^2, K))
+
+function _invmap(a::AbstractVector)
+    inva = Dict{eltype(a), Int}()
+    for i = 1:length(a) 
+       inva[a[i]] = i 
+    end
+    return inva 
 end
 
-function _rand_sto_basis(n1 = 4, n2 = 2, K = 4, T = Float64)
-    Pn = legendre_basis(n1 + 1)
-    spec_list = [(n1 = n1, n2 = n2, l = l) for n1 in 1:n1, n2 in 1:n2, l in 0:n1-1]
-    spec = SVector{length(spec_list)}(spec_list)
-    ζ = fill(T(0.5), length(spec), K)
-    D = fill(T(0.5), length(spec), K)
-    Dn = construct_sto_ng(ζ, D)
-    return AtomicOrbitalsRadials{length(spec), typeof(Pn), typeof(Dn)}(Pn, Dn, spec)
+function _specidx(spec, Pn, Dn, Ylm)
+    specidx = Vector{Tuple{Int, Int, Int}}(undef, length(spec))
+
+    spec_Ylm = natural_indices(Ylm); inv_Ylm = _invmap(spec_Ylm)
+    spec_Pn = natural_indices(Pn); inv_Pn = _invmap(spec_Pn)
+    spec_Dn = natural_indices(Dn); inv_Dn = _invmap(spec_Dn)
+    for (z, b) in enumerate(spec)
+        specidx[z] = (inv_Pn[(n = b.n1, )], inv_Dn[(n1 = b.n1, n2 = b.n2, l = b.l)], inv_Ylm[(l=b.l, m=b.m)])
+    end  
+    return specidx
+end
+
+function TSMAT(vv::Vector{<:Vector{T}}) where {T}
+    nrow = length(vv)
+    ncol = maximum(length.(vv))
+    M = zeros(T, nrow, ncol)
+    for i in 1:nrow
+        vi = vv[i]
+        for j in 1:length(vi)
+            M[i, j] = vi[j]
+        end
+    end
+    return M
 end

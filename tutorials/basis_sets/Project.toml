@@ -1,0 +1,6 @@
+[deps]
+Downloads = "f43a241f-c20a-4ad4-852c-f6b1247861c6"
+JSON3 = "0f8b85d8-7281-11e9-16c2-39a750bddbf1"
+Polynomials4ML = "03c4bcba-a943-47e9-bfa1-b1661fc2974f"
+SpecialFunctions = "276daf66-3868-5448-9aa4-cd146d93841b"
+StaticArrays = "90137ffa-7385-5640-81b9-e52037218182"
