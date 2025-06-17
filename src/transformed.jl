@@ -1,47 +1,46 @@
 
+import ForwardDiff as FD 
 
 """
    struct TransformedBasis
 
-Basically a three-stage chain, consisting of an input transformation, 
-basis evaluation and then output transformation. Constructor: 
+Basically a two-stage chain, consisting of an input transformation, 
+and basis evaluation. Constructor: 
 ```julia
-TransformedBasis(transin, basis, transout)
+TransformedBasis(trans, basis)
 ```      
-The point of this structure is to provide such a transformed basis (chain) that 
+The point of this structure is to provide a transformed basis that 
 behaves exactly as all other P4ML bases. 
 
 ### Comments
-- the "natural indices" will simply be `1:len`, where length is the 
-  number of transformed basis function. 
-- It is assumed that the input transformation and output transformation do not 
-  change the number types.
+- the "natural indices" will be the same as for `basis`
 - `_generate_input` is not implemented for general input transforms; to 
 implement it for an input transform of type `TIN` one should monkey-patch 
 ```julia
 Polynomials4ML._generate_input(::TransformedBasis{TIN}, T::Type) where {TIN} = ...
 ```
-- `identity` doesn't behave well with Lux, so don't use it as a tranform, 
-instead use `nothing`; this will be treated as an identity transform.
+- `_valtype` is implemented but unclear how well it behaves, might be necessary 
+to monkey-patch it as well
 """
-struct TransformedBasis{TIN, BAS, TOUT} <: AbstractP4MLBasis 
-   transin::TIN 
+struct TransformedBasis{TIN, BAS} <: AbstractP4MLBasis 
+   trans::TIN
    basis::BAS
-   transout::TOUT
-   len::Int
 end
-
 
 function Base.show(io::IO, l::TransformedBasis)
-   print(io, "TransformedBasis(...)")
+   print(io, "TransformedBasis($(l.trans), $(l.basis))")
 end
 
-Base.length(basis::TransformedBasis) = basis.len
+Base.length(l::TransformedBasis) = 
+      length(l.basis)
 
-natural_indices(basis::TransformedBasis) = [ (n = n,) for n = 1:length(basis) ]
+natural_indices(basis::TransformedBasis) = 
+      natural_indices(basis.basis)
 
-_valtype(basis::TransformedBasis, T::Type) = 
-    _valtype(basis.basis, T)
+function _valtype(basis::TransformedBasis, T::Type)
+   T1 = _valtype(basis.trans, T) 
+   return _valtype(basis.basis, T1)
+end
 
 _generate_input(basis::TransformedBasis{Nothing}) = 
       _generate_input(basis.basis)
@@ -50,17 +49,39 @@ _generate_input(basis::TransformedBasis{Nothing}) =
 # Lux stuff
 
 _init_luxparams(rng::AbstractRNG, l::TransformedBasis) = 
-      ( transin = _init_luxparams(rng, l.transin),
-        basis = _init_luxparams(rng, l.basis),
-        transout = _init_luxparams(rng, l.transout) )
+      ( trans = _init_luxparams(rng, l.trans),
+        basis = _init_luxparams(rng, l.basis), )
 
 _init_luxstate(rng::AbstractRNG, l::TransformedBasis) =
-      ( transin = _init_luxparams(rng, l.transin),
-        basis = _init_luxparams(rng, l.basis),
-        transout = _init_luxparams(rng, l.transout) )
+      ( trans = _init_luxparams(rng, l.trans),
+        basis = _init_luxparams(rng, l.basis),  )
+
         
+_init_luxparams(rng::AbstractRNG, ::Function) = NamedTuple() 
+_init_luxstate(rng::AbstractRNG, ::Function) = NamedTuple() 
+
+evaluate(f::Function, x::SINGLE, ps, st) = f(x)
+
+function evaluate_ed(f::Function, x::Number, ps, st)
+   y = f(FD.Dual(x)) 
+   return FD.value(y), FD.extract_derivative(y)
+end
+
+function evaluate_ed(f::Function, x::SVector, ps, st)
+   return f(x), FD.gradient(f, x)
+end
+
+function _valtype(f::Function, T::Type)
+   TT = Base.return_types(f, Tuple{T}) 
+   @assert length(TT) == 1 "Function $f should return a single value"
+   return TT[1]
+end
+
 _init_luxparams(rng::AbstractRNG, ::Nothing) = NamedTuple() 
 _init_luxstate(rng::AbstractRNG, ::Nothing) = NamedTuple() 
+evaluate(::Nothing, x::SINGLE, ps, st) = x
+evaluate_ed(::Nothing, x::SINGLE, ps, st) = x, one(x)
+_valtype(::Nothing, T::Type) = T 
 
 # --------------------------------------------------------- 
 # CPU SIMD kernel 
@@ -75,22 +96,18 @@ function _evaluate!(P, dP::Nothing,
 
    @no_escape begin
       # [1] Stage 1 - transform the inputs 
-      z1 = evaluate(tbasis.transin, x[1], ps.transin, st.transin) 
+      z1 = evaluate(tbasis.trans, x[1], ps.trans, st.trans) 
       TZ = typeof(z1)
       Z = @alloc(TZ, nX) 
       @inbounds begin
          Z[1] = z1
          @simd ivdep for i = 2:nX
-            Z[i] = evaluate(tbasis.transin, x[i], ps.transin, st.transin)
+            Z[i] = evaluate(tbasis.trans, x[i], ps.trans, st.trans)
          end
       end
 
       # [2] Stage 2 - evaluate the basis 
-      Q = @withalloc evaluate!(tbasis.basis, Z, ps.basis, st.basis)
-      dQ = nothing 
-
-      # [3] Stage 3 - transform the basis into the output basis 
-      _evaluate!(P, dP, tbasis.transout, Q, dQ, ps.transout, st.transout)
+      evaluate!(P, tbasis.basis, Z, ps.basis, st.basis)
    end
 
    return nothing 
@@ -101,22 +118,3 @@ end
 # --------------------------------------------------------- 
 # KA kernel 
 # 
-
-
-
-
-
-# ------------------------------ 
-# auxiliary transforms 
-
-evaluate(f::Function, x::SINGLE, ps, st) = f(x)
-
-evaluate(::Nothing, x::SINGLE, ps, st) = x
-
-function _evaluate!(P, dP, transout::Nothing, Q::AbstractVector, dQ, ps, st)
-   for j = 1:size(Q, 2), n = 1:size(Q, 1)
-      P[n, j] = Q[n, j]
-      isnothing(dP) || (dP[n, j] = dQ[n, j])
-   end
-   return nothing 
-end
