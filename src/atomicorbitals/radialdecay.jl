@@ -146,16 +146,3 @@ function _specidx(spec, Pn, Dn, Ylm)
     end  
     return specidx
 end
-
-function TSMAT(vv::Vector{<:Vector{T}}) where {T}
-    nrow = length(vv)
-    ncol = maximum(length.(vv))
-    M = zeros(T, nrow, ncol)
-    for i in 1:nrow
-        vi = vv[i]
-        for j in 1:length(vi)
-            M[i, j] = vi[j]
-        end
-    end
-    return M
-end
