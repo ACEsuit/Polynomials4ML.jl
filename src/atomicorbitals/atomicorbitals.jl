@@ -46,7 +46,7 @@ _valtype(basis::AtomicOrbitals, T::Type{<: SVector{3, S}}, ps, st) where {S} =
 _generate_input(basis::AtomicOrbitals) = @SVector randn(3)
 
 Base.show(io::IO, basis::AtomicOrbitals) = 
-        print(io, "AtomicOrbitals($(basis.Pn), $(basis.Dn), $(basis.Ylm))")
+        print(io, "AtomicOrbitals($(basis.Pn), $(typeof(basis.Dn.decay).name.name), $(basis.Ylm))")
 
 # Type of atomic orbital type basis sets         
 

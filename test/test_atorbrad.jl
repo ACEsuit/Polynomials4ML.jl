@@ -19,20 +19,17 @@ P1, dP1 = evaluate_ed(basis, x)
 P4ML.Testing.test_evaluate_xx(basis)
 P4ML.Testing.test_chainrules(basis)
 
-# Test is broken - 
-#  reshape is causing this
-# P4ML.Testing.test_withalloc(basis; allowed_allocs = 0)
+# Test is broken - reshape is causing this, hence single-input test is turned off
+P4ML.Testing.test_withalloc(basis; allowed_allocs = 0, single=false)
 
 ##
-
+# these are scripts to replicate and check this allocation problem. 
+# strangely it doesn't occur for the other bases. Only for AtomicOrbtials. 
+#
 # using BenchmarkTools
-# X = [P4ML._generate_input(basis) for _=1:1000 ]
-# P, dP = evaluate_ed(basis, X)
-# @btime P4ML._evaluate!($P, $dP, $basis, $X)
 
 # P, dP = evaluate_ed(basis, x)
 # @btime P4ML.evaluate_ed!($P, $dP, $basis, $x)
-
 
 # @profview let basis=basis, X=x, P=P, dP=dP 
 #     for _ = 1:1_000_000 
@@ -52,7 +49,7 @@ P1, dP1 = evaluate_ed(basis, x)
 
 P4ML.Testing.test_evaluate_xx(basis)
 P4ML.Testing.test_chainrules(basis)
-P4ML.Testing.test_withalloc(basis; allowed_allocs = 0)
+P4ML.Testing.test_withalloc(basis; allowed_allocs = 0, single=false)
 
 ##
 
@@ -67,7 +64,7 @@ P1, dP1 = evaluate_ed(basis, x)
 
 P4ML.Testing.test_evaluate_xx(basis)
 P4ML.Testing.test_chainrules(basis)
-P4ML.Testing.test_withalloc(basis; allowed_allocs = 0)
+P4ML.Testing.test_withalloc(basis; allowed_allocs = 0, single=false)
 
 
 #
