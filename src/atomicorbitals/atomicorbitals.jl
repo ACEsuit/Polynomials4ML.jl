@@ -4,46 +4,49 @@ export AtomicOrbitalsRadials
 
 abstract type AbstractDecayFunction end
 
-struct RadialDecay{TSMAT, DF<:AbstractDecayFunction} <: AbstractP4MLBasis
+const NT_NNL = NamedTuple{(:n1, :n2, :l), Tuple{Int, Int, Int}}
+const NT_NNLM = NamedTuple{(:n1, :n2, :l, :m), Tuple{Int, Int, Int, Int}}
+
+struct RadialDecay{LEN, TSMAT, DF<:AbstractDecayFunction} <: AbstractP4MLBasis
     ζ::TSMAT
     D::TSMAT
     decay::DF
+    spec::SVector{LEN, NT_NNL}
 end
 
-const NT_NNL = NamedTuple{(:n1, :n2, :l), Tuple{Int, Int, Int}}
-
-# AORBAS = Union{AtomicOrbitalsRadials, GaussianBasis, SlaterBasis, STO_NG}
-
-mutable struct AtomicOrbitalsRadials{LEN, TP, TD}  <: AbstractP4MLBasis
+mutable struct AtomicOrbitals{LEN, TP, TD, TY}  <: AbstractP4MLBasis
    Pn::TP
    Dn::TD
-   spec::SVector{LEN, NT_NNL}
+   Ylm::TY
+   spec::SVector{LEN, NT_NNLM}
+   specidx::Vector{Tuple{Int64, Int64, Int64}}
 end
 
-function AtomicOrbitalsRadials(Pn, Dn, spec::AbstractVector{NT_NNL})
+function AtomicOrbitals(Pn, Dn, Ylm, spec::AbstractVector{NT_NNLM}, specidx)
     LEN = length(spec)
-    return AtomicOrbitalsRadials{LEN, typeof(Pn), typeof(Dn)}(Pn, Dn, SVector{LEN, NT_NNL}(spec))
+    return AtomicOrbitals{LEN, typeof(Pn), typeof(Dn), typeof(Ylm)}(Pn, Dn, Ylm, SVector{LEN, NT_NNLM}(spec), specidx)
 end
 
-Base.length(basis::AtomicOrbitalsRadials) = length(basis.spec)
+Base.length(basis::AtomicOrbitals) = length(basis.spec)
 
-natural_indices(basis::AtomicOrbitalsRadials) = basis.spec
+natural_indices(basis::AtomicOrbitals) = basis.spec
 
-_valtype(basis::AtomicOrbitalsRadials, T::Type{<: Real}) = 
-        promote_type(_valtype(basis.Pn, T), _valtype(basis.Dn, T))
+_valtype(basis::AtomicOrbitals, T::Type{<: SVector{3, S}}) where {S} = 
+        promote_type(_valtype(basis.Pn, S), _valtype(basis.Dn, S), _valtype(basis.Ylm, T))
 
-_valtype(basis::AtomicOrbitalsRadials, T::Type{<: Real}, 
-            ps::Union{Nothing, @NamedTuple{}}, st) = 
-        promote_type(_valtype(basis.Pn, T), _valtype(basis.Dn, T))
+_valtype(basis::AtomicOrbitals, T::Type{<: SVector{3, S}}, 
+            ps::Union{Nothing, @NamedTuple{}}, st) where {S} = 
+        promote_type(_valtype(basis.Pn, S), _valtype(basis.Dn, S), _valtype(basis.Ylm, T))
 
-_valtype(basis::AtomicOrbitalsRadials, T::Type{<: Real}, ps, st) = 
-        promote_type(_valtype(basis.Pn, T, ps.Dn, st.Dn), 
-                     _valtype(basis.Dn, T, ps.Dn, st.Dn))
+_valtype(basis::AtomicOrbitals, T::Type{<: SVector{3, S}}, ps, st) where {S} = 
+        promote_type(_valtype(basis.Pn, S, ps.Dn, st.Dn), 
+                     _valtype(basis.Dn, S, ps.Dn, st.Dn), 
+                     _valtype(basis.Ylm, T, ps.Dn, st.Ylm))
 
-_generate_input(basis::AtomicOrbitalsRadials) = 0.1 + 0.9 * rand()
+_generate_input(basis::AtomicOrbitals) = @SVector randn(3)
 
-Base.show(io::IO, basis::AtomicOrbitalsRadials) = 
-        print(io, "AtomicOrbitalsRadials($(basis.Pn), $(basis.Dn))")
+Base.show(io::IO, basis::AtomicOrbitals) = 
+        print(io, "AtomicOrbitals($(basis.Pn), $(typeof(basis.Dn.decay).name.name), $(basis.Ylm))")
 
 # Type of atomic orbital type basis sets         
 
@@ -58,57 +61,67 @@ include("radialdecay.jl")
 
 _static_params(basis::AbstractP4MLBasis) = NamedTuple() 
 
-_static_params(basis::AtomicOrbitalsRadials) = 
-        (Pn = _static_params(basis.Pn), Dn = _static_params(basis.Dn), )
+_static_params(basis::AtomicOrbitals) = 
+        (Pn = _static_params(basis.Pn), Dn = _static_params(basis.Dn), Ylm = _static_params(basis.Ylm))
 
-_init_luxparams(rng::Random.AbstractRNG, l::AtomicOrbitalsRadials) = 
+_init_luxparams(rng::Random.AbstractRNG, l::AtomicOrbitals) = 
         ( Pn = _init_luxparams(rng, l.Pn), 
-          Dn = _init_luxparams(rng, l.Dn), )
+          Dn = _init_luxparams(rng, l.Dn), 
+          Ylm = _init_luxparams(rng, l.Ylm))
 
-_init_luxstate(rng::Random.AbstractRNG, l::AtomicOrbitalsRadials) = 
+_init_luxstate(rng::Random.AbstractRNG, l::AtomicOrbitals) = 
         ( Pn = _init_luxstate(rng, l.Pn), 
-          Dn = _init_luxstate(rng, l.Dn), )          
+          Dn = _init_luxstate(rng, l.Dn), 
+          Ylm = _init_luxstate(rng, l.Ylm))          
 
 # -------- Evaluation Code 
 
-_evaluate!(Rnl, dRnl, basis::AtomicOrbitalsRadials, X) = 
-            _evaluate!(Rnl, dRnl, basis, X, 
+_evaluate!(Rnlm, dRnlm, basis::AtomicOrbitals, X) = 
+            _evaluate!(Rnlm, dRnlm, basis, X, 
                        _static_params(basis), 
-                       (Pn = nothing, Dn = nothing))
+                       (Pn = nothing, Dn = nothing, Ylm = nothing))
 
-function _evaluate!(Rnl, dRnl, basis::AtomicOrbitalsRadials, R::BATCH, 
+function _evaluate!(Rnl, dRnl, basis::AtomicOrbitals, X::AbstractVector{<: SVector{3}}, 
                      ps, st)
-    nR = length(R)
+    nR = length(X)
     WITHGRAD = !isnothing(dRnl)
 
     fill!(Rnl, zero(eltype(Rnl)))
-    WITHGRAD && fill!(dRnl, zero(eltype(Rnl)))
+    WITHGRAD && fill!(dRnl, zero(eltype(dRnl)))
 
     @no_escape begin 
+        TR = eltype(eltype(X))
+        R = @alloc(TR, nR)
+        map!(norm, R, X)
         if WITHGRAD
             # this is a hack that circumvents an unexplained allocation in 
             # the @withalloc macro 
-            T = promote_type(eltype(Rnl), eltype(R))
+            T = promote_type(eltype(Rnl), TR)
             Pn = @alloc(T, nR, length(basis.Pn))
             dPn = @alloc(T, nR, length(basis.Pn))
             _evaluate!(Pn, dPn, basis.Pn, R, ps.Pn, st.Pn)
             Dn = @alloc(T, nR, length(basis.Dn))
             dDn = @alloc(T, nR, length(basis.Dn))
             _evaluate!(Dn, dDn, basis.Dn, R, ps.Dn, st.Dn)
+            Ylm, dYlm = @withalloc evaluate_ed!(basis.Ylm, X)
             # Pn, dPn = @withalloc evaluate_ed!(basis.Pn, R)
             # Dn, dDn = @withalloc evaluate_ed!(basis.Dn, R)
         else 
             Pn = @withalloc evaluate!(basis.Pn, R, ps.Pn, st.Pn)   # Pn(r)
             Dn = @withalloc evaluate!(basis.Dn, R, ps.Dn, st.Dn)   # Dn(r)  (ζ are the parameters -> reorganize the Lux way)
+            Ylm = @withalloc evaluate!(basis.Ylm, X, ps.Ylm, st.Ylm)
             dPn = nothing
             dDn = nothing
+            dYlm = nothing
         end
-        for (i, b) in enumerate(basis.spec)
+        for (i, b) in enumerate(basis.specidx)
             @simd ivdep for j = 1:nR
-                Rnl[j, i] = Pn[j, b.n1] * Dn[j, i]
+                Rnl[j, i] = Pn[j, b[1]] * Dn[j, b[2]] * Ylm[j, b[3]]
                 if WITHGRAD 
-                    dRnl[j, i] = ( dPn[j, b.n1] *  Dn[j, i] + 
-                                    Pn[j, b.n1] * dDn[j, i] )
+                    drj = X[j] / R[j]
+                    dRnl[j, i] = ( dPn[j, b[1]] * drj * Dn[j, b[2]] * Ylm[j, b[3]] + 
+                                    Pn[j, b[1]] * dDn[j, b[2]] * drj * Ylm[j, b[3]] + 
+                                    Pn[j, b[1]] * Dn[j, b[2]] * dYlm[j, b[3]])
                 end
             end
         end
@@ -117,30 +130,36 @@ function _evaluate!(Rnl, dRnl, basis::AtomicOrbitalsRadials, R::BATCH,
     return nothing 
 end
 
-
-function pullback_ps(∂Rnl, basis::AtomicOrbitalsRadials, X::BATCH,
+function pullback_ps(∂Rnl, basis::AtomicOrbitals, X::AbstractVector{<: SVector{3}},
                      ps::NamedTuple, st)
-    T = promote_type(eltype(∂Rnl), eltype(X)) 
+    TR = eltype(eltype(X))
+    T = promote_type(eltype(∂Rnl), TR) 
     nR = length(X)
+    R = zeros(T, nR)
+    map!(norm, R, X)
 
     # Rnl = output of evaluate(basis, X, ...)
     Pn = evaluate(basis.Pn, X, ps.Pn, st.Pn)
     Dn = evaluate(basis.Dn, X, ps.Dn, st.Dn)
+    Ylm = evaluate(basis.Ylm, X, ps.Ylm, st.Ylm)
     ∂Pn = zeros(T, size(Pn))
     ∂Dn = zeros(T, size(Dn))
+    ∂Ylm = zeros(TR, size(Ylm))
 
-    for (i, b) in enumerate(basis.spec)
+    for (i, b) in enumerate(basis.specidx)
         @simd ivdep for j = 1:nR
             #             Rnl[j, i] =             Pn[j, b.n1] * Dn[j, i]
             # ∂Rnl[j,i] * Rnl[j, i] = ∂Rnl[j,i] * Pn[j, b.n1] * Dn[j, i]
-            ∂Pn[j, b.n1] += ∂Rnl[j, i] * Dn[j, i]
-            ∂Dn[j, i] += ∂Rnl[j, i] * Pn[j, b.n1]
+            ∂Pn[j, b[1]] += ∂Rnl[j, i] * Dn[j, b[2]] * Ylm[j, b[3]]
+            ∂Dn[j, b[2]] += ∂Rnl[j, i] * Pn[j, b[1]] * Ylm[j, b[3]]
+            ∂Ylm[j, b[3]] += ∂Rnl[j, i] * Pn[j, b[1]] * Dn[j, b[2]]
         end 
     end 
 
     ∂p_Pn = pullback_ps(∂Pn, basis.Pn, X, ps.Pn, st.Pn)
     ∂p_Dn = pullback_ps(∂Dn, basis.Dn, X, ps.Dn, st.Dn)
-    return (Pn = ∂p_Pn, Dn = ∂p_Dn,)
+    ∂p_Ylm = pullback_ps(∂Ylm, basis.Ylm, X, ps.Ylm, st.Ylm)
+    return (Pn = ∂p_Pn, Dn = ∂p_Dn, Ylm = ∂p_Ylm)
 end
 
 # ---------------------------------------- 

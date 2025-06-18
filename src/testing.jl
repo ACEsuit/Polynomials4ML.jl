@@ -186,11 +186,13 @@ function test_withalloc(basis::AbstractP4MLBasis;
             generate_x = () -> _generate_input(basis),
             generate_batch = () -> _generate_batch(basis),
             allowed_allocs = 0, 
+            single = true, 
             ed = true,
             kwargs...) 
    X = generate_batch()
    x = generate_x()
-   for Y in (x, X, )
+   xX = single ? (x, X) : (X,)
+   for Y in xX 
       nalloc1 = _allocations_inner(basis, Y; ed=ed)
       nalloc = @allocated ( _allocations_inner(basis, Y; ed=ed) ) 
       println("nalloc = $nalloc (allowed = $allowed_allocs)")
@@ -209,103 +211,6 @@ function test_withalloc(basis::AbstractP4MLBasis;
    end
    return nothing 
 end
-
-
-# TODO: check we can retire these
-
-# function _allocations_inner(basis::AbstractP4MLTensor, x; 
-#                               pb = true)
-#    @no_escape begin 
-#       P = @withalloc evaluate!(basis, x)
-#       s = sum(P)
-#       if pb 
-#          T = eltype(P) 
-#          sz = size(P)
-#          ∂P = @alloc(T, sz...)
-#          fill!(∂P, zero(T))
-#          ∂x = @withalloc pullback!(∂P, basis, x)
-#       end 
-#       nothing 
-#    end
-#    return s 
-# end
-
-
-# function test_withalloc(basis::AbstractP4MLTensor; 
-#             generate_single = () -> _generate_input(basis),
-#             generate_batch = () -> _generate_batch(basis),
-#             allowed_allocs = 0, 
-#             pb = true, 
-#             batch = true, 
-#             single = true, 
-#             kwargs...) 
-
-#    if single 
-#       X = generate_single()
-#       nalloc_pre = _allocations_inner(basis, X; pb=pb)
-#       nalloc_pre = _allocations_inner(basis, X; pb=pb)
-#       nalloc = @allocated ( _allocations_inner(basis, X; pb=pb) )
-#       println("single: nalloc = $nalloc (allowed = $allowed_allocs)")
-#       println_slim(@test nalloc <= allowed_allocs)
-#       A1 = evaluate(basis, X)
-#       @no_escape begin 
-#          A2 = @withalloc evaluate!(basis, X)
-#          match_A1A2 = A1 ≈ A2
-#          println_slim(@test match_A1A2)
-#       end
-#       # if !match_A1A2
-#       #    println("single: standard withalloc evaluations don't match")
-#       # end      
-#    end 
-
-#    if batch 
-#       X = generate_batch()
-#       nalloc_pre = _allocations_inner(basis, X; pb=pb)
-#       nalloc = @allocated ( _allocations_inner(basis, X; pb=pb) )
-#       println("batch: nalloc = $nalloc (allowed = $allowed_allocs)")
-#       println_slim(@test nalloc <= allowed_allocs)
-#       A1 = evaluate(basis, X)
-#       @no_escape begin 
-#          A2 = @withalloc evaluate!(basis, X)
-#          match_A1A2 = A1 ≈ A2
-#          println_slim(@test match_A1A2)
-#       end
-#       # if !match_A1A2
-#       #    println("batch: standard withalloc evaluations don't match")
-#       # end
-#    end 
-
-#    return nothing 
-# end
-
-
-
-# ------------------------ 
-# additional testing utility functions for ACE 
-
-# function generate_SO2_spec(order, M, p=1)
-#    # m = 0, -1, 1, -2, 2, -3, 3, ... 
-#    i2m(i) = (-1)^(isodd(i-1)) * (i ÷ 2)
-#    m2i(m) = 2 * abs(m) - (m < 0)
-
-#    spec = Vector{Int}[] 
-
-#    function append_N!(::Val{N}) where {N} 
-#       for ci in CartesianIndices(ntuple(_ -> 1:2*M+1, N))
-#          mm = i2m.(ci.I)
-#          if (sum(mm) == 0) && (norm(mm, p) <= M) && issorted(ci.I)
-#             push!(spec, [ci.I...,])
-#          end
-#       end
-#    end
-
-
-#    for N = 1:order 
-#       append_N!(Val(N))
-#    end
-
-#    return spec 
-# end 
 
 
 end
