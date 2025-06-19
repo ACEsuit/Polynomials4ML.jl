@@ -34,16 +34,19 @@ const BATCH = Union{AbstractVector{<: SINGLE}, StaticBatch{<: SINGLE}}
 # ------------------------------------------------------------
 # In-place CPU interface 
 
+
+_reshape(A::AbstractArray, dims::NTuple{N, Int}) where N = Base.ReshapedArray(A, dims, ())
+
 function evaluate!(P, basis::AbstractP4MLBasis, x::SINGLE, args...) 
-	evaluate!(reshape(P, 1, :), basis, StaticBatch(x), args...)
+	evaluate!(_reshape(P, (1, length(P))), basis, StaticBatch(x), args...)
 	return P
 end
 
 function evaluate_ed!(P, dP, basis::AbstractP4MLBasis, x::SINGLE, args...) 
-	evaluate_ed!(reshape(P, 1, :), reshape(dP, 1, :), 
+	evaluate_ed!(_reshape(P, (1, length(P))), _reshape(dP, (1, length(dP))), 
 					 basis, StaticBatch(x), args...)
 	return P, dP
-end					 
+end						 
 
 function evaluate!(P, basis::AbstractP4MLBasis, x::BATCH, args...)
    @assert size(P, 1) >= length(x) 
