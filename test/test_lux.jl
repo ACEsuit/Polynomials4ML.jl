@@ -1,5 +1,5 @@
 using Polynomials4ML, Test, StaticArrays, LuxCore, Zygote, ForwardDiff
-using Polynomials4ML: lux, _generate_input
+using Polynomials4ML: _generate_input
 using Random: default_rng
 using ACEbase.Testing: println_slim, print_tf
 using LinearAlgebra: dot, I 
