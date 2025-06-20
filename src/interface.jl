@@ -233,10 +233,10 @@ _init_luxstate(rng::AbstractRNG, l::Any) = _init_luxstate(l)
 _init_luxstate(l) = NamedTuple() 
 
 initialparameters(rng::AbstractRNG, l::AbstractP4MLBasis) = 
-      _init_luxparams(rng, l.basis)
+      _init_luxparams(rng, l)
 
 initialstates(rng::AbstractRNG, l::AbstractP4MLBasis) = 
-      _init_luxstate(rng, l.basis)
+      _init_luxstate(rng, l)
 
 (l::AbstractP4MLBasis)(X, ps::NamedTuple, st::NamedTuple) = 
       evaluate(l, X, ps, st), st 
