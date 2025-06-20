@@ -14,8 +14,8 @@ rng = Random.default_rng()
 @info("   Scalar input, no transforms")
 basis = ChebBasis(5)
 trans = nothing
-tbasis = P4ML.lux(P4ML.TransformedBasis(trans, basis)) 
-X = [ P4ML._generate_input(tbasis.basis) for _ in 1:10 ]
+tbasis = P4ML.TransformedBasis(trans, basis)
+X = [ P4ML._generate_input(tbasis) for _ in 1:10 ]
 ps, st = LuxCore.setup(rng, tbasis)
 
 P1, _ = tbasis(X, ps, st)
