@@ -48,11 +48,11 @@ _generate_input(basis::TransformedBasis{Nothing}) =
 # --------------------------------------------------------- 
 # Lux stuff
 
-_init_luxparams(rng::AbstractRNG, l::TransformedBasis) = 
+initialparameters(rng::AbstractRNG, l::TransformedBasis) = 
       ( trans = _init_luxparams(rng, l.trans),
         basis = _init_luxparams(rng, l.basis), )
 
-_init_luxstate(rng::AbstractRNG, l::TransformedBasis) =
+initialstates(rng::AbstractRNG, l::TransformedBasis) =
       ( trans = _init_luxparams(rng, l.trans),
         basis = _init_luxparams(rng, l.basis),  )
 
@@ -96,7 +96,7 @@ function _evaluate!(P, dP::Nothing,
 
    @no_escape begin
       # [1] Stage 1 - transform the inputs 
-      z1 = evaluate(tbasis.trans, x[1], ps.trans, st.trans) 
+      z1 = evaluate(tbasis.trans, x[1], ps.trans, st.trans)
       TZ = typeof(z1)
       Z = @alloc(TZ, nX) 
       @inbounds begin

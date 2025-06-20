@@ -231,3 +231,5 @@ initialparameters(rng::AbstractRNG, l::AbstractP4MLBasis) =
 initialstates(rng::AbstractRNG, l::AbstractP4MLBasis) = 
       _init_luxstate(rng, l.basis)
 
+(l::AbstractP4MLBasis)(X, ps::NamedTuple, st::NamedTuple) = 
+      evaluate(l, X, ps, st), st 
