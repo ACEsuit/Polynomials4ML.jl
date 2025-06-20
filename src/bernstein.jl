@@ -18,7 +18,8 @@ _generate_input(basis::BernsteinBasis) = rand()
 end
 
 
-function _evaluate!(P, dP, basis::BernsteinBasis{N}, x::AbstractVector{<:Real}) where {N}
+function _evaluate!(P, dP, basis::BernsteinBasis{N}, x::AbstractVector{<:Real}, 
+                     ps, st) where {N}
 
    n = N - 1                     
    WITHGRAD = !isnothing(dP)

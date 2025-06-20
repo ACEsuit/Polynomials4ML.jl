@@ -14,7 +14,7 @@ basis = CTrigBasis(N)
 @info("      correctness")
 mm = natural_indices(basis)
 for ntest = 1:10
-   local x 
+   local x, P  
    x = 2*π * rand()
    P = basis(x)
    P_ref = [ exp(im * m.n * x) for m in mm ]

@@ -2,20 +2,24 @@ module Polynomials4ML
 
 # -------------- import ACEbase, Bumper, WithAlloc, Lux and related
 
-import ACEbase
+import ACEbase 
+
 import ACEbase: evaluate, evaluate_d, evaluate_ed, 
-                evaluate!, evaluate_d!, evaluate_ed!
+                evaluate!, evaluate_d!, evaluate_ed!, 
+                pullback, pullback!, pushforward, pushforward!
+
+import ChainRulesCore: rrule, frule, NoTangent, ZeroTangent
+import LuxCore: AbstractLuxLayer, initialparameters, initialstates                 
 
 using Bumper, WithAlloc
 import WithAlloc: whatalloc 
 
 using KernelAbstractions, GPUArraysCore
 
-using LuxCore, Random, StaticArrays
-import ChainRulesCore: rrule, frule, NoTangent, ZeroTangent
+using LuxCore, Random, StaticArrays, ChainRulesCore
 using ForwardDiff: Dual, extract_derivative
 using StaticArrays
-import LuxCore: AbstractLuxLayer, initialparameters, initialstates                 
+
 
 using Random: AbstractRNG   
 
@@ -23,9 +27,10 @@ using Random: AbstractRNG
 `abstract type AbstractP4MLBasis end`
 
 Annotates types that map a low-dimensional input, scalar or `SVector`,
-to a vector of scalars (feature vector, embedding, basis...). 
+to a vector of scalars (feature vector, embedding, basis...). Can be used 
+as a `Lux` layer. 
 """
-abstract type AbstractP4MLBasis end
+abstract type AbstractP4MLBasis <: AbstractLuxLayer end
 
 
 """
@@ -64,16 +69,6 @@ Chebyshev polynomials, `index(basis, n)` returns `n+1`.
 function index end
 
 function orthpolybasis end
-function degree end 
-
-function pullback! end
-function pullback end
-function pushforward end
-function pushforward! end
-
-# some stuff to allow bases to overload some lux functionality ... 
-# how much of this should go into ACEbase? 
-function lux end 
 
 export orthpolybasis
 
@@ -114,9 +109,6 @@ include("atomicorbitals/atomicorbitals.jl")
 # behaviour when the feature dimension is different from expected. 
 # RETIRE - to be discussed? 
 # include("linear.jl")
-
-# generic machinery for wrapping poly4ml bases into lux layers 
-include("lux.jl")
 
 # some nice utility functions to generate basis sets and other things  
 include("utils/utils.jl")

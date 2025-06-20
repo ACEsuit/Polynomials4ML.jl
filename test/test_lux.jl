@@ -1,5 +1,5 @@
 using Polynomials4ML, Test, StaticArrays, LuxCore, Zygote, ForwardDiff
-using Polynomials4ML: lux, _generate_input
+using Polynomials4ML: _generate_input
 using Random: default_rng
 using ACEbase.Testing: println_slim, print_tf
 using LinearAlgebra: dot, I 
@@ -66,16 +66,15 @@ test_bases = [ chebyshev_basis(10),
 ##
 
 for basis in test_bases
-# basis = test_bases[13]
+# basis = test_bases[12]
    @info("Lux layer test for $(typeof(basis).name.name)")
    local B1, B2, x
    local ps, st
    nX = rand(8:16)
    X = [ _generate_input(basis) for _ = 1:nX ]
    B1 = basis(X)
-   l = lux(basis)
-   ps, st = LuxCore.setup(rng, l)
-   B2, _ = l(X, ps, st)
+   ps, st = LuxCore.setup(rng, basis)
+   B2, _ = basis(X, ps, st)
    println_slim(@test B1 == B2)
 
    if !( eltype(eltype(B1)) <: Real)
@@ -84,7 +83,7 @@ for basis in test_bases
    end
 
    # evaluate the basis and get the pullback operator  
-   val1, pb1 = Zygote.pullback(LuxCore.apply, l, X, ps, st)
+   val1, pb1 = Zygote.pullback(LuxCore.apply, basis, X, ps, st)
    val2, pb2 = Zygote.pullback(Polynomials4ML.evaluate, basis, X, ps, st)
    # evaluate the pullback on a random cotangent 
    Δ = randn(eltype(val2), size(val2))
@@ -98,7 +97,7 @@ for basis in test_bases
    println_slim(@test ∂1[3] == ∂2[3])
 
    # look at gradients with respect to the parameters 
-   _foo = p -> dot(Δ, LuxCore.apply(l, X, p, st)[1])
+   _foo = p -> dot(Δ, LuxCore.apply(basis, X, p, st)[1])
    g1 = Zygote.gradient(_foo, ps)[1] 
    if sizeof(ps) == 0 
       println_slim(@test (isnothing(g1) || isempty(g1)))
@@ -110,7 +109,3 @@ for basis in test_bases
 
 end 
 
-
-##
-
-# @info("Test Second-order derivatices with Lux")

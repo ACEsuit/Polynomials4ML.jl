@@ -1,6 +1,7 @@
 using Polynomials4ML
 using Test
 
+##
 @testset "Polynomials4ML.jl" begin 
 
     # 1D Polynomials 
@@ -19,13 +20,14 @@ using Test
     
     # Misc
     @testset "Static Prod" begin include("test_staticprod.jl"); end
-    # @testset "Lux" begin include("test_lux.jl"); end 
 
     # Transformations 
     @testset "Transformed Basis" begin include("test_transformed.jl"); end
 
+    # Test lux interface 
+    @testset "Lux" begin include("test_lux.jl"); end 
+
     # TODO: restructure or move?? 
     # @testset "Sparse Product" begin include("test_sparseproduct.jl"); end 
     # @testset "Linear layer" begin include("test_linear.jl"); end 
-
 end

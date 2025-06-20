@@ -217,3 +217,26 @@ evaluate_ed(l::AbstractP4MLBasis, args...) =
 evaluate_d(l::AbstractP4MLBasis, args...) = 
       evaluate_ed(l, args...)[2] 
 
+
+# ------------------------------------------------------------
+# Lux interface
+
+
+"""
+a fall-back method for `initalparameters` that all AbstractP4MLBasis
+should overload 
+"""
+_init_luxparams(rng::AbstractRNG, l::Any) = _init_luxparams(l)
+_init_luxparams(l) = NamedTuple() 
+
+_init_luxstate(rng::AbstractRNG, l::Any) = _init_luxstate(l)
+_init_luxstate(l) = NamedTuple() 
+
+initialparameters(rng::AbstractRNG, l::AbstractP4MLBasis) = 
+      _init_luxparams(rng, l)
+
+initialstates(rng::AbstractRNG, l::AbstractP4MLBasis) = 
+      _init_luxstate(rng, l)
+
+(l::AbstractP4MLBasis)(X, ps::NamedTuple, st::NamedTuple) = 
+      evaluate(l, X, ps, st), st 
