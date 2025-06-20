@@ -22,6 +22,11 @@ P4ML.Testing.test_chainrules(basis)
 # Test is broken - reshape is causing this, hence single-input test is turned off
 P4ML.Testing.test_withalloc(basis; allowed_allocs = 0, single=false)
 
+# Still fails with single=true, but btime doesn't show the allocation
+# even stranger, re-evaluating `_reshape` into P4ML also makes the allocation 
+# disappear. Probably best to drop this for now, and revisit in a few months. 
+# P4ML.Testing.test_withalloc(basis; allowed_allocs = 0, single=true)
+
 ##
 # these are scripts to replicate and check this allocation problem. 
 # strangely it doesn't occur for the other bases. Only for AtomicOrbtials. 
