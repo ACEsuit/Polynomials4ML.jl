@@ -35,7 +35,11 @@ const BATCH = Union{AbstractVector{<: SINGLE}, StaticBatch{<: SINGLE}}
 # In-place CPU interface 
 
 
-_reshape(A::AbstractArray, dims::NTuple{N, Int}) where N = Base.ReshapedArray(A, dims, ())
+_reshape(A::AbstractArray, dims::NTuple{N, Int}) where N = 
+      Base.ReshapedArray(A, dims, ())
+
+# _reshape(A::AbstractArray, dims::NTuple{N, Int}) where N = 
+#       reshape(A, dims) 
 
 function evaluate!(P, basis::AbstractP4MLBasis, x::SINGLE, args...) 
 	evaluate!(_reshape(P, (1, length(P))), basis, StaticBatch(x), args...)
