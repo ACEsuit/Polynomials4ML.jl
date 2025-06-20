@@ -1,6 +1,10 @@
+name = "chembases"
+uuid = "ccbb452d-a4c7-42de-a47e-aa19b960d92a"
+
 [deps]
+JSON = "682c06a0-de6a-54ab-a142-c8b1cf79cde6"
 LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
+Polynomials4ML = "03c4bcba-a943-47e9-bfa1-b1661fc2974f"
 PyCall = "438e738f-606a-5dbb-bf0a-cddfbfd45ab0"
 SpheriCart = "5caf2b29-02d9-47a3-9434-5931c85ba645"
 StaticArrays = "90137ffa-7385-5640-81b9-e52037218182"
-Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"

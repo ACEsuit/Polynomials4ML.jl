@@ -1,22 +1,7 @@
-include("construct_basis.jl")
-
-# Example 1: Build AO for Be atom with cc-pvdz basis
-atom = "Be"
-basis_set = "cc-pvdz"
-basis = build_ao(atom, basis_set)
-
-# Create a PySCF molecule again to compare AO values
-mol = build_mol(atom, basis_set)
-x = rand(3)
-r_py = [x]
-r_p4ml = SVector{3}(x)
-
-# Compare AO values between PySCF and constructed AO basis
-ao = mol.eval_gto("GTOval_sph", np.array(r_py))
-ao_val = Array(ao[1, :])
-val = basis(r_p4ml)
-
-@test norm(ao_val - val) < 1e-13
+using Test
+using Polynomials4ML
+using chembases
+using LinearAlgebra
 
 # Test all basis sets for all elements
 basis_names = [

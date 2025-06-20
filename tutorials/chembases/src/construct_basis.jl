@@ -1,13 +1,6 @@
-using PyCall
-using Test
 using StaticArrays
 using LinearAlgebra
-using Polynomials4ML
-using Polynomials4ML: evaluate, evaluate_ed
 import Polynomials4ML as P4ML
-
-gto = pyimport("pyscf.gto")
-np = pyimport("numpy")
 
 # Utility function: convert a vector of vectors into a matrix (row-padded with zeros)
 function TSMAT(vv::Vector{<:Vector{T}}) where {T}
@@ -103,7 +96,8 @@ function isopen_shell(atom::String)
 end
 
 # Create a PySCF molecule
-function build_mol(atom, basis_set)
+function build_mol(atom::String, basis_set::String)
+    gto = pyimport("pyscf.gto")
     mol = gto.Mole()
     mol.atom = "$atom 0 0 0.0"
     mol.basis = basis_set
@@ -145,7 +139,7 @@ function build_ao(atom::String, basis_set::String)
     x = rand(3)
     r_py = [x]
     r_p4ml = SVector{3}(x)
-
+    np = pyimport("numpy")
     ao = mol.eval_gto("GTOval_sph", np.array(r_py))
     ao_val = Array(ao[1, :])
     val = basis(r_p4ml)
@@ -164,9 +158,7 @@ function build_ao(atom::String, basis_set::String)
     basis2 = P4ML.AtomicOrbitals{length(basis.spec), typeof(basis.Pn), typeof(Dn), typeof(basis.Ylm)}(
         basis.Pn, Dn, basis.Ylm, basis.spec, basis.specidx
     )
-
     val2 = basis2(r_p4ml)
     @assert norm(ao_val - val2) < 1e-5 "AO values do not match PySCF output"
     return basis2
 end
-

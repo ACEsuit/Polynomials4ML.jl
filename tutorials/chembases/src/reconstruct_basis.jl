@@ -1,5 +1,3 @@
-include("construct_basis.jl")
-
 # Load a specific basis from the JSON file and reconstruct the full AtomicOrbitals object
 function load_basis_from_json(file::String, atom::String, bset::String)
     data = JSON.parsefile(file)       # Load full dictionary from JSON
@@ -27,15 +25,3 @@ function load_basis_from_json(file::String, atom::String, bset::String)
         Pn, Dn, Ylm, spec, specidx
     )
 end
-
-# Load from JSON
-basis = load_basis_from_json("all_ao_basis.json", "Be", "cc-pvdz")
-x = SVector{3}(rand(3))  # Random evaluation point
-
-# Build from scratch for comparison
-atom = "Be"
-basis_set = "cc-pvdz"
-basis2 = build_ao(atom, basis_set)
-
-# Verify numerical consistency between original and loaded basis
-@test norm(basis(x) - basis2(x)) < 1e-10

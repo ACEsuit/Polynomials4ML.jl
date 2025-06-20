@@ -1,9 +1,15 @@
+# This script tests the behavior of PySCF's GTO evaluation and demonstrates
+# how primitive Gaussian-type orbitals (GTOs) relate to real spherical harmonics.
+#
+# It compares PySCF-evaluated spherical AOs with values computed
+# using the GTO normalization factor, real solid harmonics, and Gaussian functions.
 using PyCall
 using StaticArrays
 using Polynomials4ML
+using Polynomials4ML: MonoBasis, real_solidharmonics
 using Test
 using LinearAlgebra
-import SpheriCart: idx2lm, lm2idx  # Utilities for spherical harmonics index conversion
+import SpheriCart: idx2lm, lm2idx
 
 # Import PySCF modules via PyCall
 np = pyimport("numpy")
@@ -50,7 +56,7 @@ for l in 0:6
     # Extract real spherical harmonics components Y_{l,-l} to Y_{l,l}
     Ylm = real_solidharmonics(l)(r_p4ml)[lm2idx(l,-l):end]
 
-    # Compute the analytical GTO values using normalization × Ylm × radial decay
+    # Compute the primitive GTO values using normalization × Ylm × radial decay
     yval = gto_norm(l, α) .* Ylm .* radial(x, α)
 
     # For l = 1 (P orbitals), reorder to match PySCF's output convention [pz, px, py]

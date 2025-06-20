@@ -1,6 +1,3 @@
-using JSON
-using StaticArrays
-
 # Convert an AtomicOrbitals object to a dictionary that can be written to JSON
 function serialize_basis(basis)
     Dict(
@@ -13,7 +10,7 @@ function serialize_basis(basis)
 end
 
 # Loop over all elements and basis sets, serialize their AO basis, and save to a single JSON file
-function save_all_bases_to_json(filename::String)
+function save_all_bases_to_json(element_names, basis_names, filename::String)
     all_data = Dict()
 
     for atom in element_names
@@ -35,6 +32,3 @@ function save_all_bases_to_json(filename::String)
         JSON.print(io, all_data)
     end
 end
-
-# Save all AO basis data to a single file
-save_all_bases_to_json("all_ao_basis.json")
