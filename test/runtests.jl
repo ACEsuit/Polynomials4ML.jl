@@ -25,7 +25,7 @@ using Test
     @testset "Transformed Basis" begin include("test_transformed.jl"); end
 
     # Test lux interface 
-    # @testset "Lux" begin include("test_lux.jl"); end 
+    @testset "Lux" begin include("test_lux.jl"); end 
 
     # TODO: restructure or move?? 
     # @testset "Sparse Product" begin include("test_sparseproduct.jl"); end 

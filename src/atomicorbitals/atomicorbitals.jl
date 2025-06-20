@@ -139,8 +139,8 @@ function pullback_ps(∂Rnl, basis::AtomicOrbitals, X::AbstractVector{<: SVector
     map!(norm, R, X)
 
     # Rnl = output of evaluate(basis, X, ...)
-    Pn = evaluate(basis.Pn, X, ps.Pn, st.Pn)
-    Dn = evaluate(basis.Dn, X, ps.Dn, st.Dn)
+    Pn = evaluate(basis.Pn, R, ps.Pn, st.Pn)
+    Dn = evaluate(basis.Dn, R, ps.Dn, st.Dn)
     Ylm = evaluate(basis.Ylm, X, ps.Ylm, st.Ylm)
     ∂Pn = zeros(T, size(Pn))
     ∂Dn = zeros(T, size(Dn))
@@ -156,8 +156,8 @@ function pullback_ps(∂Rnl, basis::AtomicOrbitals, X::AbstractVector{<: SVector
         end 
     end 
 
-    ∂p_Pn = pullback_ps(∂Pn, basis.Pn, X, ps.Pn, st.Pn)
-    ∂p_Dn = pullback_ps(∂Dn, basis.Dn, X, ps.Dn, st.Dn)
+    ∂p_Pn = pullback_ps(∂Pn, basis.Pn, R, ps.Pn, st.Pn)
+    ∂p_Dn = pullback_ps(∂Dn, basis.Dn, R, ps.Dn, st.Dn)
     ∂p_Ylm = pullback_ps(∂Ylm, basis.Ylm, X, ps.Ylm, st.Ylm)
     return (Pn = ∂p_Pn, Dn = ∂p_Dn, Ylm = ∂p_Ylm)
 end

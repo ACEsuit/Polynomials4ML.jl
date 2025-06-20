@@ -66,7 +66,7 @@ test_bases = [ chebyshev_basis(10),
 ##
 
 for basis in test_bases
-basis = test_bases[12]
+# basis = test_bases[12]
    @info("Lux layer test for $(typeof(basis).name.name)")
    local B1, B2, x
    local ps, st
