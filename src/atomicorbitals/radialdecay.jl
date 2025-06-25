@@ -34,6 +34,8 @@ Base.length(basis::RadialDecay) = size(basis.ζ, 1)
 
 _valtype(::RadialDecay, T::Type{<: Real}) = T
 
+_valtype(::RadialDecay, T::Type{<: Number}) = T
+
 _valtype(::RadialDecay, T::Type{<: Real}, 
          ps::Union{Nothing, @NamedTuple{}}, st) = T
 
