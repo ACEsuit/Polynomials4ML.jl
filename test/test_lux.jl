@@ -68,8 +68,7 @@ test_bases = [ chebyshev_basis(10),
 for basis in test_bases
 # basis = test_bases[12]
    @info("Lux layer test for $(typeof(basis).name.name)")
-   local B1, B2, x
-   local ps, st
+   local B1, B2, x, X, ps, st
    nX = rand(8:16)
    X = [ _generate_input(basis) for _ = 1:nX ]
    B1 = basis(X)

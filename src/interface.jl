@@ -80,10 +80,11 @@ _evaluate!(P, dP, basis::AbstractP4MLBasis, X) =
 # But ka_evaluate! can also be called with CPU arrays to enable testing 
 # KA kernels also on the CPU. 
 
-evaluate!(P::AbstractGPUArray, basis::AbstractP4MLBasis, x::BATCH) = 
+evaluate!(P::AbstractGPUArray, basis::AbstractP4MLBasis, x::BATCH, args...) = 
 		ka_evaluate!(P, basis, x)
 
-evaluate_ed!(P::AbstractGPUArray, dP::AbstractGPUArray, basis::AbstractP4MLBasis, x::BATCH) = 
+evaluate_ed!(P::AbstractGPUArray, dP::AbstractGPUArray, 
+             basis::AbstractP4MLBasis, x::BATCH, args...) = 
 		ka_evaluate_ed!(P, dP, basis, x)      
 
 function ka_evaluate!(P, basis::AbstractP4MLBasis, x::BATCH) 
@@ -194,7 +195,7 @@ function _with_safe_alloc(fcall, args...)
    return fcall(outputs..., args...)
 end
 
-function _with_safe_alloc(fcall, basis::AbstractP4MLBasis, X::BATCH) 
+function _with_safe_alloc(fcall, basis::AbstractP4MLBasis, X::BATCH, args...) 
    _alczero(T, args...) = fill!( similar(X, T, args...), zero(T) )
       
    allocinfo = _tup_whatalloc(fcall, basis, X)
