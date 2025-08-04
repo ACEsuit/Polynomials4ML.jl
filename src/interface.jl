@@ -198,9 +198,9 @@ end
 function _with_safe_alloc(fcall, basis::AbstractP4MLBasis, X::BATCH, args...) 
    _alczero(T, args...) = fill!( similar(X, T, args...), zero(T) )
       
-   allocinfo = _tup_whatalloc(fcall, basis, X)
+   allocinfo = _tup_whatalloc(fcall, basis, X, args...)
    outputs = ntuple(i -> _alczero(allocinfo[i]...), length(allocinfo))
-   return fcall(outputs..., basis, X)
+   return fcall(outputs..., basis, X, args...)
 end
 
 # --------------------------------------- 
