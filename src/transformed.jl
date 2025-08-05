@@ -87,12 +87,19 @@ _valtype(::Nothing, T::Type) = T
 # CPU SIMD kernel 
 # 
 
+_evaluate!(P, dP, tbasis::TransformedBasis, x::AbstractVector, 
+           ps::Nothing, st::Nothing) =
+   _evaluate!(P, dP, tbasis, x, 
+             (trans = NamedTuple(), basis = NamedTuple()), 
+             (trans = NamedTuple(), basis = NamedTuple()), )
 
-function _evaluate!(P, dP::Nothing, 
+
+function _evaluate!(P, dP, 
                     tbasis::TransformedBasis,
                     x::AbstractVector, 
                     ps, st)
    nX = length(x)
+   @assert isnothing(dP) "_evaluate! not implemented for dP != nothing"
 
    @no_escape begin
       # [1] Stage 1 - transform the inputs 
