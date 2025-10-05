@@ -1,72 +1,34 @@
-using LinearAlgebra, StaticArrays, Test, Printf, Polynomials4ML
-using Polynomials4ML: evaluate, evaluate_ed
-using Polynomials4ML.Testing: print_tf, println_slim 
-using ForwardDiff
-using ACEbase.Testing: fdtest
-
+using Test
+using StaticArrays
+using LinearAlgebra
+using LuxCore
 import Polynomials4ML as P4ML
-
-##
-
-@info("Testing GaussianBasis")
-basis = P4ML._rand_gaussian_basis()
-
-@info("      correctness of evaluation")
-x = P4ML._generate_input(basis)
-P = evaluate(basis, x)
-P1, dP1 = evaluate_ed(basis, x)
-
-P4ML.Testing.test_evaluate_xx(basis)
-P4ML.Testing.test_chainrules(basis)
-
-# Test is broken - reshape is causing this, hence single-input test is turned off
-P4ML.Testing.test_withalloc(basis; allowed_allocs = 0, single=false)
-
-# Still fails with single=true, but btime doesn't show the allocation
-# even stranger, re-evaluating `_reshape` into P4ML also makes the allocation 
-# disappear. Probably best to drop this for now, and revisit in a few months. 
-# P4ML.Testing.test_withalloc(basis; allowed_allocs = 0, single=true)
-
-##
-# these are scripts to replicate and check this allocation problem. 
-# strangely it doesn't occur for the other bases. Only for AtomicOrbtials. 
-#
-# using BenchmarkTools
-
-# P, dP = evaluate_ed(basis, x)
-# @btime P4ML.evaluate_ed!($P, $dP, $basis, $x)
-
-# @profview let basis=basis, X=x, P=P, dP=dP 
-#     for _ = 1:1_000_000 
-#         P4ML.evaluate_ed!(P, dP, basis, X)
-#     end
-# end
-
-##
-
-@info("Testing SlaterBasis")
-basis = P4ML._rand_slater_basis()
-
-@info("      correctness of evaluation")
-x = P4ML._generate_input(basis)
-P = evaluate(basis, x)
-P1, dP1 = evaluate_ed(basis, x)
-
-P4ML.Testing.test_evaluate_xx(basis)
-P4ML.Testing.test_chainrules(basis)
-P4ML.Testing.test_withalloc(basis; allowed_allocs = 0, single=false)
-
-##
-
-@info("Testing STOBasis")
-basis = P4ML._rand_sto_basis()
-
-@info("      correctness of evaluation")
-x = P4ML._generate_input(basis)
-P = evaluate(basis, x)
-P1, dP1 = evaluate_ed(basis, x)
+using Polynomials4ML: evaluate, evaluate_ed
 
 
-P4ML.Testing.test_evaluate_xx(basis)
-P4ML.Testing.test_chainrules(basis)
-P4ML.Testing.test_withalloc(basis; allowed_allocs = 0, single=false)
+@testset "GaussianBasis + HyperDual matches evaluate/evaluate_ed" begin
+    basis = P4ML._rand_gaussian_basis()
+    P4ML.Testing.test_hyperdual_consistency(basis)
+    P4ML.Testing.test_evaluate_xx(basis)
+    P4ML.Testing.test_chainrules(basis)
+    P4ML.Testing.test_withalloc(basis; allowed_allocs = 0, single=false)
+end
+
+@testset "SlaterBasis + HyperDual matches evaluate/evaluate_ed" begin
+    basis = P4ML._rand_slater_basis()
+    P4ML.Testing.test_hyperdual_consistency(basis)
+    P4ML.Testing.test_evaluate_xx(basis)
+    P4ML.Testing.test_chainrules(basis)
+    P4ML.Testing.test_withalloc(basis; allowed_allocs = 0, single=false)
+end
+
+@testset "STOBasis + HyperDual matches evaluate/evaluate_ed" begin
+    basis = P4ML._rand_sto_basis()
+    P4ML.Testing.test_hyperdual_consistency(basis)
+    P4ML.Testing.test_evaluate_xx(basis)
+    P4ML.Testing.test_chainrules(basis)
+    P4ML.Testing.test_withalloc(basis; allowed_allocs = 0, single=false)
+end
+
+
+

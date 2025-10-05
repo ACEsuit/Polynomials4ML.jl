@@ -11,6 +11,7 @@ ChainRulesCore = "d360d2e6-b24c-11e9-a2a3-2a2ae2dbcce4"
 Combinatorics = "861a8166-3701-5b0c-9a16-15d98fcdc6aa"
 ForwardDiff = "f6369f11-7733-5829-9624-2563aa707210"
 GPUArraysCore = "46192b85-c4d5-4398-a991-12ede77f4527"
+HyperDualNumbers = "50ceba7f-c3ee-5a84-a6e8-3ad40456ec97"
 KernelAbstractions = "63c18a36-062a-441e-b654-da1e3ab1ce7c"
 LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
 LuxCore = "bb33d45b-7691-41d6-9220-0943567d0623"
@@ -32,6 +33,7 @@ ChainRulesCore = "1"
 Combinatorics = "1"
 ForwardDiff = "0.10, 1.0"
 GPUArraysCore = "0.2.0"
+HyperDualNumbers = "4.0.10"
 KernelAbstractions = "0.9.34"
 LinearAlgebra = "1.10"
 LuxCore = "1.2.0"
@@ -47,10 +49,11 @@ WithAlloc = "0.1.0"
 julia = "1.10"
 
 [extras]
+HyperDualNumbers = "50ceba7f-c3ee-5a84-a6e8-3ad40456ec97"
 Optimisers = "3bd65402-5787-11e9-1adc-39752487f4e2"
 Printf = "de0858da-6303-5e67-8744-51eddeeeb8d7"
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 Zygote = "e88e6eb3-aa80-5325-afca-941959d7151f"
 
 [targets]
-test = ["Test", "Printf", "Optimisers", "Zygote"]
+test = ["Test", "Printf", "Optimisers", "Zygote", "HyperDualNumbers"]
