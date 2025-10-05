@@ -22,7 +22,7 @@ test_bases = [ ChebBasis(8),
                MonoBasis(10), 
                TFL(chebyshev_basis(10)),
                TFL(legendre_basis(10)),
-               #real_sphericalharmonics(5), 
+               real_sphericalharmonics(5; T = TFL, static=true), 
                real_solidharmonics(5; T = TFL, static=true), 
                #complex_sphericalharmonics(5), 
                #complex_solidharmonics(5), 
@@ -39,21 +39,35 @@ for basis in test_bases
    X_dev = GPUArray(X)
 
    # standard CPU evaluation 
-   P1 = P4ML.evaluate(basis, X)
+   P1, dP1 = P4ML.evaluate_ed(basis, X)
 
    # KA evaluation on CPU 
    P2 = similar(P1)
    P4ML.ka_evaluate!(P2, basis, X)
+   P2a = similar(P1)
+   dP2a = similar(dP1)
+   P4ML.ka_evaluate_ed!(P2a, dP2a, basis, X)
    
    # KA evaluation on GPU
-   P3_dev = GPUArray(P2)
+   P3_dev = GPUArray(P1)
    P4ML.ka_evaluate!(P3_dev, basis, X_dev)
    P3 = Array(P3_dev)
+   P3a_dev = GPUArray(P1) 
+   dP3a_dev = GPUArray(dP1) 
+   P4ML.ka_evaluate_ed!(P3a_dev, dP3a_dev, basis, X_dev)
+   P3a = Array(P3a_dev)
+   dP3a = Array(dP3a_dev)
 
    # allocating GPU evaluation 
    P4_dev = basis(X_dev)
+   P4a_dev = P4ML.evaluate(basis, X_dev) 
+   P4b_dev, dP4b_dev = P4ML.evaluate_ed(basis, X_dev)
    P4 = Array(P4_dev)
+   P4a = Array(P4a_dev)
+   P4b = Array(P4b_dev)
+   dP4b = Array(dP4b_dev)
 
-   @show P1 ≈ P2 ≈ P3 ≈ P4
+   @show P1 ≈ P2 ≈ P3 ≈ P4 ≈ P2a ≈ P3a ≈ P4a ≈ P4b
+   @show dP1 ≈ dP2a ≈ dP3a ≈ dP4b
 end
    
