@@ -16,48 +16,20 @@ rng = Random.default_rng()
 
 ##
 
+# TODO: move this into P4ML? 
 struct LinL <: AbstractLuxLayer
    in_dim::Int 
    out_dim::Int 
 end
 
-LuxCore.initialparameters(rng::AbstractRNG, l::LinL) = 
-      ( W = randn(rng, l.out_dim, l.in_dim), )
+LuxCore.initialparameters(rng::AbstractRNG, l::LinL)  = 
+      ( W = randn(rng, l.out_dim, l.in_dim) * sqrt(2 / (l.in_dim + l.out_dim)), )
 
 LuxCore.initialstates(rng::AbstractRNG, l::LinL) = NamedTuple()
 
 (l::LinL)(x::AbstractVector, ps, st) = ps.W * x, st 
 
 (l::LinL)(X::AbstractMatrix, ps, st) = X * transpose(ps.W), st 
-
-
-
-##
-
-struct ChainedBasis{TCH} 
-   chain::TCH
-end
-
-P4ML.evaluate(b::ChainedBasis, x, ps, st) = 
-      Lux.apply(b.chain, x, ps, st)
-
-
-function P4ML.evaluate_ed(b::ChainedBasis, x::Number, ps, st)
-   B_dB, st = P4ML.evaluate(b, Dual(x, one(x)), ps, st)
-   B = FD.value.(B_dB) 
-   dB = [bdb.partials[1] for bdb in B_dB] 
-   return (B, dB), st
-end
-
-function P4ML.evaluate(b::ChainedBasis, X::AbstractVector{<: Number}, ps, st) 
-   N = length(X)
-   M = length(b.chain.basis)
-   B = zeros(eltype(_valtype(b, eltype(X))), N, M) 
-   for i in 1:N
-      B[i, :], st = P4ML.evaluate(b, X[i], ps, st)
-   end
-   return B, st
-end
 
 ##
 
@@ -67,34 +39,38 @@ trans = x -> 1 ./ (1 .+ x)
 # old approach 
 tbasis = P4ML.TransformedBasis(trans, basis)
 P4ML._generate_input(::typeof(tbasis)) = rand() 
+
 ps0, st0 = LuxCore.setup(rng, tbasis)
 X = [ P4ML._generate_input(tbasis) for _ in 1:10 ]
+
 x = 0.5
 b0 = evaluate(tbasis, x, ps0, st0)
-
-# new approach 
-chb = ChainedBasis(Chain(; trans=WrappedFunction(trans), basis=basis))
-ps, st = LuxCore.setup(rng, chb.chain)
-b1, _ = evaluate(chb, x, ps, st)
-(b1a, db1a), _ = evaluate_ed(chb, 0.5, ps, st) 
-
-b1 ≈ b0
-b1a ≈ b0
+B0 = evaluate(tbasis, X, ps0, st0)
 
 ##
-# new new approach 
-wrb = P4ML.wrapped_basis(
+# new approach 
+wrb1 = P4ML.wrapped_basis(
                Chain(; trans=WrappedFunction(trans), basis=basis), 
                1.0) 
-b3 = evaluate(wrb, [x,], ps, st)[:]
+ps1, st1 = LuxCore.setup(rng, wrb1)
+b1 = evaluate(wrb, x, ps1, st1)
+B1 = evaluate(wrb, X, ps1, st1)
 
-(b3a, db3a) = evaluate_ed(wrb, [x,], ps, st)
-
-b3 ≈ b1
-b3a[:] ≈ b1 
-db3a[:] ≈ db1a 
+b1 ≈ b0
+B1 ≈ B0
 
 
+(b1a, db1a) = evaluate_ed(wrb1, x, ps1, st1)
+(B1a, dB1a) = evaluate_ed(wrb1, X, ps1, st1)
+
+b1a ≈ b0
+B1a ≈ B0
+
+fw_b1a = ForwardDiff.derivative(x -> wrb.l(x, ps1, st1)[1], x)
+fw_b1a ≈ db1a
+
+##
+# a slightly more complicated composed basis 
 
 len_basis = length(basis)
 wrb2 = P4ML.wrapped_basis(
@@ -102,9 +78,16 @@ wrb2 = P4ML.wrapped_basis(
                        basis = basis, 
                        linear = LinL(len_basis, len_basis ÷ 2) ), 
                 1.0 )
-ps, st = LuxCore.setup(rng, wrb2)
+ps2, st2 = LuxCore.setup(rng, wrb2)
 
-b4 = evaluate(wrb2, [x,], ps, st)
-b4[:] ≈ ps.linear.W * basis(trans(x))
+b2 = evaluate(wrb2, X[1], ps2, st2)
+b2 ≈ ps2.linear.W * basis(trans(X[1]))
 
-(b4a, db4a) = evaluate_ed(wrb2, [x,], ps, st)
+B2 = evaluate(wrb2, X, ps2, st2)
+B2[1,:] ≈ b2
+
+b2a, db2a = evaluate_ed(wrb2, X[1], ps2, st2)
+B2a, dB2a = evaluate_ed(wrb2, X, ps2, st2)
+fw_b2a = FD.derivative(x -> wrb2.l(x, ps2, st2)[1], X[1])
+b2a ≈ b2 ≈ B2a[1,:]
+db2a ≈ dB2a[1,:] ≈ fw_b2a

@@ -57,6 +57,14 @@ _valtype(basis::WrappedBasis{TL, TX, TP}, T::Type{Dual{S, TX, TX}}
 
 Base.length(basis::WrappedBasis) = basis.len
 
+# This method for _evaluate! gets around the issue that basis.l can convert 
+# a StaticBatch into an SVector, which then messes badly with the 
+# type dispatch. It is an extra allocation but since this basis is 
+# already allocating anyhow, it is probably not a great loss. Still 
+# an unfortunate side-effect...
+# TODO: find a better workaround? 
+_evaluate!(P, dP, basis::WrappedBasis, X::StaticBatch, ps, st) = 
+      _evaluate!(P, dP, basis, Vector(X), ps, st)
 
 function _evaluate!(P, dP, basis::WrappedBasis, X::AbstractVector{<: Number}, 
                     ps, st)
@@ -77,11 +85,11 @@ function _evaluate!(P, dP, basis::WrappedBasis, X::AbstractVector{<: Number},
          # TPd = typeof(FD.Dual(one(TP), one(TP)))
          # Pd = @alloc(TPd, size(P))
 
-         Pd = basis.l(Xd, ps, st)
+         Pd, _ = basis.l(Xd, ps, st)
 
          for i = 1:length(X), j = 1:size(P, 2)
-            P[i, j] = FD.value(Pd[i][j])
-            dP[i, j] = Pd[i][j].partials[1]
+            P[i, j] = Pd[i, j].value # FD.value(Pd[i][j])
+            dP[i, j] = Pd[i, j].partials[1]
          end
       end
    end
