@@ -82,6 +82,9 @@ include("staticprod.jl")
 # transformed basis 
 include("transformed.jl")
 
+# utility function to interpret a lux layer as a P4ML basis 
+include("luxbasis.jl")
+
 # polynomials 
 include("orthopolybasis.jl")
 include("discreteweights.jl")
