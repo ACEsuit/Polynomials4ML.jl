@@ -70,7 +70,7 @@ function _evaluate!(P, dP, basis::WrappedBasis, X::AbstractVector{<: Number},
                     ps, st)
    if isnothing(dP) 
       Pl, _ = basis.l(X, ps, st)
-      P[:] = Pl
+      copy!(P, Pl)
    else
       @no_escape begin 
          TX = eltype(X)
@@ -97,4 +97,28 @@ function _evaluate!(P, dP, basis::WrappedBasis, X::AbstractVector{<: Number},
    return nothing 
 end
 
+#
+# doesn't need a real kernel launcher since all the actual 
+# kernels live inside...
+#
+function _ka_evaluate_launcher!(P, dP, 
+                     basis::AbstractP4MLBasis, 
+                     X::AbstractVector{<: Number}, 
+                     ps, st)
+   
+   if isnothing(dP) 
+      Pl, _ = basis.l(X, ps, st)
+      copy!(P, Pl)
+   else
+      TX = eltype(X)
+      TP = _valtype(basis, TX) 
+      TXd = typeof(FD.Dual(one(TX), one(TX)))
+      Xd = map(x -> FD.Dual(x, one(TX)), X)
+      Pd, _ = basis.l(Xd, ps, st)
 
+      map!(pd -> pd.value, P, Pd) 
+      map!(pd -> pd.partials[1], dP, Pd)
+   end
+
+   return nothing 
+end

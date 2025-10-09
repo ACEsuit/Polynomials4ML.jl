@@ -16,23 +16,6 @@ rng = Random.default_rng()
 
 ##
 
-# TODO: move this into P4ML? 
-struct LinL <: AbstractLuxLayer
-   in_dim::Int 
-   out_dim::Int 
-end
-
-LuxCore.initialparameters(rng::AbstractRNG, l::LinL)  = 
-      ( W = randn(rng, l.out_dim, l.in_dim) * sqrt(2 / (l.in_dim + l.out_dim)), )
-
-LuxCore.initialstates(rng::AbstractRNG, l::LinL) = NamedTuple()
-
-(l::LinL)(x::AbstractVector, ps, st) = ps.W * x, st 
-
-(l::LinL)(X::AbstractMatrix, ps, st) = X * transpose(ps.W), st 
-
-##
-
 basis = ChebBasis(5)
 trans = x -> 1 ./ (1 .+ x)
 
@@ -76,7 +59,7 @@ len_basis = length(basis)
 wrb2 = P4ML.wrapped_basis(
                 Chain(; trans = WrappedFunction(trans), 
                        basis = basis, 
-                       linear = LinL(len_basis, len_basis ÷ 2) ), 
+                       linear = P4ML.Utils.LinL(len_basis, len_basis ÷ 2) ), 
                 1.0 )
 ps2, st2 = LuxCore.setup(rng, wrb2)
 
@@ -102,3 +85,6 @@ P4ML._generate_input(::typeof(wrb2_wrap)) = rand()
 # P4ML.Testing.test_evaluate_xx(wrb2_wrap)
 P4ML.Testing.test_chainrules(wrb2_wrap)
 
+##
+
+P4ML.Testing.test_ka_evaluate(wrb2_wrap)
