@@ -53,8 +53,8 @@ wrb1 = P4ML.wrapped_basis(
                Chain(; trans=WrappedFunction(trans), basis=basis), 
                1.0) 
 ps1, st1 = LuxCore.setup(rng, wrb1)
-b1 = evaluate(wrb, x, ps1, st1)
-B1 = evaluate(wrb, X, ps1, st1)
+b1 = evaluate(wrb1, x, ps1, st1)
+B1 = evaluate(wrb1, X, ps1, st1)
 
 b1 ≈ b0
 B1 ≈ B0
@@ -66,7 +66,7 @@ B1 ≈ B0
 b1a ≈ b0
 B1a ≈ B0
 
-fw_b1a = ForwardDiff.derivative(x -> wrb.l(x, ps1, st1)[1], x)
+fw_b1a = ForwardDiff.derivative(x -> wrb1.l(x, ps1, st1)[1], x)
 fw_b1a ≈ db1a
 
 ##
@@ -91,3 +91,14 @@ B2a, dB2a = evaluate_ed(wrb2, X, ps2, st2)
 fw_b2a = FD.derivative(x -> wrb2.l(x, ps2, st2)[1], X[1])
 b2a ≈ b2 ≈ B2a[1,:]
 db2a ≈ dB2a[1,:] ≈ fw_b2a
+
+##
+
+wrb2_wrap = P4ML.WithState(wrb2, ps2, st2)
+evaluate(wrb2_wrap, X[1]) ≈ b2
+all(evaluate_ed(wrb2_wrap, X) .≈ (B2a, dB2a))
+
+P4ML._generate_input(::typeof(wrb2_wrap)) = rand()
+# P4ML.Testing.test_evaluate_xx(wrb2_wrap)
+P4ML.Testing.test_chainrules(wrb2_wrap)
+
