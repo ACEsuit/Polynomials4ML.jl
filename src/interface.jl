@@ -81,23 +81,23 @@ _evaluate!(P, dP, basis::AbstractP4MLBasis, X) =
 # KA kernels also on the CPU. 
 
 evaluate!(P::AbstractGPUArray, basis::AbstractP4MLBasis, x::BATCH, args...) = 
-		ka_evaluate!(P, basis, x)
+		ka_evaluate!(P, basis, x, args...)
 
 evaluate_ed!(P::AbstractGPUArray, dP::AbstractGPUArray, 
              basis::AbstractP4MLBasis, x::BATCH, args...) = 
-		ka_evaluate_ed!(P, dP, basis, x)      
+		ka_evaluate_ed!(P, dP, basis, x, args...)      
 
-function ka_evaluate!(P, basis::AbstractP4MLBasis, x::BATCH) 
-	_ka_evaluate_launcher!(P, nothing, basis, x)
+function ka_evaluate!(P, basis::AbstractP4MLBasis, x::BATCH, args...) 
+	_ka_evaluate_launcher!(P, nothing, basis, x, args...)
 	return P
 end 
 
-function ka_evaluate_ed!(P, dP, basis::AbstractP4MLBasis, x::BATCH)
-   _ka_evaluate_launcher!(P, dP, basis, x)
+function ka_evaluate_ed!(P, dP, basis::AbstractP4MLBasis, x::BATCH, args...)
+   _ka_evaluate_launcher!(P, dP, basis, x, args...)
    return P, dP 
 end
 
-function _ka_evaluate_launcher!(P, dP, basis::AbstractP4MLBasis, x)
+function _ka_evaluate_launcher!(P, dP, basis::AbstractP4MLBasis, x, args...)
 	nX = length(x) 
 	len_basis = length(basis)
 	

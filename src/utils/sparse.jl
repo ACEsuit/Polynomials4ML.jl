@@ -1,4 +1,4 @@
-# RETIRE 
+# RETIRE WITH NEXT BREAKING RELEASE 
 
 using StaticArrays
 

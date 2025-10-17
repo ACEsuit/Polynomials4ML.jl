@@ -199,7 +199,7 @@ end
 # getting this right. 
 
 function _ka_evaluate_launcher!(P, dP, 
-									basis::RealSCWrapper{<: SolidHarmonics}, 
+									basis::RealSCWrapper, 
 									x)
 	nX = length(x) 
 	len_basis = length(basis)
@@ -211,9 +211,14 @@ function _ka_evaluate_launcher!(P, dP,
 		@assert size(dP, 2) >= len_basis
 	end
 
+	_valSH(::SphericalHarmonics) = Val{true}() 
+	_valSH(::SolidHarmonics) = Val{false}()
+
 	Flm = basis.scbasis.Flm
 	valL = Val{maxl(basis)}()
-	SpheriCart.ka_solid_harmonics!(P, dP, valL, x, Flm)
+	valSH = _valSH(basis.scbasis)
+
+	SpheriCart.ka_solid_harmonics!(P, dP, valL, valSH, x, Flm)
 	
 	return nothing 
 end
