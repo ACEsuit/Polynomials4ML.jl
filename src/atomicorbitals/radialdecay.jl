@@ -32,13 +32,11 @@ end
 
 Base.length(basis::RadialDecay) = size(basis.ζ, 1)
 
-_valtype(::RadialDecay, T::Type{<: Real}) = T
-
-_valtype(::RadialDecay, T::Type{<: Real}, 
-         ps::Union{Nothing, @NamedTuple{}}, st) = T
+_valtype(::RadialDecay, T::Type{<: Number}, args...) = T
 
 _valtype(::RadialDecay, T::Type{<: Real}, 
          ps, st) = promote_type(T, eltype(ps.ζ), eltype(ps.D))
+
 
 _static_params(basis::RadialDecay) = (ζ = basis.ζ, D = basis.D)
 

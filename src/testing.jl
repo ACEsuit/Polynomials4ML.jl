@@ -11,9 +11,11 @@ import Polynomials4ML: _generate_input, _generate_batch
 using ChainRulesCore: rrule 
 
 using Test, ForwardDiff, Bumper, WithAlloc
-
+using HyperDualNumbers
+using HyperDualNumbers: Hyper
 using StaticArrays 
-using LinearAlgebra: norm, dot 
+using Random, LuxCore
+using LinearAlgebra: norm, dot, normalize
 
 using ACEbase.Testing: print_tf, println_slim, fdtest 
 
@@ -213,4 +215,49 @@ function test_withalloc(basis::AbstractP4MLBasis;
 end
 
 
+# Construct a static vector of HyperDual numbers from
+#   x : point coordinates
+#   v : first direction
+#   w : second direction
+make_hyper(x::SVector{N,T}, v::SVector{N,T}, w::SVector{N,T}) where {N,T} =
+   SVector{N}(Hyper.(x, v, w, zero(T)))
+
+# Extract components from an array of HyperDual numbers
+_val(A) = HyperDualNumbers.value.(A)  # function value
+_e1(A)  = HyperDualNumbers.eps1.(A)   # first directional derivative
+_e2(A)  = HyperDualNumbers.eps2.(A)   # second directional derivative
+
+# Project each gradient vector g in G onto direction v
+# G is a vector of static vectors (gradients for each basis function)
+_dir(G::AbstractVector{<:StaticVector{D,T}}, v::StaticVector{D,T}) where {D,T} =
+   map(g -> dot(g, v), G)
+
+function test_hyperdual_consistency(basis; rng=Random.default_rng(), rtol=1e-10, atol=1e-12)
+   @info("HyperDual test")
+   ps, st = LuxCore.setup(rng, basis)
+
+   x  = _generate_input(basis)
+   v = normalize(rand(rng, SVector{length(x)}))
+   w = normalize(rand(rng, SVector{length(x)}))
+   xh = make_hyper(x, v, w)
+
+   P  = evaluate(basis, x)
+   P_ed, G = evaluate_ed(basis, x)
+
+   Ph = evaluate(basis, xh)
+   @test isapprox(_val(Ph), P; rtol=rtol, atol=atol)
+   @test isapprox(_e1(Ph), _dir(G, v); rtol=rtol, atol=atol)
+   @test isapprox(_e2(Ph), _dir(G, w); rtol=rtol, atol=atol)
+
+   Pp  = evaluate(basis, x, ps, st)
+   Pp_ed, Gp = evaluate_ed(basis, x, ps, st)
+
+   Php = evaluate(basis, xh, ps, st)
+   @test isapprox(_val(Php), Pp; rtol=rtol, atol=atol)
+   @test isapprox(_e1(Php), _dir(Gp, v); rtol=rtol, atol=atol)
+   @test isapprox(_e2(Php), _dir(Gp, w); rtol=rtol, atol=atol)
+
+   @test isapprox(P_ed, P; rtol=rtol, atol=atol)
+   @test isapprox(Pp_ed, Pp; rtol=rtol, atol=atol)
+end
 end
