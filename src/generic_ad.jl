@@ -18,7 +18,10 @@ end
 function pullback!(∂X, 
                    ∂P, basis::AbstractP4MLBasis, X::BATCH; 
                    dP = evaluate_ed(basis, X)[2] )
-   @assert size(∂P) == size(dP) == (length(X), length(basis))
+   # @assert size(∂P) == size(dP) == (length(X), length(basis))
+   if !(size(∂P) == size(dP) == (length(X), length(basis)))
+      throw(ArgumentError("size mismatch: size(∂P) = $(size(∂P)), size(dP) = $(size(dP)), expected (length(X), length(basis)) = ($(length(X)), $(length(basis)))"))
+   end
    @assert length(∂X) == length(X)
    # manual loops to avoid any broadcasting of StrideArrays 
    # ∂_xa ( ∂P : P ) = ∑_ij ∂_xa ( ∂P_ij * P_ij ) 

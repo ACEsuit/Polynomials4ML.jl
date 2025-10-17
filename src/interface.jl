@@ -97,7 +97,7 @@ function ka_evaluate_ed!(P, dP, basis::AbstractP4MLBasis, x::BATCH, args...)
    return P, dP 
 end
 
-function _ka_evaluate_launcher!(P, dP, basis::AbstractP4MLBasis, x)
+function _ka_evaluate_launcher!(P, dP, basis::AbstractP4MLBasis, x, args...)
 	nX = length(x) 
 	len_basis = length(basis)
 	

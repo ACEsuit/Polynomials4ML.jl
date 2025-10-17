@@ -102,7 +102,7 @@ end
 # kernels live inside...
 #
 function _ka_evaluate_launcher!(P, dP, 
-                     basis::AbstractP4MLBasis, 
+                     basis::WrappedBasis, 
                      X::AbstractVector{<: Number}, 
                      ps, st)
    
