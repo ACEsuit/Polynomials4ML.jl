@@ -4,7 +4,7 @@ using Polynomials4ML: _generate_input
 using Polynomials4ML.Testing: println_slim, print_tf, test_all 
 using LinearAlgebra: I, norm, dot 
 using QuadGK
-
+import Polynomials4ML as P4ML 
 
 @info("Testing OrthPolyBasis1D3T")
 
@@ -100,3 +100,34 @@ println_slim(@test all([
 @info("    consistency with ChebBasis")
 cheb2 = ChebBasis(N)
 println_slim(@test all( (x = 2*rand()-1; cheb(x) ≈ cheb2(x)) for _=1:30 ))
+
+## 
+
+@info("check F32 evaluation")
+using LuxCore, Random 
+
+# initial floating point type is Float64
+cheb = chebyshev_basis(N)
+@assert eltype(cheb.refstate.A) == Float64
+
+# evaluate with ps and st  
+xx = [ _generate_input(cheb) for _ = 1:1000 ]
+P1 = P4ML.evaluate(cheb, xx)
+
+ps, st = LuxCore.setup(MersenneTwister(1234), cheb) 
+P1a, _st = cheb(xx, ps, st)
+println_slim(@test P1a == P1) 
+println_slim(@test _st == st == cheb.refstate)
+
+# now move x and st to Float32 
+xx_f32 = Float32.(xx)
+st_f32 = (A = Float32.(st.A), B = Float32.(st.B), C = Float32.(st.C))
+
+# this still evaluates to Float64 because refstate is Float64 
+P2 = P4ML.evaluate(cheb, xx_f32)
+println_slim(@test eltype(P2) == Float64)
+
+# but this now evaluates to Float32 because st is Float32
+P3 = cheb(xx_f32, nothing, st_f32)
+println_slim(@test eltype(P3) == Float32)
+println_slim(@test P3 ≈ Float32.(P2) ≈ Float32.(P1))

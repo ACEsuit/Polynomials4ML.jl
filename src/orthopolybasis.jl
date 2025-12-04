@@ -47,6 +47,9 @@ Base.show(io::IO, basis::OrthPolyBasis1D3T) =
 _valtype(basis::OrthPolyBasis1D3T{N, T1}, TX::Type{T2}) where {N, T1, T2} = 
             promote_type(T1, T2)
 
+_valtype(basis::OrthPolyBasis1D3T{N, T1}, TX::Type{T2}, ps, st) where {N, T1, T2} = 
+            promote_type(T2, eltype(st.A))
+
 _generate_input(basis::OrthPolyBasis1D3T) = 2 * rand() - 1
 
 # TODO: This should not really be needed anymore
