@@ -53,12 +53,12 @@ end
 @info("   coeffs")
 cheb = chebyshev_basis(N, normalize=true)
 println_slim(@test all([ 
-   cheb.A[1] ≈ sqrt(1/π), 
-   cheb.A[2] ≈ sqrt(2/π), 
-   cheb.C[3] ≈ -sqrt(2), 
-   norm(cheb.A[3:end] .- 2, Inf) < 1e-12, 
-   norm(cheb.B, Inf) == 0, 
-   norm(cheb.C[4:end] .+ 1) < 1e-12, ] ))
+   cheb.refstate.A[1] ≈ sqrt(1/π), 
+   cheb.refstate.A[2] ≈ sqrt(2/π), 
+   cheb.refstate.C[3] ≈ -sqrt(2), 
+   norm(cheb.refstate.A[3:end] .- 2, Inf) < 1e-12, 
+   norm(cheb.refstate.B, Inf) == 0, 
+   norm(cheb.refstate.C[4:end] .+ 1) < 1e-12, ] ))
 @info("   orthogonality")
 G = quadgk(x -> (1-x)^(-0.5) * (x+1)^(-0.5) * cheb(x) * cheb(x)', -1, 1)[1]
 println_slim(@test round.(G, digits=6) ≈ I)
@@ -91,11 +91,11 @@ println()
 cheb = chebyshev_basis(N, normalize=false)
 @info("     recursion coefficients")
 println_slim(@test all([ 
-         cheb.A[1] ≈ 1, 
-         all(cheb.B[:] .== 0), 
-         cheb.A[2] ≈ 1, 
-         all(cheb.A[3:end] .≈ 2), 
-         all(cheb.C[3:end] .≈ -1), ]))
+         cheb.refstate.A[1] ≈ 1, 
+         all(cheb.refstate.B[:] .== 0), 
+         cheb.refstate.A[2] ≈ 1, 
+         all(cheb.refstate.A[3:end] .≈ 2), 
+         all(cheb.refstate.C[3:end] .≈ -1), ]))
 
 @info("    consistency with ChebBasis")
 cheb2 = ChebBasis(N)
