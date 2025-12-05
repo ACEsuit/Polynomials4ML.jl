@@ -71,7 +71,9 @@ Careful: the normalisation may be non-standard.
 """
 function chebyshev_basis(N::Integer; normalize=false) 
    cheb = orthpolybasis(N, chebyshev_weights(normalize))
-   A = Vector(cheb.A); B = Vector(cheb.B); C = Vector(cheb.C)
+   A = Vector(cheb.refstate.A)
+   B = Vector(cheb.refstate.B)
+   C = Vector(cheb.refstate.C)
    if normalize 
       A[1] = sqrt(1/π)
       A[2] = sqrt(2/π)

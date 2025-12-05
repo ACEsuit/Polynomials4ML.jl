@@ -2,19 +2,18 @@
 # to test that all basis sets evaluate correctly with GPU arrays as 
 # inputs.  
 
-using Polynomials4ML
+using Polynomials4ML, Random, LuxCore 
 import Polynomials4ML as P4ML 
 
 # For Metal: 
 using Metal
-GPUArray = MtlArray
+dev = Metal.mtl 
 TFL = Float32
 
 # or CUDA or ...
 
 ##
 
-# stolen from test_lux.jl 
 test_bases = [ ChebBasis(8), 
                BernsteinBasis(8), 
                RTrigBasis(10), 
@@ -35,8 +34,8 @@ for basis in test_bases
    local P1, P2, x
    nX = rand(500:1500)
 
-   X = [ Float32.(P4ML._generate_input(basis)) for _ = 1:nX ]
-   X_dev = GPUArray(X)
+   X = [ TFL.(P4ML._generate_input(basis)) for _ = 1:nX ]
+   X_dev = dev(X)
 
    # standard CPU evaluation 
    P1, dP1 = P4ML.evaluate_ed(basis, X)
@@ -49,11 +48,11 @@ for basis in test_bases
    P4ML.ka_evaluate_ed!(P2a, dP2a, basis, X)
    
    # KA evaluation on GPU
-   P3_dev = GPUArray(P1)
+   P3_dev = dev(P1)
    P4ML.ka_evaluate!(P3_dev, basis, X_dev)
    P3 = Array(P3_dev)
-   P3a_dev = GPUArray(P1) 
-   dP3a_dev = GPUArray(dP1) 
+   P3a_dev = dev(P1) 
+   dP3a_dev = dev(dP1) 
    P4ML.ka_evaluate_ed!(P3a_dev, dP3a_dev, basis, X_dev)
    P3a = Array(P3a_dev)
    dP3a = Array(dP3a_dev)
@@ -71,3 +70,36 @@ for basis in test_bases
    @show dP1 ≈ dP2a ≈ dP3a ≈ dP4b
 end
    
+## 
+
+using Metal, Functors
+
+_float32(nt::NamedTuple) = Functors.fmap(_float32, nt) 
+_float32(x::AbstractArray) = _float32.(x)
+_float32(x::AbstractFloat) = Float32(x)
+_float32(x) = x
+
+@info("Testing F32 GPU evaluation consistency via state transfer")
+
+for basis in [ chebyshev_basis(10),
+               legendre_basis(10),
+               real_sphericalharmonics(5; static=true), 
+               real_solidharmonics(5; static=true), 
+               ]
+   nX = rand(500:1500)
+   X = [ P4ML._generate_input(basis) for _ = 1:nX ]
+   X_32 = _float32(X)
+   X_dev = dev(X_32)
+
+   ps, st = LuxCore.setup(MersenneTwister(1234), basis)
+   st_32 = _float32(st)
+   ps_dev = dev(ps) 
+   st_dev = dev(st_32)
+
+   P1 = basis(X, ps, st)[1]
+   P2 = basis(X_32, ps, st_32)[1] 
+   P3_dev = basis(X_dev, ps_dev, st_dev)[1] 
+   P3 = Array(P3_dev)
+   @show P1 ≈ P2 ≈ P3
+
+end
