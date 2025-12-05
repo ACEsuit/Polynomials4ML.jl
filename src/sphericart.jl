@@ -19,6 +19,7 @@ struct ComplexSCWrapper{SCT} <: SCWrapper
 	scbasis::SCT
 end			
 
+_init_luxstate(l::SCWrapper) = (Flm = deepcopy(l.scbasis.Flm),)
 
 # ---------------------- Convenience constructors & Accessors 
 
@@ -74,7 +75,7 @@ end
 
 function _generate_input(scbasis::SolidHarmonics)
 	u = @SVector randn(3)
-	return rand() * (u / norm(u))
+	return sqrt(rand()) * (u / norm(u))
 end
 
 # ---------------------- Nicer output 
@@ -89,6 +90,9 @@ Base.show(io::IO, basis::SCWrapper) =
 
 natural_indices(basis::SCWrapper) = 
       [ NamedTuple{(:l, :m)}(idx2lm(i)) for i = 1:length(basis) ]
+
+# TODO: should the output type only depend on the input type or also 
+#       on the type of the Flm parameters? 		
 
 _valtype(sh::RealSCWrapper, ::Type{<: SVector{3, S}}) where {S} = S
 
@@ -123,11 +127,11 @@ function evaluate!(Y::AbstractArray,
 end
 
 function evaluate!(Y::AbstractGPUArray, 
-		    basis::SCWrapper, X::AbstractVector{<: SVector{3}}, args...) 
-	compute!(Y, basis.scbasis, X)
-	_convert_R2C!(Y, basis)
+		    basis::RealSCWrapper, X::AbstractVector{<: SVector{3}}, args...) 
+	_ka_evaluate_launcher!(Y, nothing, basis, X, args...)
 	return Y 
 end
+
 
 
 function evaluate_ed!(Y::AbstractArray, dY::AbstractArray, 
@@ -140,9 +144,7 @@ end
 
 function evaluate_ed!(Y::AbstractGPUArray, dY::AbstractGPUArray, 
 			    basis::SCWrapper, X::AbstractVector{<: SVector{3}}, args...) 
-	compute_with_gradients!(Y, dY, basis.scbasis, X)
-	_convert_R2C!(Y, basis)
-	_convert_R2C!(dY, basis)
+	_ka_evaluate_launcher!(Y, dY, basis, X, args...)
 	return Y, dY
 end
 
@@ -193,14 +195,20 @@ end
 
 # ---------------------- KernelAbstractions Interface
 #
-# only for real solid harmonics, since the rest aren't actually supported 
-# by the KA kernel in SpheriCart yet. 
+# only for real solid and complex harmonics, since the complex ones aren't 
+# supported by the KA kernel in SpheriCart yet. 
 # this is a bit of a hack really and we need to iterate on with SC on 
 # getting this right. 
 
+_ka_evaluate_launcher!(P, dP, basis::RealSCWrapper, x) = 
+			_ka_evaluate_launcher!(P, dP, basis, x, 
+										  NamedTuple(), 
+										  (Flm = basis.scbasis.Flm,) )
+
+
 function _ka_evaluate_launcher!(P, dP, 
 									basis::RealSCWrapper, 
-									x)
+									x, ps, st)
 	nX = length(x) 
 	len_basis = length(basis)
 	
@@ -214,7 +222,7 @@ function _ka_evaluate_launcher!(P, dP,
 	_valSH(::SphericalHarmonics) = Val{true}() 
 	_valSH(::SolidHarmonics) = Val{false}()
 
-	Flm = basis.scbasis.Flm
+	Flm = st.Flm
 	valL = Val{maxl(basis)}()
 	valSH = _valSH(basis.scbasis)
 
