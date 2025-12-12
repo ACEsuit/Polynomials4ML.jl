@@ -94,6 +94,9 @@ include("monomials.jl")
 include("chebbasis.jl")
 include("bernstein.jl")
 
+# splines 
+include("splinify.jl")
+
 # 2d harmonics / trigonometric polynomials 
 include("ctrig.jl")
 include("rtrig.jl")
