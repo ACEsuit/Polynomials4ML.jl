@@ -13,6 +13,7 @@ DiffResults = "163ba53b-c6d8-5494-b064-1a9d43ac40c5"
 ForwardDiff = "f6369f11-7733-5829-9624-2563aa707210"
 GPUArraysCore = "46192b85-c4d5-4398-a991-12ede77f4527"
 HyperDualNumbers = "50ceba7f-c3ee-5a84-a6e8-3ad40456ec97"
+Interpolations = "a98d9a8b-a2ab-59e6-89dd-64a1c18fca59"
 KernelAbstractions = "63c18a36-062a-441e-b654-da1e3ab1ce7c"
 LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
 LuxCore = "bb33d45b-7691-41d6-9220-0943567d0623"
@@ -25,7 +26,6 @@ StaticArrays = "90137ffa-7385-5640-81b9-e52037218182"
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 WithAlloc = "fb1aa66a-603c-4c1d-9bc4-66947c7b08dd"
 
-
 [compat]
 ACEbase = "0.4.5"
 BenchmarkTools = "1"
@@ -36,6 +36,7 @@ DiffResults = "1.1.0"
 ForwardDiff = "0.10, 1.0"
 GPUArraysCore = "0.2.0"
 HyperDualNumbers = "4.0.10"
+Interpolations = "0.16.2"
 KernelAbstractions = "0.9.34"
 LinearAlgebra = "1.10"
 LuxCore = "1.2.0"
@@ -56,4 +57,4 @@ Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 Zygote = "e88e6eb3-aa80-5325-afca-941959d7151f"
 
 [targets]
-test = ["Test", "Printf", "Optimisers", "Zygote", ]
+test = ["Test", "Printf", "Optimisers", "Zygote"]
