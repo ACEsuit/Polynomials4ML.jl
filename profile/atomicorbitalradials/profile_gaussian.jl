@@ -8,7 +8,7 @@ using ObjectPools
 using Random
 using LuxCore
 
-P4ML = Polynomials4ML
+import Polynomials4ML as P4ML 
 
 @info("Batched Implementation")
 @info("evaluate, evaluated, evaluated2, evaluated_dp")

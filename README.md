@@ -9,6 +9,7 @@ This package implements a few polynomial basis types, and convenience methods fo
 * Trigonometric polynomials 
 * Complex and real spherical and solid harmonics 
 * A few quantum chemistry (atomic orbitals) basis sets 
+* Interpolate a basis onto splines
 * Utilities to recombine them into (tensor) product or compressed basis sets 
 
 We also aim to provide full `Lux.jl` integration. A possible application of this might be to implement various flavours of equivariant neural networks and related models. 

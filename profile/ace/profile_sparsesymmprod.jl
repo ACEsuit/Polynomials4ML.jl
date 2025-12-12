@@ -6,7 +6,7 @@ using Random
 using ChainRulesCore: rrule 
 # using Zygote
 
-P4ML = Polynomials4ML
+import Polynomials4ML as P4ML 
 
 ## 
 

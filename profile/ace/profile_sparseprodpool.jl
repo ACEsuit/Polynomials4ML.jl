@@ -2,7 +2,7 @@ using BenchmarkTools, Test, Polynomials4ML, ChainRulesCore
 using Polynomials4ML: PooledSparseProduct, evaluate, evaluate!
 using LuxCore, Random, Zygote
 
-P4ML = Polynomials4ML
+import Polynomials4ML as P4ML 
 
 ##
 

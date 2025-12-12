@@ -2,7 +2,8 @@ using Test, Polynomials4ML, Random, LuxCore
 using LinearAlgebra, Optimisers, ChainRulesCore, Zygote
 using ACEbase.Testing: println_slim, print_tf, fdtest
 
-P4ML = Polynomials4ML
+import Polynomials4ML as P4ML 
+
 @info("Testing LinearLayer")
 
 

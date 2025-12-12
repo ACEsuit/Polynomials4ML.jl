@@ -11,7 +11,7 @@ basis = RTrigBasis(N)
 @info("      correctness")
 mm = natural_indices(basis)
 for ntest = 1:30
-   local x, P
+   local x, P, P2 
    x = 2*π * rand()
    P = basis(x)
    P2 = [ (m.n >= 0 ? cos(m.n*x) : sin(abs(m.n)*x)) for m in mm ]

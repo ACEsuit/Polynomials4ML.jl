@@ -1,7 +1,7 @@
 
 using Polynomials4ML, StaticArrays, ForwardDiff, Test, LinearAlgebra
 using ACEbase.Testing: fdtest, println_slim, print_tf
-P4ML = Polynomials4ML
+import Polynomials4ML as P4ML
 
 ##
 

@@ -2,7 +2,7 @@ using Polynomials4ML
 using BenchmarkTools
 using LuxCore, Random, Zygote
 
-const P4ML = Polynomials4ML
+import Polynomials4ML as P4ML 
 
 
 SUITE = BenchmarkGroup()
