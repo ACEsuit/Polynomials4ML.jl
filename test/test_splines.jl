@@ -58,7 +58,8 @@ println()
 
 ##
 
-P4ML.Testing.test_all(st_spl1; ka = false)
+P4ML.Testing.test_all(st_spl1; ka = true)
+
 
 ##
 

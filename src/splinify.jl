@@ -171,3 +171,19 @@ end
 
 # ----------------- KernelAbstractions evaluation code
 
+
+@kernel function _ka_evaluate!(P, dP, basis::CubicSplines, x::AbstractVector{T}
+         ) where {T}
+
+   i = @index(Global)
+
+   if isnothing(dP) 
+         P[i, :] = _eval_cubspl(x[i], basis.F, basis.G, basis.x0, basis.x1, __NX(basis))
+   else 
+      f, g = _cubspl_widthgrad(x[i], basis.F, basis.G, basis.x0, basis.x1, __NX(basis))
+      P[i, :] = f
+      dP[i, :] = g
+   end
+
+   nothing 
+end
