@@ -3,35 +3,34 @@
    struct WrappedBasis 
 
 A wrapper type for a Lux layer `l` that behaves like a P4ML basis. The wrapper 
-implements the necessary methods to make `LuxBasis` a valid `AbstractP4MLBasis`.
+implements the necessary methods to make `WrappedBasis` a valid `AbstractP4MLBasis`.
 It assumes that the following calls are valid: 
-- `l(x::Number, ps, st)` produces an `AbstractVector`
-- `l(X::AbstractVector{<:Number}, ps, st)` produces an `B::AbstractMatrix` of 
+- `l(x::T, ps, st)` with `T <: Number` produces an `AbstractVector{T}`; i.e. 
+- `l(X::AbstractVector{T}, ps, st)` produces an `B::AbstractMatrix{T}` of 
 numbers, with `B[i, :] == l(X[i], ps, st)`.
 
-When used with the allocating interface `evaluate` and `evaluate_ed`, then 
-it is also assumed that the input type and output eltype are the same. If this 
-is not the case, then one should monkey-patch `_valtype(::LuxBasis, T::Type)`.
+In particular it is assume that input and output types match. If this 
+fails then the behaviour is undefined. (With the non-allocating interface 
+this is likely unproblematic. Witht he allocating interface one could 
+monkey-patch `_valtype` to get around this restriction.)
 
 The forwardpass is computed via `l(x, ps, st)`. Due to the above assumption, 
 the optimal implementation of derivatives is forward-mode, hence `evaluate_ed` is
 implemented via `ForwardDiff`, and the rrule is provided by the standard P4ML 
 interface. 
 """
-struct WrappedBasis{TL, TX, TP} <: AbstractP4MLBasis
+struct WrappedBasis{TL} <: AbstractP4MLBasis
    l::TL
    len::Int 
 end
 
-function wrapped_basis(l, x; rng = Random.default_rng())
+function wrapped_basis(l; rng = Random.default_rng(), x = 0.0)
    ps, st = LuxCore.setup(rng, l)
    P, _ = l(x, ps, st)
    if !(isa(P, AbstractVector{<: Number}))
       throw(ArgumentError("The Lux layer `l` does not return a vector of numbers for scalar input."))
    end
-   TX = typeof(x) 
-   TP = eltype(P)  
-   return WrappedBasis{typeof(l), TX, TP}(l, length(P))
+   return WrappedBasis{typeof(l)}(l, length(P))
 end
 
 LuxCore.initialparameters(rng::AbstractRNG, b::WrappedBasis) = 
@@ -40,20 +39,7 @@ LuxCore.initialparameters(rng::AbstractRNG, b::WrappedBasis) =
 LuxCore.initialstates(rng::AbstractRNG, b::WrappedBasis) = 
       LuxCore.initialstates(rng, b.l) 
 
-
-
-
-# function chained_basis()
-
-
-_valtype(basis::WrappedBasis{TL, TX, TP}, T::Type{TX}
-        ) where {TL, TX, TP} = TP 
-
-_valtype(basis::WrappedBasis{TL, TX, TP}, T::Type{Dual{S, TX, TX}}
-        ) where {TL, TX, TP, S} = Dual{S, TP, TP} 
-
-# _valtype(basis::WrappedBasis{TL, TX, TP}, T::Type{TX}) = 
-#       throw( ArgumentError("WrappedBasis must be initialized with the correct argument type") )
+_valtype(basis::WrappedBasis, T::Type{TX}) where {TX} = TX 
 
 Base.length(basis::WrappedBasis) = basis.len
 
@@ -62,7 +48,8 @@ Base.length(basis::WrappedBasis) = basis.len
 # type dispatch. It is an extra allocation but since this basis is 
 # already allocating anyhow, it is probably not a great loss. Still 
 # an unfortunate side-effect...
-# TODO: find a better workaround? 
+# TODO: find a better workaround? => probably remove sphericart from P4ml 
+#                                   and define P4ML interface only for scalars
 _evaluate!(P, dP, basis::WrappedBasis, X::StaticBatch, ps, st) = 
       _evaluate!(P, dP, basis, Vector(X), ps, st)
 
