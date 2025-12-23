@@ -92,6 +92,8 @@ function _ka_evaluate_launcher!(P, dP,
                      basis::WrappedBasis, 
                      X::AbstractVector{<: Number}, 
                      ps, st)
+
+   __dualize(x)= FD.Dual(x, one(eltype(x)))                     
    
    if isnothing(dP) 
       Pl, _ = basis.l(X, ps, st)
@@ -100,7 +102,9 @@ function _ka_evaluate_launcher!(P, dP,
       TX = eltype(X)
       TP = _valtype(basis, TX) 
       TXd = typeof(FD.Dual(one(TX), one(TX)))
-      Xd = map(x -> FD.Dual(x, one(TX)), X)
+      Xd = similar(X, TXd)
+      map!(__dualize, Xd, X)
+      # Xd = map(x -> FD.Dual(x, one(TX)), X)
       Pd, _ = basis.l(Xd, ps, st)
 
       map!(pd -> pd.value, P, Pd) 
