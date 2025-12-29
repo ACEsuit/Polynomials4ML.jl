@@ -153,11 +153,11 @@ _gradtype(basis, TX::Type, ps, st) = _gradtype(basis, TX)
 
 # default grad types
 _gradtype(basis::AbstractP4MLBasis, TX::Type{<:Number}, args...) = 
-      _valtype(basis, TX)
+      _valtype(basis, TX, args...)
 
 _gradtype(basis::AbstractP4MLBasis, Tx::Type{<: StaticArray}, args...) = 
       StaticArrays.similar_type(Tx, 
-                     promote_type(eltype(Tx), _valtype(basis, Tx)))
+                     promote_type(eltype(Tx), _valtype(basis, Tx, args...)))
 
 # ------------------------------------------------------------
 # allocation interface & WithAlloc Interface 
