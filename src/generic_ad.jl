@@ -35,8 +35,43 @@ function pullback!(∂X,
    return ∂X
 end
 
-pullback(∂X, l::AbstractP4MLBasis, args...) = 
-      _with_safe_alloc(pullback!, ∂X, l, args...)
+
+@kernel function _pullback_ka!(∂X, @Const(dP), @Const(∂P))
+   a = @index(Global)
+   T = eltype(∂X)
+   acc = zero(T)
+   N = size(dP, 2)
+   @inbounds for n = 1:N
+      acc += dP[a, n] * ∂P[a, n]
+   end
+   @inbounds ∂X[a] += acc
+end
+
+function pullback!(∂X::AbstractGPUArray,
+                   ∂P::AbstractGPUArray, basis::AbstractP4MLBasis, X::BATCH)
+   P, dP = evaluate_ed(basis, X)
+   if !(size(∂P) == size(dP) == (length(X), length(basis)))
+      throw(ArgumentError("size mismatch: size(∂P) = $(size(∂P)), size(dP) = $(size(dP)), expected (length(X), length(basis)) = ($(length(X)), $(length(basis)))"))
+   end
+   @assert length(∂X) == length(X)
+   backend = KernelAbstractions.get_backend(∂X)
+   kernel! = _pullback_ka!(backend)
+   kernel!(∂X, dP, ∂P; ndrange = length(X))
+   return ∂X
+end
+
+
+pullback(∂P, l::AbstractP4MLBasis, args...) = 
+      _with_safe_alloc(pullback!, ∂P, l, args...)
+
+
+function pullback(∂P::AbstractGPUArray, l::AbstractP4MLBasis, X::BATCH)
+   T∂X = _promote_grad_type(_gradtype(l, X), eltype(∂P))
+   ∂X = similar(X, T∂X, size(X))
+   fill!(∂X, zero(T∂X))
+   return pullback!(∂X, ∂P, l, X)   
+end
+
 
 
 function rrule(::typeof(evaluate), 
