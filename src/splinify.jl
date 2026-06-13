@@ -154,17 +154,21 @@ end
 """
    _eval_cubic_d(t, fl, fr, gl, gr, h) -> (f, g)
 
-Evaluate the Hermite cubic (`_eval_cubic`) and its derivative w.r.t. the
-physical coordinate on an interval of width `h`. `t` is the local coordinate
-and `fl, fr, gl, gr` are the endpoint values / interval-scaled gradients. The
-derivative is obtained from a single ForwardDiff `Dual`.
+Evaluate the Hermite cubic and its derivative w.r.t. the physical coordinate
+on an interval of width `h`. `t` is the local coordinate and `fl, fr, gl, gr`
+are the endpoint values / interval-scaled gradients. Value and `t`-derivative
+are computed analytically from the cubic `f(t) = a3 t³ + a2 t² + a1 t + a0`
+(same coefficients as `_eval_cubic`); the `t`-derivative is then rescaled to
+the physical coordinate by `1/h`.
 """
 @inline function _eval_cubic_d(t, fl, fr, gl, gr, h)
-   td = Dual(t, one(t))
-   fd = _eval_cubic(td, fl, fr, gl, gr)
-   f = ForwardDiff.value.(fd)
-   g = ForwardDiff.partials.(fd, 1)
-   return f, g / h
+   a0 = fl
+   a1 = gl
+   a2 = -3fl + 3fr - 2gl - gr
+   a3 = 2fl - 2fr + gl + gr
+   f  = ((a3*t + a2)*t + a1)*t + a0      # a3 t³ + a2 t² + a1 t + a0
+   df = (3*a3*t + 2*a2)*t + a1           # 3 a3 t² + 2 a2 t + a1  ( = df/dt )
+   return f, df / h
 end
 
 """
