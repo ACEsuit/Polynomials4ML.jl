@@ -21,8 +21,11 @@ using Test
     # Misc
     @testset "Static Prod" begin include("test_staticprod.jl"); end
 
-    # Transformations 
+    # Transformations
     @testset "Transformed Basis" begin include("test_transformed.jl"); end
+
+    # Splines
+    @testset "Cubic Splines" begin include("test_splines.jl"); end
 
     # Test lux interface 
     @testset "Lux" begin include("test_lux.jl"); end 

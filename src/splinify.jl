@@ -92,52 +92,109 @@ end
 
 
 
-# ----------------- shared evaluation code 
+# ----------------- shared evaluation code
+#
+# The helpers in this block (`_spl_grid`, `_eval_cubic`, `_eval_cubic_d`,
+# `_eval_cubspl`, `_cubspl_widthgrad`) are the scalar cubic-spline kernel of
+# P4ML. They are not exported, but they are a *stable, GPU-safe internal API*
+# that downstream packages (e.g. ACEradials) may use to build their own spline
+# layers without re-implementing the math. All are `@inline` and free of
+# CPU-only constructs: integer truncation uses `unsafe_trunc`, which — unlike
+# `floor(Int, ·)` / `Int(·)` — carries no exception path and therefore
+# compiles on GPU backends (the reason these were previously forked).
+
+# primal value of a (possibly ForwardDiff-`Dual`) coordinate, for the integer
+# index computation only — the index is piecewise constant in `x`, so it
+# carries no derivative; the local coordinate `t = s - il` keeps it.
+@inline _spl_primal(x::Real) = x
+@inline _spl_primal(x::Dual) = _spl_primal(ForwardDiff.value(x))
 
 """
-   _eval_cubic(t, fl, fr, gl, gr, h)
+   _spl_grid(x, x0, x1, NX) -> (x, t, il, h)
 
-Evaluate cubic spline at position `t` in `[0,1]`, given function values `fl`, `fr`
-and gradients `gl`, `gr` at the left and right endpoints.
+Locate `x` on the uniform spline grid of `NX` nodes spanning `[x0, x1]`.
+Returns the clamped coordinate `x` (Flat boundary condition), the local
+coordinate `t ∈ [0,1)` within the interval, the 0-based left-node index `il`,
+and the grid spacing `h`. The cubic on that interval is then evaluated with
+`_eval_cubic(t, F[il+1], F[il+2], h*G[il+1], h*G[il+2])`.
+
+GPU-safe: uses `unsafe_trunc` rather than `floor(Int, ·)`.
+"""
+@inline function _spl_grid(x, x0, x1, NX)
+   x = clamp(x, x0, x1)        # project to [x0, x1] (corresponds to Flat bc)
+   h = (x1 - x0) / (NX-1)      # uniform grid spacing
+   s = (x - x0) / h
+   # left-node index, from the primal of `s`. `unsafe_trunc` carries no
+   # InexactError check, so it compiles on GPU (the reason these helpers were
+   # previously forked) and accepts a `Dual` value via `_spl_primal`; the
+   # argument is in [0, NX-1] here, so truncation is well-defined. The `min`
+   # keeps `il+2 ≤ NX` at the right endpoint x = x1 (where s = NX-1 exactly,
+   # which would otherwise index one past the end), giving t = 1.
+   il = min(unsafe_trunc(Int, _spl_primal(s)), NX-2)
+   t = s - il                  # local coordinate of x in [0, 1]
+   return x, t, il, h
+end
+
+"""
+   _eval_cubic(t, fl, fr, gl, gr)
+
+Evaluate a Hermite cubic at `t ∈ [0,1]`, given function values `fl`, `fr` and
+(interval-scaled) gradients `gl`, `gr` at the left and right endpoints.
 """
 @inline function _eval_cubic(t, fl, fr, gl, gr)
-   # (2t³ - 3t² + 1)*fl + (t³ - 2t² + t)*gl + 
-   #           (-2t³ + 3t²)*fr + (t³ - t²)*gr 
+   # (2t³ - 3t² + 1)*fl + (t³ - 2t² + t)*gl +
+   #           (-2t³ + 3t²)*fr + (t³ - t²)*gr
    a0 = fl
-   a1 = gl 
+   a1 = gl
    a2 = -3fl + 3fr - 2gl - gr
    a3 = 2fl - 2fr + gl + gr
    return ((a3*t + a2)*t + a1)*t + a0
 end
 
 """
+   _eval_cubic_d(t, fl, fr, gl, gr, h) -> (f, g)
+
+Evaluate the Hermite cubic and its derivative w.r.t. the physical coordinate
+on an interval of width `h`. `t` is the local coordinate and `fl, fr, gl, gr`
+are the endpoint values / interval-scaled gradients. Value and `t`-derivative
+are computed analytically from the cubic `f(t) = a3 t³ + a2 t² + a1 t + a0`
+(same coefficients as `_eval_cubic`); the `t`-derivative is then rescaled to
+the physical coordinate by `1/h`.
+"""
+@inline function _eval_cubic_d(t, fl, fr, gl, gr, h)
+   a0 = fl
+   a1 = gl
+   a2 = -3fl + 3fr - 2gl - gr
+   a3 = 2fl - 2fr + gl + gr
+   f  = ((a3*t + a2)*t + a1)*t + a0      # a3 t³ + a2 t² + a1 t + a0
+   df = (3*a3*t + 2*a2)*t + a1           # 3 a3 t² + 2 a2 t + a1  ( = df/dt )
+   return f, df / h
+end
+
+"""
    _eval_cubspl(x, F, G, x0, x1, NX)
 
-auxiliary function to the evaluate the cubic spline basis given 
-the spline data arrays    
+Evaluate the cubic spline basis at `x`, given the node value / gradient arrays
+`F`, `G` and the grid `(x0, x1, NX)`.
 """
 @inline function _eval_cubspl(x, F, G, x0, x1, NX)
-   x = clamp(x, x0, x1)     # project to [x0, x1] (corresponds to Flat bc)
-   h = (x1 - x0) / (NX-1)   # uniform grid spacing 
-   il = floor(Int, (x - x0) / h)   # index of left node
-   # TODO: is this numerically stable? 
-   t = (x - x0) / h - il          # relative coordinate of x in [il, il+1]
+   _, t, il, h = _spl_grid(x, x0, x1, NX)
    @inbounds _eval_cubic(t, F[il+1], F[il+2], h*G[il+1], h*G[il+2])
 end
 
+"""
+   _cubspl_widthgrad(x, F, G, x0, x1, NX) -> (f, g)
+
+Evaluate the cubic spline basis and its derivative at `x`. Outside `[x0, x1]`
+the value is Flat-extended and the derivative is zero.
+"""
 @inline function _cubspl_widthgrad(x, F, G, x0, x1, NX)
    if x < x0 || x > x1
       f = _eval_cubspl(x, F, G, x0, x1, NX)
-      return f, zero(f) 
+      return f, zero(f)
    end
-   h = (x1 - x0) / (NX-1)   # uniform grid spacing 
-   t, _il = modf((x - x0) / h)
-   il = Int(_il)
-   td = Dual(t, one(t))
-   fd = _eval_cubic(td, F[il+1], F[il+2], h*G[il+1], h*G[il+2])
-   f = ForwardDiff.value.(fd)
-   g = ForwardDiff.partials.(fd, 1)
-   return f, g / h 
+   _, t, il, h = _spl_grid(x, x0, x1, NX)
+   @inbounds _eval_cubic_d(t, F[il+1], F[il+2], h*G[il+1], h*G[il+2], h)
 end
 
 

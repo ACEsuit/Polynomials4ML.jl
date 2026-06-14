@@ -62,6 +62,30 @@ P4ML.Testing.test_all(st_spl1; ka = true)
 
 
 ##
+# ForwardDiff check of the hard-coded cubic-spline derivative. `_eval_cubic_d`
+# returns the value and the analytic d/dx derivative (= d/dt of `_eval_cubic`,
+# rescaled by 1/h); both must match `_eval_cubic` and its ForwardDiff
+# derivative.
+
+import ForwardDiff as FD
+
+@info("ForwardDiff check of hard-coded _eval_cubic_d")
+let NU = 6
+   for ntest = 1:30
+      t = rand()
+      h = 0.5 + rand()
+      fl = @SVector randn(NU); fr = @SVector randn(NU)
+      gl = @SVector randn(NU); gr = @SVector randn(NU)
+      f, df = P4ML._eval_cubic_d(t, fl, fr, gl, gr, h)
+      df_ad = FD.derivative(τ -> P4ML._eval_cubic(τ, fl, fr, gl, gr), t) ./ h
+      print_tf(@test f ≈ P4ML._eval_cubic(t, fl, fr, gl, gr))
+      print_tf(@test df ≈ df_ad)
+   end
+   println()
+end
+
+
+##
 
 # import ForwardDiff as FD
 
