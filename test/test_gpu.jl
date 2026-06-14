@@ -21,10 +21,6 @@ test_bases = [ ChebBasis(8),
                MonoBasis(10), 
                TFL(chebyshev_basis(10)),
                TFL(legendre_basis(10)),
-               real_sphericalharmonics(5; T = TFL, static=true), 
-               real_solidharmonics(5; T = TFL, static=true), 
-               #complex_sphericalharmonics(5), 
-               #complex_solidharmonics(5), 
                ]
 
 ##      
@@ -83,8 +79,6 @@ _float32(x) = x
 
 for basis in [ chebyshev_basis(10),
                legendre_basis(10),
-               real_sphericalharmonics(5; static=true), 
-               real_solidharmonics(5; static=true), 
                ]
    nX = rand(500:1500)
    X = [ P4ML._generate_input(basis) for _ = 1:nX ]

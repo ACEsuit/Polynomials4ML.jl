@@ -1,5 +1,3 @@
-using SpecialFunctions
-
 struct GaussianDecay <: AbstractDecayFunction
 end
 
@@ -107,7 +105,7 @@ function _rand_basis(N1=4, N2=3;
     Dinit = () -> ones(T, N1 * N2 * N1^2, K))
 
     Pn = MonoBasis(N1 + 1)
-    Ylm = real_solidharmonics(N1 - 1)
+    Ylm = SolidHarmonics(N1 - 1)
     spec_list = [(n1=n1, n2=n2, l=l, m=m) for n1 in 1:N1, n2 in 1:N2, l in 0:N1-1 for m in -l:l]
     spec = SVector{length(spec_list)}(spec_list)
     spec_ln = unique((n1=s.n1, n2=s.n2, l=s.l) for s in spec)

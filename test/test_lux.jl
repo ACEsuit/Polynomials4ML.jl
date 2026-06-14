@@ -52,15 +52,8 @@ test_bases = [ chebyshev_basis(10),
                BernsteinBasis(8), 
                RTrigBasis(10), 
                CTrigBasis(10), 
-               MonoBasis(10), 
+               MonoBasis(10),
                legendre_basis(10),
-               real_sphericalharmonics(5), 
-               real_solidharmonics(5), 
-               complex_sphericalharmonics(5), 
-               complex_solidharmonics(5), 
-               P4ML._rand_gaussian_basis(), 
-               P4ML._rand_slater_basis(), 
-               P4ML._rand_sto_basis(), 
                ]
 
 ##

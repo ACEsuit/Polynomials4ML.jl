@@ -50,16 +50,6 @@ P1, _ = tbasis(X, ps, st)
 P2 = evaluate(tbasis.basis, trans.(X))
 println_slim(@test P1 ≈ P2) 
 
-##
-
-@info("   Vector input transformed to vector")
-basis = real_solidharmonics(5)
-trans = x -> x / norm(x) 
-tbasis = P4ML.TransformedBasis(trans, basis)
-P4ML._generate_input(::typeof(tbasis)) = rand(SVector{3, Float64}) 
-X = [ P4ML._generate_input(tbasis) for _ in 1:10 ]
-ps, st = LuxCore.setup(rng, tbasis)
-
-P1, _ = tbasis(X, ps, st)
-P2 = evaluate(tbasis.basis, trans.(X))
-println_slim(@test P1 ≈ P2) 
+# NOTE: the "vector input transformed to vector" case (using solid harmonics)
+# moved out with SpheriCart; that coverage now lives in the lib/AtomicOrbitals
+# and SpheriCart test suites.
