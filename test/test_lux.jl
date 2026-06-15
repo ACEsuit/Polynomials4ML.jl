@@ -3,8 +3,9 @@ using Polynomials4ML: _generate_input
 using Random: default_rng
 using ACEbase.Testing: println_slim, print_tf
 using LinearAlgebra: dot, I 
-using Optimisers: destructure 
+using Optimisers: destructure
 import Polynomials4ML as P4ML
+import SpheriCart   # activates the P4ML SpheriCart extension (AtomicOrbitals Ylm)
 
 rng = default_rng()
 
@@ -54,6 +55,9 @@ test_bases = [ chebyshev_basis(10),
                CTrigBasis(10), 
                MonoBasis(10),
                legendre_basis(10),
+               P4ML._rand_gaussian_basis(),
+               P4ML._rand_slater_basis(),
+               P4ML._rand_sto_basis(),
                ]
 
 ##

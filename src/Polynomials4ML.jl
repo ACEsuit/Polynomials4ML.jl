@@ -96,7 +96,7 @@ include("rtrig.jl")
 # atomic-orbital basis `AtomicOrbitals = Pn * Dn * Ylm` lives here; the
 # SpheriCart-specific glue (complex value types, default-Ylm constructors) is in
 # ext/SpheriCartExt.jl, loaded when SpheriCart is available.
-include("atomicorbitals/aorbasis.jl")
+include("atomicorbitals/atomicorbitals.jl")
 export AtomicOrbitals, RadialDecay, GaussianDecay, SlaterDecay
 
 # generating product bases (generalisation of tensor products)

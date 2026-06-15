@@ -12,11 +12,13 @@ This page documents the public API for polynomial bases: the list of bases and f
 * 2D harmonics: 
    - Complex trigonometric polynomials [`CTrigBasis`](@ref)
    - Real trigonometric polynomials [`RTrigBasis`](@ref)
-* 3D harmonics: 
-   - Complex spherical harmonics [`complex_sphericalharmonics`](@ref)
-   - Real spherical harmonics [`real_sphericalharmonics`](@ref)
-   - Complex solid harmonics [`complex_solidharmonics`](@ref)
-   - Real solid harmonics [`real_solidharmonics`](@ref)
+* 3D harmonics: real/complex spherical and solid harmonics are provided by
+   [SpheriCart.jl](https://github.com/lab-cosmo/sphericart); with `ACEbase`
+   loaded they expose the same `evaluate` / `evaluate_ed` / `natural_indices`
+   interface used here.
+* Atomic orbitals: [`AtomicOrbitals`](@ref) — quantum-chemistry `Pn * Dn * Ylm`
+   product bases. The angular `Ylm` is a SpheriCart harmonics basis, so using
+   these requires `import SpheriCart` (see the docstring).
 
 ### In-place Evaluation  
 
@@ -72,7 +74,7 @@ The arrays `P1, P2, dP2` are Bumper-allocated i.e. are not allowed to leave the 
 
 ### Utility functions
 
-The basis specification can be obtained using [`Polynomials4ML.natural_indices`](@ref)
+The basis specification can be obtained using `natural_indices`
 ```julia
 spec = natural_indices(basis)
 ```

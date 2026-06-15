@@ -97,12 +97,34 @@ function pullback_ps(∂P, basis::RadialDecay, x::BATCH, ps, st)
     return (ζ = ∂ζ, D = ∂D)
 end
 
-# `_rand_*` are test/dev fixtures that default the angular part to a SpheriCart
-# `SolidHarmonics`; their methods are defined in ext/SpheriCartExt.jl.
-function _rand_basis end
-function _rand_gaussian_basis end
-function _rand_slater_basis end
-function _rand_sto_basis end
+# `_rand_*` build ready-made example/test `AtomicOrbitals` bases. The default
+# angular part `_default_ylm(L)` (a SpheriCart `SolidHarmonics`) is supplied by
+# the SpheriCart extension, so these require `import SpheriCart` to be active.
+function _rand_basis(N1=4, N2=3;
+    K::Int=1,
+    T::Type=Float64,
+    decay_type::AbstractDecayFunction=GaussianDecay(),
+    ζinit = () -> rand(T, N1 * N2 * N1^2, K),
+    Dinit = () -> ones(T, N1 * N2 * N1^2, K))
+
+    Pn = MonoBasis(N1 + 1)
+    Ylm = _default_ylm(N1 - 1)
+    spec_list = [(n1=n1, n2=n2, l=l, m=m) for n1 in 1:N1, n2 in 1:N2, l in 0:N1-1 for m in -l:l]
+    spec = SVector{length(spec_list)}(spec_list)
+    spec_ln = unique((n1=s.n1, n2=s.n2, l=s.l) for s in spec)
+    Dn = construct_basis(ζinit(), Dinit(), decay_type, spec_ln)
+    specidx = _specidx(spec, Pn, Dn, Ylm)
+
+    return AtomicOrbitals{length(spec), typeof(Pn), typeof(Dn), typeof(Ylm)}(Pn, Dn, Ylm, spec, specidx)
+end
+
+_rand_gaussian_basis(N1=4, N2=3, T=Float64) = _rand_basis(N1, N2; T=T)
+
+_rand_slater_basis(N1=4, N2=3, T=Float64) = _rand_basis(N1, N2; T=T, decay_type = SlaterDecay())
+
+_rand_sto_basis(N1=4, N2=2, K=4, T=Float64) = _rand_basis(N1, N2; T=T, K=K,
+        ζinit = () -> rand(T, N1 * N2 * N1^2, K),
+        Dinit = () -> rand(T, N1 * N2 * N1^2, K))
 
 function _invmap(a::AbstractVector)
     inva = Dict{eltype(a), Int}()

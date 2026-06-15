@@ -12,6 +12,32 @@ struct RadialDecay{LEN, TSMAT, DF<:AbstractDecayFunction} <: AbstractP4MLBasis
     spec::SVector{LEN, NT_NNL}
 end
 
+"""
+`AtomicOrbitals` : a quantum-chemistry atomic-orbital basis whose functions are
+products `ϕ_{n1,n2,l,m}(𝐫) = Pn_{n1}(r) * Dn_{n2,l}(r) * Ylm_{l,m}(𝐫)` of a
+radial polynomial part `Pn`, a radial decay part `Dn` (a `RadialDecay`), and an
+angular part `Ylm`. The angular `Ylm` is a spherical/solid harmonics basis used
+purely through the ACEbase `evaluate` interface, so it carries no
+`Polynomials4ML` parameters or state.
+
+`Polynomials4ML` ships no harmonics of its own — the `Ylm` is supplied by
+[SpheriCart.jl](https://github.com/lab-cosmo/sphericart). You therefore need to
+load SpheriCart (which activates the `Polynomials4ML` SpheriCart extension)
+before constructing or using an `AtomicOrbitals` basis:
+
+```julia
+import Polynomials4ML as P4ML
+import SpheriCart                      # activates the P4ML SpheriCart extension
+basis = P4ML._rand_gaussian_basis()    # a ready-made example basis
+```
+
+To assemble one directly, pass any SpheriCart harmonics basis as `Ylm`:
+
+```julia
+using SpheriCart: SolidHarmonics
+basis = AtomicOrbitals(Pn, Dn, SolidHarmonics(L), spec, specidx)
+```
+"""
 mutable struct AtomicOrbitals{LEN, TP, TD, TY}  <: AbstractP4MLBasis
    Pn::TP
    Dn::TD
@@ -34,6 +60,11 @@ natural_indices(basis::AtomicOrbitals) = basis.spec
 # `_valtype` machinery. This generic fallback assumes a real-valued `Ylm`; the
 # SpheriCart extension specialises `_ylm_valtype` for the complex harmonics types.
 _ylm_valtype(Ylm, ::Type{<: SVector{3, S}}) where {S} = S
+
+# the default angular basis used by the `_rand_*` example bases is a SpheriCart
+# `SolidHarmonics`, supplied by the SpheriCart extension (ext/SpheriCartExt.jl);
+# this is why those constructors require `import SpheriCart`.
+function _default_ylm end
 
 _valtype(basis::AtomicOrbitals, T::Type{<: SVector{3, S}}) where {S} =
         promote_type(_valtype(basis.Pn, S), _valtype(basis.Dn, S), _ylm_valtype(basis.Ylm, T))
