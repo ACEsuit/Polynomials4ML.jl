@@ -4,9 +4,10 @@ module Polynomials4ML
 
 import ACEbase 
 
-import ACEbase: evaluate, evaluate_d, evaluate_ed, 
-                evaluate!, evaluate_d!, evaluate_ed!, 
-                pullback, pullback!, pushforward, pushforward!
+import ACEbase: evaluate, evaluate_d, evaluate_ed,
+                evaluate!, evaluate_d!, evaluate_ed!,
+                pullback, pullback!, pushforward, pushforward!,
+                natural_indices
 
 import ChainRulesCore: rrule, frule, NoTangent, ZeroTangent
 import LuxCore: AbstractLuxLayer, initialparameters, initialstates                 
@@ -44,20 +45,9 @@ _generate_batch(basis::AbstractP4MLBasis; nbatch = rand(7:16)) =
          [ _generate_input(basis) for _ = 1:nbatch ]
 
 
-""" 
-   natural_indices(basis) -> AbstractVector
-
-Returns an abstract vector of "natural" descriptions of the basis functions in 
-the order that they are stored in the computed vector of basis function values.
-For example, for Chebyshev polynomials, `natural_indices(basis)` returns 
-`0:N`, where `N+1` is the length of the basis. For Spherical Harmmonics, 
-a natural description requires two indices `(l, m)`, so the output will be a 
-vector of tuples.
-
-At the moment, this function is used only for inspection and testing so no 
-strict format is enforced.
-"""
-function natural_indices end   # could rename this get_spec or similar ... 
+# `natural_indices(basis)` (owned by ACEbase, imported above) returns a vector
+# of "natural" descriptions of the basis functions, in storage order. For
+# Chebyshev this is `0:N`; for spherical harmonics it is a vector of `(l, m)`.
 
 """
    index(basis, k) -> Integer
@@ -101,11 +91,13 @@ include("splinify.jl")
 include("ctrig.jl")
 include("rtrig.jl")
 
-# 3d harmonics 
-include("sphericart.jl")
-
-# quantum chemistry 
+# 3d spherical harmonics (real + complex solid/spherical) are owned by SpheriCart
+# (with an ACEbase extension for the evaluate interface). The quantum-chemistry
+# atomic-orbital basis `AtomicOrbitals = Pn * Dn * Ylm` lives here; the
+# SpheriCart-specific glue (complex value types, default-Ylm constructors) is in
+# ext/SpheriCartExt.jl, loaded when SpheriCart is available.
 include("atomicorbitals/atomicorbitals.jl")
+export AtomicOrbitals, RadialDecay, GaussianDecay, SlaterDecay
 
 # generating product bases (generalisation of tensor products)
 # RETIRE - to be discussed?

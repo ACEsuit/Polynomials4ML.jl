@@ -3,6 +3,7 @@ using StaticArrays
 using LinearAlgebra
 using LuxCore
 import Polynomials4ML as P4ML
+import SpheriCart, ACEbase   # activate the SpheriCart ACEbase + P4ML SpheriCart extensions
 using Polynomials4ML: evaluate, evaluate_ed
 
 
@@ -29,6 +30,3 @@ end
     P4ML.Testing.test_chainrules(basis)
     P4ML.Testing.test_withalloc(basis; allowed_allocs = 0, single=false)
 end
-
-
-

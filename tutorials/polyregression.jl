@@ -6,6 +6,7 @@
 #
 
 using Polynomials4ML, LinearAlgebra, StaticArrays
+using SpheriCart: SphericalHarmonics
 
 # ### Example 1: Univariate Polynomial Regression 
 #
@@ -52,11 +53,12 @@ N = 1_000
 X = [ (x = randn(SVector{3, Float64}); x/norm(x)) for i = 1:N ]
 Y = f2.(X);
 
-# In this case, spherical harmonics are natural basis functions. P4ML implements 
-# both real and complex spherical harmonics. Since the target function is 
-# real, we choose the real basis. 
+# In this case, spherical harmonics are natural basis functions. These are
+# provided by [SpheriCart.jl](https://github.com/lab-cosmo/sphericart) in both
+# real and complex variants. Since the target function is real, we choose the
+# real basis.
 
-basis = real_sphericalharmonics(9)
+basis = SphericalHarmonics(9)
 @show length(basis);
 
 # We see that we now have far more basis functions per degree and therefore 
