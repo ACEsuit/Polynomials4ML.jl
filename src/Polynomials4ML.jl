@@ -91,10 +91,13 @@ include("splinify.jl")
 include("ctrig.jl")
 include("rtrig.jl")
 
-# 3d harmonics (real + complex solid/spherical) and quantum-chemistry atomic
-# orbitals now live outside P4ML core: spherical harmonics are owned by
-# SpheriCart (with an ACEbase extension for the evaluate interface), and the
-# AtomicOrbitals basis moved to the `lib/AtomicOrbitals` subpackage.
+# 3d spherical harmonics (real + complex solid/spherical) are owned by SpheriCart
+# (with an ACEbase extension for the evaluate interface). The quantum-chemistry
+# atomic-orbital basis `AtomicOrbitals = Pn * Dn * Ylm` lives here; the
+# SpheriCart-specific glue (complex value types, default-Ylm constructors) is in
+# ext/SpheriCartExt.jl, loaded when SpheriCart is available.
+include("atomicorbitals/aorbasis.jl")
+export AtomicOrbitals, RadialDecay, GaussianDecay, SlaterDecay
 
 # generating product bases (generalisation of tensor products)
 # RETIRE - to be discussed?

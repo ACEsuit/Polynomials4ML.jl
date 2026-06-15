@@ -10,10 +10,12 @@ using Test
     @testset "Chebyshev" begin include("test_cheb.jl"); end 
     @testset "Monomials" begin include("test_mono.jl"); end 
 
-    # 2D Harmonics (3D spherical harmonics now live in SpheriCart; atomic
-    # orbitals moved to the lib/AtomicOrbitals subpackage)
+    # 2D Harmonics (3D spherical harmonics now live in SpheriCart)
     @testset "Complex Trigonometric" begin include("test_ctrig.jl"); end
     @testset "Real Trigonometric" begin include("test_rtrig.jl"); end
+
+    # Atomic orbitals (angular Ylm via the SpheriCart extension)
+    @testset "Atomic Orbitals" begin include("test_atorbrad.jl"); end
 
     # Misc
     @testset "Static Prod" begin include("test_staticprod.jl"); end

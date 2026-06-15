@@ -1,3 +1,5 @@
+using LinearAlgebra: norm
+
 abstract type AbstractDecayFunction end
 
 const NT_NNL = NamedTuple{(:n1, :n2, :l), Tuple{Int, Int, Int}}
@@ -27,13 +29,11 @@ Base.length(basis::AtomicOrbitals) = length(basis.spec)
 
 natural_indices(basis::AtomicOrbitals) = basis.spec
 
-# the angular `Ylm` is a SpheriCart harmonics basis (param-free) used via the
-# ACEbase interface, so its value type is derived here rather than through the
-# P4ML `_valtype` machinery.
-_ylm_valtype(::Union{SolidHarmonics, SphericalHarmonics},
-             ::Type{<: SVector{3, S}}) where {S} = S
-_ylm_valtype(::Union{ComplexSolidHarmonics, ComplexSphericalHarmonics},
-             ::Type{<: SVector{3, S}}) where {S} = Complex{S}
+# the angular `Ylm` is used purely through the ACEbase `evaluate` interface
+# (param-free), so its value type is derived here rather than through the P4ML
+# `_valtype` machinery. This generic fallback assumes a real-valued `Ylm`; the
+# SpheriCart extension specialises `_ylm_valtype` for the complex harmonics types.
+_ylm_valtype(Ylm, ::Type{<: SVector{3, S}}) where {S} = S
 
 _valtype(basis::AtomicOrbitals, T::Type{<: SVector{3, S}}) where {S} =
         promote_type(_valtype(basis.Pn, S), _valtype(basis.Dn, S), _ylm_valtype(basis.Ylm, T))
@@ -49,23 +49,23 @@ _valtype(basis::AtomicOrbitals, T::Type{<: SVector{3, S}}, ps, st) where {S} =
 
 _generate_input(basis::AtomicOrbitals) = @SVector randn(3)
 
-Base.show(io::IO, basis::AtomicOrbitals) = 
+Base.show(io::IO, basis::AtomicOrbitals) =
         print(io, "AtomicOrbitals($(basis.Pn), $(typeof(basis.Dn.decay).name.name), $(basis.Ylm))")
 
-# Type of atomic orbital type basis sets         
+# Type of atomic orbital type basis sets
 
 include("radialdecay.jl")
 
-# _static_params is used to extract parameters from the basis set when 
-# the basis is evaluated with the old parameter-free convention. In that case, 
-# the internally stored parameters are used. 
+# _static_params is used to extract parameters from the basis set when
+# the basis is evaluated with the old parameter-free convention. In that case,
+# the internally stored parameters are used.
 #
-# _init_luxparams is used to initialize parameters in the lux style, as a 
+# _init_luxparams is used to initialize parameters in the lux style, as a
 # NamedTuple. This is used when the basis as a learnable Lux layer.
 
-_static_params(basis::AbstractP4MLBasis) = NamedTuple() 
+_static_params(basis::AbstractP4MLBasis) = NamedTuple()
 
-# `Ylm` carries no P4ML parameters/state (it is a bare SpheriCart basis)
+# `Ylm` carries no P4ML parameters/state (it is a bare angular basis)
 _static_params(basis::AtomicOrbitals) =
         (Pn = _static_params(basis.Pn), Dn = _static_params(basis.Dn), Ylm = NamedTuple())
 
@@ -79,14 +79,14 @@ _init_luxstate(rng::Random.AbstractRNG, l::AtomicOrbitals) =
           Dn = _init_luxstate(rng, l.Dn),
           Ylm = NamedTuple())
 
-# -------- Evaluation Code 
+# -------- Evaluation Code
 
-_evaluate!(Rnlm, dRnlm, basis::AtomicOrbitals, X) = 
-            _evaluate!(Rnlm, dRnlm, basis, X, 
-                       _static_params(basis), 
+_evaluate!(Rnlm, dRnlm, basis::AtomicOrbitals, X) =
+            _evaluate!(Rnlm, dRnlm, basis, X,
+                       _static_params(basis),
                        (Pn = nothing, Dn = nothing, Ylm = nothing))
 
-function _evaluate!(Rnl, dRnl, basis::AtomicOrbitals, X::AbstractVector{<: SVector{3}}, 
+function _evaluate!(Rnl, dRnl, basis::AtomicOrbitals, X::AbstractVector{<: SVector{3}},
                      ps, st)
     nR = length(X)
     WITHGRAD = !isnothing(dRnl)
@@ -98,7 +98,7 @@ function _evaluate!(Rnl, dRnl, basis::AtomicOrbitals, X::AbstractVector{<: SVect
         TR = eltype(eltype(X))
         R = @alloc(TR, nR)
         map!(norm, R, X)
-        # `Ylm` is a SpheriCart basis used via the ACEbase in-place interface;
+        # `Ylm` is an angular basis used via the ACEbase in-place interface;
         # buffers are taken from the Bumper stack to keep this allocation-free.
         TY = _ylm_valtype(basis.Ylm, eltype(X))
         nY = length(basis.Ylm)
@@ -127,23 +127,23 @@ function _evaluate!(Rnl, dRnl, basis::AtomicOrbitals, X::AbstractVector{<: SVect
         for (i, b) in enumerate(basis.specidx)
             @simd ivdep for j = 1:nR
                 Rnl[j, i] = Pn[j, b[1]] * Dn[j, b[2]] * Ylm[j, b[3]]
-                if WITHGRAD 
+                if WITHGRAD
                     drj = X[j] / R[j]
-                    dRnl[j, i] = ( dPn[j, b[1]] * drj * Dn[j, b[2]] * Ylm[j, b[3]] + 
-                                    Pn[j, b[1]] * dDn[j, b[2]] * drj * Ylm[j, b[3]] + 
+                    dRnl[j, i] = ( dPn[j, b[1]] * drj * Dn[j, b[2]] * Ylm[j, b[3]] +
+                                    Pn[j, b[1]] * dDn[j, b[2]] * drj * Ylm[j, b[3]] +
                                     Pn[j, b[1]] * Dn[j, b[2]] * dYlm[j, b[3]])
                 end
             end
         end
     end
 
-    return nothing 
+    return nothing
 end
 
 function pullback_ps(∂Rnl, basis::AtomicOrbitals, X::AbstractVector{<: SVector{3}},
                      ps::NamedTuple, st)
     TR = eltype(eltype(X))
-    T = promote_type(eltype(∂Rnl), TR) 
+    T = promote_type(eltype(∂Rnl), TR)
     nR = length(X)
     R = zeros(T, nR)
     map!(norm, R, X)
@@ -151,7 +151,7 @@ function pullback_ps(∂Rnl, basis::AtomicOrbitals, X::AbstractVector{<: SVector
     # Rnl = output of evaluate(basis, X, ...)
     Pn = evaluate(basis.Pn, R, ps.Pn, st.Pn)
     Dn = evaluate(basis.Dn, R, ps.Dn, st.Dn)
-    Ylm = evaluate(basis.Ylm, X)   # SpheriCart basis, param-free
+    Ylm = evaluate(basis.Ylm, X)   # angular basis, param-free
     ∂Pn = zeros(T, size(Pn))
     ∂Dn = zeros(T, size(Dn))
 
