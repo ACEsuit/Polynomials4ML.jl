@@ -129,10 +129,10 @@ function _evaluate!(Rnl, dRnl, basis::AtomicOrbitals, X::AbstractVector{<: SVect
         TR = eltype(eltype(X))
         R = @alloc(TR, nR)
         map!(norm, R, X)
-        # `Ylm` is an angular basis used via the ACEbase in-place interface;
-        # buffers are taken from the Bumper stack to keep this allocation-free.
-        TY = _ylm_valtype(basis.Ylm, eltype(X))
-        nY = length(basis.Ylm)
+        # `Ylm` (angular basis) is evaluated through SpheriCart's *allocating*
+        # interface: its KA-based `compute!` needs a backend-aware output array,
+        # which a Bumper `@alloc` `UnsafeArray` is not, so we let SpheriCart
+        # allocate its (standard) output buffer itself.
         if WITHGRAD
             # this is a hack that circumvents an unexplained allocation in
             # the @withalloc macro
@@ -143,14 +143,11 @@ function _evaluate!(Rnl, dRnl, basis::AtomicOrbitals, X::AbstractVector{<: SVect
             Dn = @alloc(T, nR, length(basis.Dn))
             dDn = @alloc(T, nR, length(basis.Dn))
             _evaluate!(Dn, dDn, basis.Dn, R, ps.Dn, st.Dn)
-            Ylm = @alloc(TY, nR, nY)
-            dYlm = @alloc(SVector{3, TY}, nR, nY)
-            evaluate_ed!(Ylm, dYlm, basis.Ylm, X)
+            Ylm, dYlm = evaluate_ed(basis.Ylm, X)
         else
             Pn = @withalloc evaluate!(basis.Pn, R, ps.Pn, st.Pn)   # Pn(r)
             Dn = @withalloc evaluate!(basis.Dn, R, ps.Dn, st.Dn)   # Dn(r)  (ζ are the parameters -> reorganize the Lux way)
-            Ylm = @alloc(TY, nR, nY)
-            evaluate!(Ylm, basis.Ylm, X)
+            Ylm = evaluate(basis.Ylm, X)
             dPn = nothing
             dDn = nothing
             dYlm = nothing
