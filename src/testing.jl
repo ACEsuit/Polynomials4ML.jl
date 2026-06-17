@@ -187,18 +187,23 @@ end
 function test_withalloc(basis::AbstractP4MLBasis; 
             generate_x = () -> _generate_input(basis),
             generate_batch = () -> _generate_batch(basis),
-            allowed_allocs = 0, 
-            single = true, 
+            allowed_allocs = 0,
+            single = true,
             ed = true,
-            kwargs...) 
+            alloc_broken = false,
+            kwargs...)
    X = generate_batch()
    x = generate_x()
    xX = single ? (x, X) : (X,)
-   for Y in xX 
+   for Y in xX
       nalloc1 = _allocations_inner(basis, Y; ed=ed)
-      nalloc = @allocated ( _allocations_inner(basis, Y; ed=ed) ) 
+      nalloc = @allocated ( _allocations_inner(basis, Y; ed=ed) )
       println("nalloc = $nalloc (allowed = $allowed_allocs)")
-      print_tf(@test nalloc <= allowed_allocs)
+      if alloc_broken
+         @test_broken nalloc <= allowed_allocs
+      else
+         print_tf(@test nalloc <= allowed_allocs)
+      end
       P1, dP1 = evaluate_ed(basis, Y)
       @no_escape begin 
          P2 = @withalloc evaluate!(basis, Y)
